@@ -128,8 +128,13 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
             return {}
 
     def _send_json(self, data: Any, status=200):
-        self._set_headers(status, "application/json")
-        self.wfile.write(json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8"))
+        body_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+        self._set_headers(status, "application/json", extra_headers={"Content-Length": str(len(body_bytes))})
+        self.wfile.write(body_bytes)
+        try:
+            self.wfile.flush()
+        except Exception:
+            pass
 
     def _send_error_json(self, message: str, status=400):
         self._send_json({"status": "error", "message": message}, status=status)
@@ -356,7 +361,10 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         fpath, orig_name, mime_type = info
                         with open(fpath, "rb") as f:
                             content = f.read()
-                        self._set_headers(200, mime_type, {"Content-Disposition": f'attachment; filename="{orig_name}"'})
+                        self._set_headers(200, mime_type, {
+                            "Content-Disposition": f'attachment; filename="{orig_name}"',
+                            "Content-Length": str(len(content))
+                        })
                         self.wfile.write(content)
                     return
 
@@ -367,27 +375,47 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     fmt = parts[5].lower()
                     if fmt in ("openlca", "jsonld"):
                         zip_bytes = export_openlca_jsonld_zip(conn, sys_id)
-                        self._set_headers(200, "application/zip", {"Content-Disposition": f'attachment; filename="openLCA_System_{sys_id}_JSONLD.zip"'})
+                        self._set_headers(200, "application/zip", {
+                            "Content-Disposition": f'attachment; filename="openLCA_System_{sys_id}_JSONLD.zip"',
+                            "Content-Length": str(len(zip_bytes))
+                        })
                         self.wfile.write(zip_bytes)
                     elif fmt in ("ilcd", "gabi", "sphera"):
                         zip_bytes = export_ilcd_xml_zip(conn, sys_id)
-                        self._set_headers(200, "application/zip", {"Content-Disposition": f'attachment; filename="ILCD_System_{sys_id}.zip"'})
+                        self._set_headers(200, "application/zip", {
+                            "Content-Disposition": f'attachment; filename="ILCD_System_{sys_id}.zip"',
+                            "Content-Length": str(len(zip_bytes))
+                        })
                         self.wfile.write(zip_bytes)
                     elif fmt in ("simapro", "simapro_csv"):
                         csv_txt = export_simapro_csv(conn, sys_id)
-                        self._set_headers(200, "text/csv", {"Content-Disposition": f'attachment; filename="SimaPro_System_{sys_id}.csv"'})
-                        self.wfile.write(csv_txt.encode("utf-8"))
+                        csv_b = csv_txt.encode("utf-8")
+                        self._set_headers(200, "text/csv", {
+                            "Content-Disposition": f'attachment; filename="SimaPro_System_{sys_id}.csv"',
+                            "Content-Length": str(len(csv_b))
+                        })
+                        self.wfile.write(csv_b)
                     elif fmt in ("csv", "lci_csv"):
                         csv_txt = export_lci_consolidated_csv(conn, sys_id)
-                        self._set_headers(200, "text/csv", {"Content-Disposition": f'attachment; filename="Inventario_LCI_Sistema_{sys_id}.csv"'})
-                        self.wfile.write(csv_txt.encode("utf-8"))
+                        csv_b = csv_txt.encode("utf-8")
+                        self._set_headers(200, "text/csv", {
+                            "Content-Disposition": f'attachment; filename="Inventario_LCI_Sistema_{sys_id}.csv"',
+                            "Content-Length": str(len(csv_b))
+                        })
+                        self.wfile.write(csv_b)
                     elif fmt in ("zip", "expediente", "nom070"):
                         zip_bytes = export_expediente_nom070_zip(conn, sys_id)
-                        self._set_headers(200, "application/zip", {"Content-Disposition": f'attachment; filename="Expediente_NOM070_Sistema_{sys_id}.zip"'})
+                        self._set_headers(200, "application/zip", {
+                            "Content-Disposition": f'attachment; filename="Expediente_NOM070_Sistema_{sys_id}.zip"',
+                            "Content-Length": str(len(zip_bytes))
+                        })
                         self.wfile.write(zip_bytes)
                     elif fmt in ("pdf", "report_pdf"):
                         pdf_bytes = export_system_pdf_bytes(conn, sys_id)
-                        self._set_headers(200, "application/pdf", {"Content-Disposition": f'attachment; filename="Reporte_ACV_NOM070_Sistema_{sys_id}.pdf"'})
+                        self._set_headers(200, "application/pdf", {
+                            "Content-Disposition": f'attachment; filename="Reporte_ACV_NOM070_Sistema_{sys_id}.pdf"',
+                            "Content-Length": str(len(pdf_bytes))
+                        })
                         self.wfile.write(pdf_bytes)
                     else:
                         self._send_error_json(f"Formato no reconocido: {fmt}. Opciones: openlca, ilcd, simapro, csv, expediente, pdf", 400)
