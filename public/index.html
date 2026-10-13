@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>ECONODE Studio · Plataforma de Análisis de Ciclo de Vida & EPD</title>
+  <link rel="stylesheet" href="css/styles.css?v=20261012_client_report_v37">
+  <!-- Google Identity Services (GSI SDK) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+  <!-- ============================================================= -->
+  <!-- 1. TOP NAVIGATION BAR (Adaptive: Landing Mode vs Studio Mode) -->
+  <!-- ============================================================= -->
+  <header class="top-navbar" id="topNavbar">
+    <div class="brand-section">
+      <div class="brand-logo" id="btnNavHome" title="Ir al Inicio de ECONODE">
+        <span class="dot">●</span> ECONODE
+      </div>
+      <span class="brand-divider">/</span>
+      <span class="project-title" id="navProjectTitle">Professional Life Cycle Assessment Platform</span>
+    </div>
+
+    <!-- Navigation Views Switcher (Visible in Studio Mode) -->
+    <nav class="nav-links" id="studioNavLinks" role="navigation" aria-label="Navegación del Studio" style="display: none;">
+      <button class="nav-btn" data-view="dashboard" id="navBtnDashboard" aria-label="Dashboard">
+        <span data-i18n="nav.dashboard">Dashboard</span>
+      </button>
+      <button class="nav-btn" data-view="canvas" id="navBtnCanvas" aria-label="Modelado Lienzo">
+        <span data-i18n="nav.canvas">Modelado Lienzo</span>
+      </button>
+      <button class="nav-btn" data-view="catalog" id="navBtnCatalog" aria-label="Explorador LCI">
+        <span data-i18n="nav.catalog">Explorador LCI</span>
+      </button>
+      <button class="nav-btn" data-view="report" id="navBtnReport" aria-label="Reporte Dinámico">
+        <span data-i18n="nav.report">Reporte Dinámico</span>
+      </button>
+      <button class="nav-btn" data-view="audit" id="navBtnAudit" aria-label="Auditoría y Normas">
+        <span data-i18n="nav.audit">Auditoría & Normas</span>
+      </button>
+    </nav>
+
+    <!-- Navigation Links (Visible in Landing Mode) -->
+    <nav class="nav-links" id="landingNavLinks">
+      <a href="#homeFeatures" class="landing-nav-link" id="lnkFeatures" data-i18n="home.nav_features">Características</a>
+      <a href="#homeArchitecture" class="landing-nav-link" id="lnkWhyUs" data-i18n="home.nav_why">Por qué Nosotros</a>
+      <a href="#homeTestimonials" class="landing-nav-link" id="lnkTestimonials" data-i18n="home.nav_testimonials">Testimonios</a>
+      <a href="#homeFaq" class="landing-nav-link" id="lnkFaq" data-i18n="home.nav_faq">Preguntas Frecuentes</a>
+    </nav>
+
+    <!-- Top Right Actions -->
+    <div class="nav-right-actions">
+      <!-- Landing Actions (When in Home Landing Mode) -->
+      <div id="landingActionsGroup" style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="btnNavLogin" data-i18n="home.nav_login">
+          Iniciar Sesión
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btnNavSignup" data-i18n="home.nav_signup">
+          Registrarse
+        </button>
+        <button class="btn btn-primary btn-sm" id="btnNavEnterStudio" data-i18n="home.nav_enter">
+          Ingresar al Studio ➔
+        </button>
+      </div>
+
+      <!-- Language Toggle -->
+      <div class="lang-toggle" role="group" aria-label="Idioma">
+        <button class="lang-btn active" id="btnLangEs">ES</button>
+        <button class="lang-btn" id="btnLangEn">EN</button>
+      </div>
+
+      <!-- Active User Profile Pill & Logout (in Studio) -->
+      <div id="navUserGroup" style="display: none; align-items: center; gap: 8px;">
+        <div class="user-pill" id="btnUserMenu" title="Configuración y Perfil">
+          <div class="user-avatar" id="navUserAvatar">CM</div>
+          <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.1;">
+            <span class="user-name" id="navUserName">Carla Méndez</span>
+            <span style="font-size: 8.5px; color: var(--accent-emerald);" id="navUserRole">Analista de ACV</span>
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnNavbarLogout" title="Cerrar Sesión e Ir al Inicio" data-i18n="app.btn_logout">
+          Cerrar Sesión ⎋
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================= -->
+  <!-- 2. VISTA 0: HOME LANDING PAGE DE PENPOT (#viewHome) -->
+  <!-- ============================================================= -->
+  <main class="view-container active" id="viewHome">
+    <!-- HERO SECTION -->
+    <section class="home-hero-section">
+      <div class="home-hero-content">
+        <div class="badge-pill badge-emerald" style="margin-bottom: 14px;">
+          ● LIFE CYCLE ASSESSMENT PLATFORM
+        </div>
+        <h1 class="home-hero-title">ECONODE</h1>
+        <h2 class="home-hero-subtitle" data-i18n="home.hero_subtitle">Professional Life Cycle Assessment Platform</h2>
+        <p class="home-hero-desc" data-i18n="home.hero_desc">
+          Model product systems, calculate environmental impacts (LCIA), and audit ISO compliance, 100% in the cloud.
+        </p>
+
+        <div class="home-hero-cta-group">
+          <button class="btn btn-primary" id="btnHomeEnterStudio" style="height: 42px; padding: 0 20px; font-size: 13px;" data-i18n="home.explore_btn">
+            Explore Features ➔
+          </button>
+          <button class="btn btn-secondary" id="btnHomeViewExamples" style="height: 42px; padding: 0 18px; font-size: 13px;" data-i18n="home.examples_btn">
+            LCA Examples
+          </button>
+        </div>
+
+        <div class="home-hero-trust-row">
+          <span>✓ 100% Web sin instalación</span>
+          <span style="color: var(--border-strong);">•</span>
+          <span>✓ Conexión ecoinvent 3.12</span>
+          <span style="color: var(--border-strong);">•</span>
+          <span>✓ Rigor científico ISO 14044 / NOM-070</span>
+        </div>
+      </div>
+
+      <!-- HERO GRAPH VISUALIZATION (Vector Directed Graph Replica) -->
+      <div class="home-hero-visual-card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+          <span class="mono" style="font-size: 10px; color: var(--text-dim);">SYS_GRAPH :: DIRECTED_TREE</span>
+          <span class="mono" style="font-size: 10.5px; font-weight: 700; color: var(--accent-emerald);">1.00 Functional Unit</span>
+        </div>
+
+        <svg viewBox="0 0 460 280" style="width: 100%; height: auto;">
+          <!-- Enlaces / Curvas del árbol -->
+          <path d="M 60 140 Q 150 140 230 110" stroke="#CBD5E1" stroke-width="2" fill="none" />
+          <path d="M 230 110 Q 310 80 390 60" stroke="#CBD5E1" stroke-width="2" fill="none" />
+          <path d="M 230 110 Q 310 160 390 190" stroke="#CBD5E1" stroke-width="2" fill="none" />
+          <path d="M 120 220 Q 180 180 230 110" stroke="#059669" stroke-width="2" stroke-dasharray="4,4" fill="none" />
+          <path d="M 390 190 Q 320 250 230 250" stroke="#CBD5E1" stroke-width="1.5" fill="none" />
+
+          <!-- Nodos del Grafo -->
+          <!-- Insumo A: Ore Extr. -->
+          <circle cx="60" cy="140" r="7" fill="#0F172A" />
+          <text x="60" y="162" font-size="9" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">Ore Extr.</text>
+
+          <!-- Core Process -->
+          <circle cx="230" cy="110" r="10" fill="#059669" />
+          <circle cx="230" cy="110" r="16" fill="none" stroke="#86EFAC" stroke-width="2" opacity="0.6" />
+          <text x="230" y="90" font-size="10" font-family="Source Sans 3" font-weight="700" fill="#0F172A" text-anchor="middle">Core Process</text>
+          <text x="230" y="132" font-size="8" font-family="Roboto Mono" fill="#059669" text-anchor="middle">Loop 0.18</text>
+
+          <!-- Salida 1: Impact CO2 -->
+          <circle cx="390" cy="60" r="7" fill="#0284C7" />
+          <text x="390" y="80" font-size="9" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">GWP 100a</text>
+
+          <!-- Salida 2: Biomass -->
+          <circle cx="390" cy="190" r="7" fill="#059669" />
+          <text x="390" y="210" font-size="9" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">Biomass</text>
+
+          <!-- Transporte -->
+          <circle cx="120" cy="220" r="6" fill="#D97706" />
+          <text x="120" y="238" font-size="8.5" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">Transport</text>
+
+          <!-- Emisiones Suelo -->
+          <circle cx="230" cy="250" r="5" fill="#64748B" />
+          <text x="230" y="266" font-size="8" font-family="Roboto Mono" fill="#94A3B8" text-anchor="middle">NH3 Soil</text>
+        </svg>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+          <div>
+            <span style="font-size: 8.5px; color: var(--text-muted); font-family: var(--font-mono);">IMPACT GWP 100a:</span>
+            <strong style="font-size: 11px; color: var(--accent-emerald); font-family: var(--font-mono); margin-left: 4px;">1.428 kg CO₂-eq</strong>
+          </div>
+          <span class="badge-pill badge-emerald" style="font-size: 8px;">✓ ISO 14044 Certified</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- INTEGRATED WITH & TRUSTED BY -->
+    <section class="home-partners-section">
+      <div style="font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px;">
+        INTEGRATED WITH & TRUSTED BY
+      </div>
+      <div class="home-partners-grid">
+        <div class="partner-badge">● Brightway</div>
+        <div class="partner-badge">● Sphera</div>
+        <div class="partner-badge">● ecoinvent 3.12</div>
+        <div class="partner-badge">● openLCA 2.x</div>
+      </div>
+    </section>
+
+    <!-- CORE CAPABILITIES (4 CARDS) -->
+    <section class="home-section" id="homeFeatures">
+      <div class="section-badge">CORE CAPABILITIES</div>
+      <h2 class="section-title">VANGUARD TECHNOLOGY FOR LCA</h2>
+
+      <div class="capabilities-grid">
+        <div class="capability-card">
+          <div class="capability-icon">➔</div>
+          <h3 class="capability-title">Visual Modeling Canvas</h3>
+          <p class="capability-desc">
+            Map complex product systems with interactive nodes, drag-and-drop palettes, process connectors, and real-time Sankey mass & energy balances.
+          </p>
+        </div>
+
+        <div class="capability-card">
+          <div class="capability-icon">✓</div>
+          <h3 class="capability-title">NOM-070 & ISO Compliance</h3>
+          <p class="capability-desc">
+            Built-in auditor checklists, 18 normative verification clauses, tamper-proof audit trails, and official digital certification seals (HMAC-SHA256).
+          </p>
+        </div>
+
+        <div class="capability-card">
+          <div class="capability-icon">📊</div>
+          <h3 class="capability-title">Bóveda Documental & Expedientes</h3>
+          <p class="capability-desc">
+            Almacena y gestiona en base de datos dedicada archivos SQL, balances en Excel (.xlsx), informes en PDF, modelos openLCA y facturas primarias de planta.
+          </p>
+        </div>
+
+        <div class="capability-card">
+          <div class="capability-icon">☁</div>
+          <h3 class="capability-title">Cloud Database Explorer</h3>
+          <p class="capability-desc">
+            Navigate 26,533+ unit processes and 14,210 elementary flows from ecoinvent 3.12 Cutoff without local Java installations or heavy setup.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ARCHITECTURE & ROLE-BASED ACCESS (THE 3 PROFILES) -->
+    <section class="home-section" id="homeArchitecture">
+      <div class="section-badge">THE ECONODE ADVANTAGE</div>
+      <h2 class="section-title">ARCHITECTED FOR SCALE & COMPLIANCE</h2>
+
+      <div class="advantage-grid">
+        <!-- 01 Cloud Performance -->
+        <div class="advantage-card">
+          <span class="mono" style="font-size: 10px; color: var(--accent-emerald); font-weight: 700;">01 / CLOUD-NATIVE PERFORMANCE</span>
+          <h3 style="font-size: 16px; font-weight: 700; margin-top: 6px;">100% Cloud-Native Performance</h3>
+          <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 6px;">
+            Elimina las instalaciones complejas de Java y los bloqueos de memoria. Diseñado con arquitectura ligera SQLite WAL y micro-servicios autónomos en Python.
+          </p>
+          <div style="margin-top: 10px; font-size: 11px; color: var(--text-muted);">
+            ⚡ Cero dependencias pesadas &nbsp;|&nbsp; ⚡ Inicio instantáneo en puerto 8081 &nbsp;|&nbsp; ⚡ Estado colaborativo en tiempo real
+          </div>
+        </div>
+
+        <!-- 02 Zero Lock-in -->
+        <div class="advantage-card">
+          <span class="mono" style="font-size: 10px; color: var(--accent-emerald); font-weight: 700;">02 / OPEN ECOSYSTEM</span>
+          <h3 style="font-size: 16px; font-weight: 700; margin-top: 6px;">Zero Vendor Lock-In</h3>
+          <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 6px;">
+            Exporta e importa sin pérdida en los formatos industriales estándar de la industria ACV global:
+          </p>
+          <div style="display: flex; gap: 8px; margin-top: 10px;">
+            <span class="badge-pill badge-slate">openLCA JSON-LD</span>
+            <span class="badge-pill badge-slate">ILCD / Sphera XML</span>
+            <span class="badge-pill badge-slate">SimaPro CSV</span>
+            <span class="badge-pill badge-slate">Excel / SQL Dumps</span>
+          </div>
+        </div>
+
+        <!-- 03 SMART RBAC CON LOS 3 PERFILES -->
+        <div class="advantage-card" style="grid-column: 1 / -1;">
+          <span class="mono" style="font-size: 10px; color: var(--accent-emerald); font-weight: 700;">03 / ENTERPRISE GOVERNANCE</span>
+          <h3 style="font-size: 18px; font-weight: 700; margin-top: 6px;">Smart Role-Based Access: Tres Perfiles Especializados</h3>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 800px;">
+            Un espacio unificado con flujos de trabajo independientes para cada actor del estudio de ciclo de vida:
+          </p>
+
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px;">
+            <!-- Perfil 1: Analista -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div class="user-avatar" style="width: 24px; height: 24px; font-size: 9px; background: #0284C7;">CM</div>
+                <strong style="font-size: 12px;">Analista / Modelador</strong>
+              </div>
+              <div style="font-size: 10px; color: var(--accent-blue); font-weight: 700; margin-bottom: 6px;">CREADOR DEL SISTEMA PRODUCTO</div>
+              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
+                Crea sistemas producto, define la unidad funcional, arrastra procesos al lienzo, conecta flujos técnicos y configura parámetros y balances de masa.
+              </p>
+            </div>
+
+            <!-- Perfil 2: Auditor Líder -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div class="user-avatar" style="width: 24px; height: 24px; font-size: 9px; background: #0F172A;">JA</div>
+                <strong style="font-size: 12px;">Auditor Líder ACV</strong>
+              </div>
+              <div style="font-size: 10px; color: var(--accent-emerald); font-weight: 700; margin-bottom: 6px;">SUPERVISIÓN & CERTIFICACIÓN</div>
+              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
+                Inspecciona el modelo, audita las 18 cláusulas NOM-070 / ISO 14044, emite observaciones técnicas en el reporte y firma el dictamen oficial con HMAC-SHA256.
+              </p>
+            </div>
+
+            <!-- Perfil 3: Cliente Productor -->
+            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                <div class="user-avatar client" style="width: 24px; height: 24px; font-size: 9px;">ER</div>
+                <strong style="font-size: 12px;">Cliente / Productor</strong>
+              </div>
+              <div style="font-size: 10px; color: var(--accent-amber); font-weight: 700; margin-bottom: 6px;">EVIDENCIAS & REPORTE FINAL</div>
+              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
+                Sube información primaria (facturas CFE, dossiers en Excel/PDF), responde objeciones del auditor para resolverlas y consulta la declaración EPD final.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- METRICS STRIP -->
+    <section class="home-metrics-section">
+      <div class="metric-item">
+        <div class="metric-value">26,500+</div>
+        <div class="metric-label">ecoinvent 3.12 Processes</div>
+        <div class="metric-sub">Cutoff Unit & System Datasets</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-value">4,700+</div>
+        <div class="metric-label">Elemental Flows</div>
+        <div class="metric-sub">Air, Water & Soil Biosphere</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-value">100%</div>
+        <div class="metric-label">NOM-070 Verified</div>
+        <div class="metric-sub">Certified Mexican Standard</div>
+      </div>
+      <div class="metric-item">
+        <div class="metric-value">&lt; 1s</div>
+        <div class="metric-label">System Data Retrieval</div>
+        <div class="metric-sub">High-Performance Local SQLite</div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS / SUCCESS STORIES -->
+    <section class="home-section" id="homeTestimonials">
+      <div class="section-badge">SUCCESS STORIES</div>
+      <h2 class="section-title">TRUSTED BY SUSTAINABILITY DIRECTORS & AUDITORS</h2>
+
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="badge-pill badge-emerald" style="font-size: 8.5px; margin-bottom: 8px;">⚡ CLOUD SPEED</div>
+          <p class="testimonial-quote">
+            "ECONODE eliminó los cuellos de botella del modelado. Pasar de software de escritorio con bloqueos de Java a una plataforma web con ecoinvent 3.12 aceleró nuestros tiempos de entrega a la mitad."
+          </p>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+            <div class="user-avatar client" style="width: 24px; height: 24px;">ER</div>
+            <div>
+              <strong style="font-size: 11px;">Dra. Elena Ramírez</strong>
+              <div style="font-size: 9.5px; color: var(--text-muted);">Directora de Sustentabilidad, BioPack México</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="badge-pill badge-emerald" style="font-size: 8.5px; margin-bottom: 8px;">✓ ISO COMPLIANCE</div>
+          <p class="testimonial-quote">
+            "Como verificadores terceros, el checklist automatizado NOM-070 y el sello criptográfico SHA-256 nos permiten emitir dictámenes acreditados con plena trazabilidad y seguridad legal."
+          </p>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+            <div class="user-avatar" style="width: 24px; height: 24px;">MV</div>
+            <div>
+              <strong style="font-size: 11px;">Mtro. Marcus Vance, PE</strong>
+              <div style="font-size: 9.5px; color: var(--text-muted);">Auditor Líder ACV, VeriSustain</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="testimonial-card">
+          <div class="badge-pill badge-emerald" style="font-size: 8.5px; margin-bottom: 8px;">📊 COLLABORATION</div>
+          <p class="testimonial-quote">
+            "Poder trabajar analistas, auditores y clientes en un mismo hilo documental resolviendo observaciones técnicas en tiempo real cambió por completo la forma en que auditamos empaques."
+          </p>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+            <div class="user-avatar" style="width: 24px; height: 24px; background: #0284C7;">SM</div>
+            <div>
+              <strong style="font-size: 11px;">Sofía Méndez</strong>
+              <div style="font-size: 9.5px; color: var(--text-muted);">Head of ESG Analytics, Circularis</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FREQUENTLY ASKED QUESTIONS (FAQ ACCORDION) -->
+    <section class="home-section" id="homeFaq">
+      <div class="section-badge">FREQUENTLY ASKED QUESTIONS</div>
+      <h2 class="section-title">EVERYTHING YOU NEED TO KNOW ABOUT ECONODE</h2>
+
+      <div class="faq-container">
+        <details class="faq-item" open>
+          <summary class="faq-question">¿Cómo se compara ECONODE Studio frente a software tradicional como openLCA o SimaPro?</summary>
+          <div class="faq-answer">
+            ECONODE proporciona acceso 100% web en la nube sin necesidad de instalar entornos Java locales ni máquinas virtuales pesadas. Integra colaboración multi-usuario entre Analistas, Auditores y Clientes, auditoría normativa NOM-070-SE-2024 e inventario de ecoinvent 3.12 oficial.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">¿Puedo importar y exportar mis modelos existentes de openLCA, GaBi y Brightway?</summary>
+          <div class="faq-answer">
+            Sí. ECONODE cuenta con soporte nativo bidireccional para paquetes openLCA JSON-LD, estándares ILCD XML (Sphera / GaBi), matrices CSV de SimaPro y plantillas tabuladas parametrizadas en Excel.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">¿Cómo funciona la verificación de conformidad NOM-070-SE-2024 / ISO 14044?</summary>
+          <div class="faq-answer">
+            La plataforma incluye un checklist digital con las 18 cláusulas obligatorias de la norma mexicana. Cada cláusula enlaza la evidencia del modelo (facturas CFE, balances de masa, reglas de corte) y permite al auditor líder firmar digitalmente el dictamen con algoritmo HMAC-SHA256.
+          </div>
+        </details>
+
+        <details class="faq-item">
+          <summary class="faq-question">¿Cuáles son los permisos de los 3 perfiles disponibles?</summary>
+          <div class="faq-answer">
+            El <strong>Analista</strong> modela el sistema producto en el lienzo y ajusta parámetros; el <strong>Auditor Líder</strong> inspecciona la evidencia, plantea observaciones técnicas y firma el dictamen; y el <strong>Cliente</strong> sube facturas y datos primarios en la Bóveda de Documentos y resuelve observaciones técnicas.
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="home-footer">
+      <div class="home-footer-grid">
+        <div>
+          <div class="brand-logo" style="margin-bottom: 8px;">
+            <span class="dot">●</span> ECONODE
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
+            Cloud-native Life Cycle Assessment (LCA) platform. Accelerating scientific environmental transparency for global industry and certified auditors.
+          </p>
+          <div style="margin-top: 10px;">
+            <span class="badge-pill badge-emerald">● ALL SYSTEMS OPERATIONAL (PORT 8081)</span>
+          </div>
+        </div>
+
+        <div>
+          <h4 style="font-size: 11.5px; font-weight: 700; margin-bottom: 8px;">Platform</h4>
+          <ul class="footer-links">
+            <li><a href="#" onclick="window.EconodeApp.showView('canvas')">Visual Canvas</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('catalog')">ecoinvent 3.12 Browser</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('report')">Dynamic LCIA Report</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('dashboard')">Project Portfolio</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 style="font-size: 11.5px; font-weight: 700; margin-bottom: 8px;">Compliance</h4>
+          <ul class="footer-links">
+            <li><a href="#" onclick="window.EconodeApp.showView('audit')">ISO 14040 / 14044</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('audit')">NOM-070-SE-2024</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('report')">EPD Generation ISO 14025</a></li>
+            <li><a href="#">HMAC-SHA256 Digital Seals</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 style="font-size: 11.5px; font-weight: 700; margin-bottom: 8px;">Soporte & Roles</h4>
+          <ul class="footer-links">
+            <li><a href="#" onclick="window.EconodeApp.showView('login')">Iniciar Sesión (Todos los Roles)</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('signup')">Crear Nueva Cuenta</a></li>
+            <li><a href="#" onclick="window.EconodeApp.openDocsModal()">Bóveda de Documentos</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="home-footer-bottom">
+        <div>© 2026 ECONODE Inc. All rights reserved. Acreditado para declaraciones ambientales de producto.</div>
+        <div style="display: flex; gap: 14px;">
+          <span>Privacidad</span>
+          <span>Términos de Servicio</span>
+          <span>Seguridad TLS 1.3</span>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 3. VISTA: LOGIN & SELECCIÓN DE LOS 3 PERFILES (#viewLogin) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewLogin">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-header">
+          <span class="badge-pill badge-emerald" data-i18n="login.tier_badge">● TIER 1 STUDIO · CONTROL DE ACCESO</span>
+          <h1 class="auth-title" data-i18n="login.title">Iniciar Sesión en ECONODE</h1>
+          <p class="auth-subtitle" data-i18n="login.subtitle">Ingresa con tu cuenta o selecciona el rol correspondiente para tu sesión</p>
+        </div>
+
+        <!-- Google Sign-In Container -->
+        <button class="btn-google" id="btnGoogleSignInAction">
+          <span class="google-icon-box">G</span>
+          <span data-i18n="login.google_btn">Continuar con Google (Google Workspace)</span>
+        </button>
+        <div id="g_id_onload"
+             data-client_id="744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com"
+             data-callback="handleGoogleCredentialResponse"
+             data-auto_prompt="false">
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 8.5px; color: var(--text-dim); text-align: center; margin-bottom: 8px;">
+          CLIENT ID: 744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com
+        </div>
+
+        <!-- Formulario de Acceso Profesional -->
+        <form id="formLogin" onsubmit="return false;" style="margin-top: 14px;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="login.email_label">Usuario o Correo Institucional</label>
+            <input type="text" class="form-input" id="inputLoginEmail" placeholder="ej. carla.mendez@econode.io o analista" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;" data-i18n="login.password_label">Contraseña</label>
+              <span style="font-size: 10px; color: var(--text-dim);">Cifrado PBKDF2</span>
+            </div>
+            <input type="password" class="form-input" id="inputLoginPassword" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+          </div>
+
+          <div id="loginErrorMessage" style="display: none; padding: 8px 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #EF4444; font-size: 11px; margin-bottom: 10px;">
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; height: 40px; margin-top: 4px;" id="btnSubmitLogin" data-i18n="login.submit">
+            Iniciar Sesión ➔
+          </button>
+        </form>
+
+        <div style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+          <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.05em;">
+            ⚡ Acceso Rápido Demo (1-Clic por Rol)
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnLoginAnalyst" style="font-size: 10px; padding: 6px 4px; justify-content: center;">
+              Analista ACV
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnLoginAuditor" style="font-size: 10px; padding: 6px 4px; justify-content: center;">
+              Auditor Líder
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnLoginClient" style="font-size: 10px; padding: 6px 4px; justify-content: center;">
+              Cliente Productor
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px; padding: 10px 12px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 10.5px; color: var(--text-secondary); line-height: 1.4;">
+          🔒 <strong>Acceso Seguro y Escalable:</strong> Cuentas administradas localmente. Consulta las credenciales iniciales en el archivo interno: <code style="font-family: var(--font-mono); font-size: 10px; background: var(--bg-card); padding: 1px 4px; border-radius: 3px;">econode_studio/data/credenciales_demo.txt</code>.
+        </div>
+
+        <div style="margin-top: 18px; text-align: center; font-size: 11.5px; color: var(--text-muted);">
+          <span data-i18n="login.no_account">¿Tu organización aún no tiene cuenta?</span>
+          <a href="#" id="linkGoSignup" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none;" data-i18n="login.go_signup">Crear Cuenta Nueva ➔</a>
+        </div>
+      </div>
+      
+      <div style="margin-top: 16px; font-size: 10px; color: var(--text-muted); text-align: center;">
+        ✓ Encriptación TLS 1.3 / HMAC-SHA256 &nbsp;|&nbsp; ✓ Acreditado NOM-070-SE-2024 &nbsp;|&nbsp; ✓ Base de Datos Local SQLite
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 4. VISTA: REGISTRO DE CUENTA & ORGANIZACIÓN (#viewSignup) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewSignup">
+    <div class="auth-wrapper">
+      <div class="auth-card" style="max-width: 520px;">
+        <div class="auth-header">
+          <span class="badge-pill badge-emerald">● NUEVA ORGANIZACIÓN · TIER 1</span>
+          <h1 class="auth-title">Crear Cuenta en ECONODE Studio</h1>
+          <p class="auth-subtitle">Espacio colaborativo de modelado de producto y expedientes NOM-070</p>
+        </div>
+
+        <form id="formSignup" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="signup.name_label">Nombre y Apellidos del Responsable</label>
+            <input type="text" class="form-input" id="inputSignupName" placeholder="Ej. Ing. Carla Méndez" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="signup.email_label">Correo electrónico institucional</label>
+            <input type="email" class="form-input" id="inputSignupEmail" placeholder="ejemplo@organizacion.com" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" data-i18n="signup.org_label">Nombre de la Organización / Razón Social</label>
+            <input type="text" class="form-input" id="inputSignupOrg" placeholder="BioPack Industrial S.A. de C.V." required>
+          </div>
+
+          <!-- Selector de los 3 Perfiles -->
+          <div class="form-group">
+            <label class="form-label" data-i18n="signup.role_label">Perfil de Uso en la Plataforma</label>
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
+              <button type="button" class="segmented-btn active" id="btnSignupRoleAnalyst" data-role="analyst" data-i18n="signup.role_analyst">
+                ● Analista (Creador)
+              </button>
+              <button type="button" class="segmented-btn" id="btnSignupRoleAuditor" data-role="auditor" data-i18n="signup.role_auditor">
+                ● Auditor Líder
+              </button>
+              <button type="button" class="segmented-btn" id="btnSignupRoleClient" data-role="client" data-i18n="signup.role_client">
+                ● Cliente Productor
+              </button>
+            </div>
+            <input type="hidden" id="inputSignupSelectedRole" value="analyst">
+            <div style="font-size: 10px; color: var(--accent-emerald); margin-top: 6px; line-height: 1.4;">
+              ● El alta de organización y plan de suscripción corresponde a <strong>Analistas de ACV</strong>. Los perfiles de Auditor y Cliente se activan cuando el Analista les comparte el proyecto.
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="signup.password_label">Contraseña de acceso</label>
+            <input type="password" class="form-input" id="inputSignupPassword" placeholder="Contraseña segura (mínimo 6 caracteres)" required>
+          </div>
+
+          <div id="signupErrorMessage" style="display: none; padding: 8px 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #EF4444; font-size: 11px; margin-bottom: 10px;">
+          </div>
+
+          <button type="submit" class="btn btn-primary" style="width: 100%; height: 42px; margin-top: 4px;" id="btnSubmitSignup" data-i18n="signup.submit">
+            Crear Cuenta & Activar Espacio de Trabajo ➔
+          </button>
+        </form>
+
+        <div style="margin-top: 18px; text-align: center; font-size: 11.5px; color: var(--text-muted);">
+          <span data-i18n="signup.has_account">¿Ya tienes cuenta activa?</span>
+          <a href="#" id="linkGoLogin" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none;" data-i18n="signup.go_login">Iniciar Sesión ➔</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 5. VISTA: DASHBOARD DE PROYECTOS & PORTAFOLIO ACV (#viewDashboard) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewDashboard">
+    <div class="dashboard-header" style="margin-bottom: 20px;">
+      <div>
+        <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em;" data-i18n="dash.title">Portafolio de Sistemas Producto</h1>
+        <p style="font-size: 11.5px; color: var(--text-muted);" data-i18n="dash.subtitle">Modelos de ciclo de vida activos, balances de masa y estado de verificación normativa</p>
+      </div>
+    </div>
+
+    <!-- Table Card -->
+    <div class="table-card">
+      <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div class="table-filters">
+          <button class="segmented-btn active" data-filter="all"><span data-i18n="dash.filter_all">Todos</span> (<span id="countAllSystems">0</span>)</button>
+          <button class="segmented-btn" data-filter="in_audit" data-i18n="dash.filter_in_audit">En Auditoría</button>
+          <button class="segmented-btn" data-filter="certified" data-i18n="dash.filter_certified">Certificados</button>
+          <button class="segmented-btn" data-filter="draft" data-i18n="dash.filter_draft">Borradores</button>
+        </div>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="text" class="form-input" style="width: 250px;" placeholder="Buscar por nombre o SKU..." id="inputSearchSystems" data-i18n-placeholder="dash.search_placeholder">
+          <button class="btn btn-primary" id="btnDashNewSystem" style="white-space: nowrap; height: 32px; font-size: 11.5px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px;">
+            <span data-i18n="dash.new_btn">+ Nuevo Sistema Producto</span>
+          </button>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-i18n="dash.col_system">Sistema Producto</th>
+            <th data-i18n="dash.col_sku">Código / SKU</th>
+            <th data-i18n="dash.col_unit">Unidad Funcional</th>
+            <th data-i18n="dash.col_processes">Procesos Conectados</th>
+            <th data-i18n="dash.col_team">Equipo / Colaboradores</th>
+            <th data-i18n="dash.col_status">Estado Normativo</th>
+            <th data-i18n="dash.col_action">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="tableSystemsBody">
+          <!-- Renderizado dinámico desde app.js -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 6. VISTA: MODELADO EN LIENZO VISUAL (#viewCanvas) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewCanvas">
+    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 8px;" role="toolbar" aria-label="Herramientas del lienzo">
+      <!-- Modo Sankey Segmented Control -->
+      <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Visualización Sankey">
+        <button class="segmented-btn active" id="btnSankeyModeNone" data-sankey="none" data-i18n="canvas.sankey_std" style="padding: 4px 8px; font-size: 10px;">Estándar</button>
+        <button class="segmented-btn" id="btnSankeyModeMass" data-sankey="mass" data-i18n="canvas.sankey_mass" style="padding: 4px 8px; font-size: 10px;">Sankey Masa</button>
+        <button class="segmented-btn" id="btnSankeyModeEnergy" data-sankey="energy" data-i18n="canvas.sankey_energy" style="padding: 4px 8px; font-size: 10px;">Sankey Energía</button>
+      </div>
+
+      <!-- Sticky Notes Controls on Canvas (Toggle de visualización) -->
+      <button class="btn btn-secondary btn-sm" id="btnToggleCanvasStickyNotes" title="Mostrar/Ocultar notas adhesivas en el lienzo" data-i18n-title="canvas.sticky_notes_title">
+        📌 <span id="labelStickyNotesToggle" data-i18n="canvas.sticky_notes_on">Notas (On)</span>
+      </button>
+
+      <!-- Botón Global de Exportación (Menú Desplegable) -->
+      <div class="canvas-export-dropdown-wrapper">
+        <button class="btn btn-secondary btn-sm" id="btnCanvasExportDropdown" title="Exportar modelo a formatos industriales" data-i18n-title="canvas.export_dropdown_title">
+          📥 <span id="labelCanvasExportDropdown" data-i18n="canvas.export_model">Exportar Modelo</span> ▾
+        </button>
+        <div class="canvas-export-menu" id="canvasExportMenu">
+          <button type="button" class="canvas-export-item" id="btnExportOpenLca">
+            <span data-i18n="canvas.export_openlca">openLCA JSON-LD</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">ZIP</span>
+          </button>
+          <button type="button" class="canvas-export-item" id="btnExportIlcd">
+            <span data-i18n="canvas.export_ilcd">ILCD / Sphera</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">XML</span>
+          </button>
+          <button type="button" class="canvas-export-item" id="btnExportSimaPro">
+            <span data-i18n="canvas.export_simapro">SimaPro</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
+          </button>
+          <button type="button" class="canvas-export-item" id="btnExportLciCsv">
+            <span data-i18n="canvas.export_lci_csv">LCI Consolidado</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="canvas-wrapper">
+      <!-- Left Panel: Process Palette (Draggable) -->
+      <div class="canvas-panel" role="region" aria-label="Catálogo de Procesos Arrastrables">
+        <div class="panel-header">
+          <span data-i18n="canvas.palette_title">Catálogo de Procesos (Arrastrar)</span>
+          <span class="badge-pill badge-slate">ecoinvent 3.12</span>
+        </div>
+        <div style="padding: 8px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px;">
+          <input type="text" class="form-input" placeholder="Filtrar insumos arrastrables..." id="inputPaletteSearch" data-i18n-placeholder="canvas.palette_search_ph">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnPaletteCreateBlank" data-i18n="canvas.create_blank" style="width: 100%; font-size: 11px; justify-content: center; border-style: dashed;">
+            + Crear Proceso en Blanco
+          </button>
+        </div>
+        <div style="padding: 8px; overflow-y: auto; flex: 1;" id="paletteProcessList" role="list">
+          <!-- Lista de procesos arrastrables -->
+        </div>
+      </div>
+
+      <!-- Center Stage: Drag & Drop Canvas with Visual Connectors -->
+      <div class="canvas-panel" style="position: relative;">
+        <!-- Leyenda Flotante Sankey -->
+        <div id="canvasSankeyLegend" class="sankey-legend-box" style="display: none;">
+          <div style="font-weight: 700; font-size: 11px; margin-bottom: 4px;" id="sankeyLegendTitle">Diagrama Sankey por Masa (kg)</div>
+          <div style="font-size: 10px; color: var(--text-secondary);">
+            <span id="sankeyLabelTotal">Flujo Total en Cadena</span>: <strong class="mono" id="sankeyStatTotal" style="color: var(--accent-emerald);">0.000 kg</strong><br>
+            <span id="sankeyLabelMax">Flujo Máximo</span>: <strong class="mono" id="sankeyStatMax">0.000 kg</strong>
+          </div>
+        </div>
+
+        <!-- Instrucción de Conexión Activa Banner -->
+        <div id="connectHelpBanner" style="display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; padding: 6px 14px; border-radius: var(--radius-md); font-size: 10.5px; z-index: 90; box-shadow: var(--shadow-md);">
+          ⚡ Haz clic en el puerto de entrada [🡇] del proceso destino para conectar el flujo. <button id="btnCancelConnect" style="background: transparent; border: none; color: #FCA5A5; margin-left: 8px; cursor: pointer;">Cancelar</button>
+        </div>
+
+        <div class="canvas-stage" id="canvasStage" style="width: 100%; height: 100%; min-height: 520px; position: relative;">
+          <!-- SVG Overlay y Nodos dinámicos -->
+          <div id="canvasStickyNotesLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40;"></div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Node Inspector -->
+      <div class="canvas-panel">
+        <div class="panel-header">
+          <span data-i18n="canvas.inspector_title">Inspector de Proceso</span>
+          <span class="badge-pill badge-slate" id="inspCategoryBadge" data-i18n="canvas.inspector_none">Ningún proceso seleccionado</span>
+        </div>
+        <div style="padding: 14px; overflow-y: auto;" id="inspectorDetails">
+          <div style="padding: 24px 12px; text-align: center; color: var(--text-muted);">
+            <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;" data-i18n="canvas.inspector_title">Inspector de Proceso</div>
+            <div style="font-size: 11px; line-height: 1.45;" data-i18n="canvas.inspector_empty">Selecciona un nodo del lienzo o agrega un proceso desde la paleta para inspeccionar sus intercambios técnicos, entradas unitarias y residuos.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 7. VISTA: EXPLORADOR & CATÁLOGO LCI (#viewCatalog) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewCatalog">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 style="font-size: 20px; font-weight: 700;" data-i18n="catalog.title">Explorador de Procesos LCI (ecoinvent 3.12)</h1>
+        <p style="font-size: 11.5px; color: var(--text-muted);" data-i18n="catalog.subtitle">Catálogo oficial con 26,533 procesos unitarios clasificados por categorías ISIC / CPC</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <label for="selectCatalogCategory" style="font-size: 11px; font-weight: 600; color: var(--text-secondary);" data-i18n="editor.category_label">Sector / Categoría DB:</label>
+        <select id="selectCatalogCategory" class="form-input" style="height: 32px; font-size: 11px; width: 280px; padding: 2px 8px;">
+          <option value="ALL">Todas las Categorías (26,533 procesos)</option>
+          <option value="999999" style="font-weight: 700; color: var(--accent-emerald);">⭐ Custom processes & flows</option>
+          <option value="3510">3510: Energía Eléctrica & Red (4,046)</option>
+          <option value="3821">3821: Residuos & Tratamiento (3,827)</option>
+          <option value="2011">2011: Químicos Básicos (2,826)</option>
+          <option value="2013">2013: Plásticos & Polímeros Primarios (337)</option>
+          <option value="2220">2220: Productos de Plástico & Moldeo (293)</option>
+          <option value="4923">4923: Transporte Carretero de Carga (256)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 460px 1fr; gap: 18px;">
+      <!-- Columna izquierda: Lista y buscador -->
+      <div class="table-card" style="padding: 14px;">
+        <input type="text" class="form-input" placeholder="Buscar por nombre, código CAS o sinónimo..." id="inputCatalogSearch" style="margin-bottom: 12px;" data-i18n-placeholder="catalog.search_placeholder">
+        <div style="max-height: 600px; overflow-y: auto;" id="catalogProcessList">
+          <!-- Tarjetas de procesos -->
+        </div>
+      </div>
+
+      <!-- Columna derecha: Ficha técnica profunda -->
+      <div class="table-card" style="padding: 24px;" id="catalogDetailCard">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px;">
+          <div>
+            <span class="badge-pill badge-emerald" data-i18n="catalog.selected_badge">PROCESO SELECCIONADO</span>
+            <h2 style="font-size: 18px; font-weight: 700; margin-top: 6px;" id="catalogDetailTitle">Granulado PET virgen [GLO]</h2>
+            <p style="font-size: 11px; color: var(--text-muted);" id="catalogDetailSub">ecoinvent 3.12 Cutoff · Código CPC 34710 · UF: 1.000 kg</p>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <button class="btn btn-secondary" id="btnDeleteCatalogItem" style="display: none; color: #EF4444; border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.05); font-size: 11px; padding: 6px 12px;" title="Eliminar de la base de datos">
+              🗑️ Eliminar
+            </button>
+            <button class="btn btn-emerald" id="btnInsertToActiveCanvas" data-i18n="catalog.insert_btn">
+              Insertar en Sistema Activo ➔
+            </button>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 18px;">
+          <h4 style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;" data-i18n="catalog.inputs_title">ENTRADAS TECNOSFÉRICAS PRINCIPALES</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="catalog.col_flow">Insumo / Flujo</th>
+                <th data-i18n="catalog.col_amount">Cantidad</th>
+                <th data-i18n="catalog.col_unit">Unidad</th>
+              </tr>
+            </thead>
+            <tbody id="catalogInputsTable">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <h4 style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 8px;" data-i18n="catalog.outputs_title">EMISIONES BIOSFÉRICAS ELEMENTALES</h4>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th data-i18n="catalog.col_emission">Emisión / Compartimento</th>
+                <th data-i18n="catalog.col_amount">Cantidad</th>
+                <th data-i18n="catalog.col_unit">Unidad</th>
+              </tr>
+            </thead>
+            <tbody id="catalogOutputsTable">
+              <!-- Renderizado dinámico -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 8. VISTA: REPORTE DINÁMICO & HILOS COLABORATIVOS (#viewReport) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewReport">
+    <!-- Tooltip Flotante para Subrayar & Comentar Selección del Auditor -->
+    <div id="reportHighlightTooltip" role="tooltip" style="display: none; position: absolute; background: #0F172A; color: #FFFFFF; border-radius: var(--radius-sm); padding: 5px 10px; font-size: 11px; font-weight: 600; cursor: pointer; z-index: 1000; box-shadow: var(--shadow-md); transform: translate(-50%, -100%);">
+      💬 Subrayar & Comentar Selección
+    </div>
+
+    <div style="max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 1fr 360px; gap: 24px;">
+      <!-- Documento Central Estilo Notion / Docs -->
+      <div id="reportMainCard" style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 32px 36px; box-shadow: var(--shadow-sm);">
+        <!-- ENCABEZADO FORMAL PARA IMPRESIÓN PDF OFICIAL ISO / NOM-070 -->
+        <div class="print-official-header" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0F172A; padding-bottom: 8pt; margin-bottom: 14pt;">
+            <div>
+              <div style="font-size: 16pt; font-weight: 700; color: #0F172A;">ECONODE Studio · Reporte Técnico de Ciclo de Vida</div>
+              <div style="font-size: 9.5pt; color: #475569; margin-top: 2pt;">DECLARACIÓN AMBIENTAL DE PRODUCTO (EPD) & EXPEDIENTE DE AUDITORÍA NOM-070</div>
+            </div>
+            <div style="text-align: right; font-size: 8.5pt; color: #475569;">
+              <div>Ref: <strong>EPD-NOM070-2026-SYS21</strong></div>
+              <div>Fecha de Emisión: <strong>07 de Octubre de 2026</strong></div>
+              <div>Sellado Digital: <strong>0x8F2A6C4D91BC437E</strong></div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; margin-bottom: 14pt; font-size: 9pt; background: #F8FAFC; padding: 8pt 10pt; border: 1px solid #CBD5E1; border-radius: 4pt;">
+            <div><strong>Sistema Producto:</strong> Envase PET Circular 500ml (SYS-PET-CIRCULAR-01)</div>
+            <div><strong>Unidad Funcional:</strong> 1.000 u (Botella con tapa y etiqueta)</div>
+            <div><strong>Fabricante / Titular:</strong> BioPack Industrial de México S.A. de C.V.</div>
+            <div><strong>Límites del Sistema:</strong> Cradle-to-Gate (De la cuna a la puerta)</div>
+            <div><strong>Auditor Líder ACV:</strong> Josué Arentería (Acreditado NOM-070)</div>
+            <div><strong>Analista Responsable:</strong> Carla Méndez (BioPack Lab)</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+          <div>
+            <span class="badge-pill badge-emerald">⟳ Auto-Sincronizado con el Modelo Oficial</span>
+            <h1 style="font-size: 20px; font-weight: 700; margin-top: 8px;" id="reportMainTitle">Sistema Producto: Envase PET Circular 500ml</h1>
+          </div>
+
+          <!-- ACCIONES DEL DOCUMENTO -->
+          <div class="report-web-actions" style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;" role="toolbar" aria-label="Exportación del reporte">
+            <button class="btn btn-primary btn-sm" id="btnExportReportPdf" title="Descargar documento PDF oficial con membrete y sellos" data-i18n="report.export_pdf">
+              PDF Oficial 🡇
+            </button>
+          </div>
+        </div>
+
+        <!-- BARRA DE EDICIÓN RICA ESTILO NOTION / WORD -->
+        <div id="reportFormattingToolbar" style="display: flex; gap: 6px; align-items: center; padding: 6px 12px; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 16px; flex-wrap: wrap;">
+          <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-right: 4px;">EDICIÓN:</span>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtBold" title="Negrita" style="padding: 2px 8px; font-weight: 700;">B</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtItalic" title="Cursiva" style="padding: 2px 8px; font-style: italic;">I</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtUnderline" title="Subrayado" style="padding: 2px 8px; text-decoration: underline;">U</button>
+          <div style="height: 16px; width: 1px; background: var(--border-color); margin: 0 4px;"></div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtHighlightYellow" title="Resaltar Amarillo" style="padding: 2px 8px; background: #FEF08A; color: #854D0E; font-weight: 600;">🖍 Amarillo</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtHighlightGreen" title="Resaltar Verde (Conforme)" style="padding: 2px 8px; background: #BBF7D0; color: #166534; font-weight: 600;">🖍 Verde</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtClearHighlight" title="Limpiar Resaltado" style="padding: 2px 8px;">✕ Quitar</button>
+          <div style="height: 16px; width: 1px; background: var(--border-color); margin: 0 4px;"></div>
+          <button type="button" class="btn btn-emerald btn-sm" id="btnSaveReportEdits" title="Guardar cambios del documento" style="padding: 2px 10px; margin-left: auto;">💾 Guardar Reporte</button>
+        </div>
+
+        <div id="reportDocumentBody" contenteditable="true" style="outline: none; min-height: 400px; padding: 4px;">
+          <h3 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;" data-i18n="report.processes_title">1. Estructura de Procesos del Sistema</h3>
+          <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 12px;">
+            Etapas del ciclo de vida modeladas con sus entradas tecnosféricas, flujos de referencia y salidas (productos, mermas/residuos y emisiones):
+          </p>
+
+          <!-- Tabla de Procesos y Balances -->
+          <table class="data-table" style="margin-bottom: 24px;" id="reportProcessesTable">
+            <thead>
+              <tr>
+                <th>Etapa del Ciclo</th>
+                <th>Flujo de Referencia (UF)</th>
+                <th>Insumos Principales (3)</th>
+                <th>Residuo / Waste</th>
+                <th>Emisión Elemental</th>
+              </tr>
+            </thead>
+            <tbody id="reportBodyProcesses">
+              <!-- Renderizado dinámico desde app.js -->
+            </tbody>
+          </table>
+
+          <h3 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;" data-i18n="report.lci_title">2. Inventario de Ciclo de Vida (LCI Consolidado)</h3>
+          <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 12px;">
+            Consolidación de entradas tecnosféricas y emisiones elementales verificadas por el Auditor Líder:
+          </p>
+          <table class="data-table" style="margin-bottom: 24px;" id="reportLciTable">
+            <thead>
+              <tr>
+                <th>Insumo / Emisión</th>
+                <th>Valor Unitario</th>
+                <th>Unidad</th>
+                <th>Estado Verificado</th>
+              </tr>
+            </thead>
+            <tbody id="reportBodyLciConsolidated">
+              <!-- Renderizado dinámico según nodos del lienzo -->
+            </tbody>
+          </table>
+
+          <h3 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;" data-i18n="report.assumptions_title">3. Supuestos Técnicos y Evidencia de Planta</h3>
+          <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">
+            La tasa de merma del proceso de inyección se acreditó en 5% con reciclaje interno en bucle cerrado. Para la etapa de soplado se utilizó un factor de recorte de 0.2%. Las evidencias documentales (facturas CFE y manifiestos de residuo) se encuentran custodiadas en la <strong>Bóveda de Documentos</strong>.
+          </p>
+        </div>
+
+        <!-- PIE FORMAL CON FIRMAS PARA IMPRESIÓN PDF -->
+        <div class="print-official-footer" style="display: none; margin-top: 24pt; border-top: 1px solid #CBD5E1; padding-top: 16pt; page-break-inside: avoid;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30pt;">
+            <div style="border-top: 1px solid #0F172A; padding-top: 6pt; text-align: center;">
+              <div style="font-size: 10pt; font-weight: 700;">Carla Méndez</div>
+              <div style="font-size: 8.5pt; color: #64748B;">Analista de ACV · Creadora del Modelo</div>
+              <div style="font-size: 8pt; color: #94A3B8; font-family: monospace; margin-top: 4pt;">Firma Digital: 0x4B9E77F12A803D</div>
+            </div>
+            <div style="border-top: 1px solid #0F172A; padding-top: 6pt; text-align: center;">
+              <div style="font-size: 10pt; font-weight: 700;">Josué Arentería</div>
+              <div style="font-size: 8.5pt; color: #64748B;">Auditor Líder Senior · NOM-070-SE-2024 / ISO 14044</div>
+              <div style="font-size: 8pt; color: #059669; font-family: monospace; margin-top: 4pt;">Dictamen Válido: Sello SHA-256 0x8F2A6C4D91BC437E</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra Lateral de Comentarios Colaborativos (Analista, Auditor, Cliente) -->
+      <div id="viewReportCommentsCol" role="complementary" aria-label="Hilos de Auditoría">
+        <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 18px; box-shadow: var(--shadow-sm); position: sticky; top: 76px;">
+          <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+            <span data-i18n="report.threads_title">Hilos de Auditoría (3 Roles)</span>
+            <span class="badge-pill badge-slate">En Vivo</span>
+          </h4>
+
+          <div id="commentsThreadContainer" style="display: flex; flex-direction: column; gap: 10px; max-height: 440px; overflow-y: auto;">
+            <!-- Comentarios renderizados dinámicamente -->
+          </div>
+
+          <!-- Input para nueva observación técnica -->
+          <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border-color);">
+            <div style="font-size: 10.5px; font-weight: 700; margin-bottom: 4px;" id="commentPostingAsLabel">Publicando como: Carla Méndez (Analista)</div>
+            <textarea class="form-input" id="inputNewComment" rows="2" style="height: auto; padding: 8px; font-size: 11px;" placeholder="Escribir nota u objeción técnica..."></textarea>
+            <button class="btn btn-primary btn-sm" id="btnPostComment" style="width: 100%; margin-top: 6px;">Publicar Observación ➔</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 9. VISTA: CHECKLIST NORMATIVO NOM-070 / ISO 14044 (#viewAudit) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewAudit" role="region" aria-label="Checklist Normativo NOM-070">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h1 style="font-size: 20px; font-weight: 700; margin: 0;" data-i18n="audit.title">Checklist Normativo & Dictámenes de Auditoría</h1>
+          <span class="badge-pill badge-emerald" id="auditActiveStandardBadge">NOM-070-SE-2024</span>
+        </div>
+      </div>
+      
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <!-- Selector de Estándar / Norma -->
+        <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-card); padding: 3px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <label for="selectAuditStandard" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;" data-i18n="audit.select_standard_label">Norma:</label>
+          <select id="selectAuditStandard" class="form-input" style="height: 28px; padding: 2px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent; cursor: pointer; min-width: 170px;">
+            <option value="nom070">NOM-070-SE-2024</option>
+            <option value="iso14044">ISO 14044:2006</option>
+            <option value="iso14067">ISO 14067:2018</option>
+            <option value="ghg_protocol">GHG Protocol (Scope 3)</option>
+          </select>
+        </div>
+
+        <!-- Descargar Plantilla CSV -->
+        <button class="btn btn-secondary btn-sm" id="btnDownloadChecklistTemplate" title="Descargar plantilla CSV para checklists personalizados" data-i18n="audit.download_template">
+          📄 Plantilla CSV
+        </button>
+
+        <!-- Subir / Importar Checklist Propio -->
+        <button class="btn btn-secondary btn-sm" id="btnImportChecklistCsv" title="Importar o subir un checklist normativo propio desde CSV" data-i18n="audit.import_csv">
+          📤 Subir Checklist
+        </button>
+        <input type="file" id="inputImportChecklistFile" accept=".csv" style="display: none;">
+
+        <!-- Descargar Expediente ZIP -->
+        <button class="btn btn-secondary btn-sm" id="btnExportAuditZip" title="Descargar paquete ZIP con dictamen y evidencias" data-i18n="audit.export_zip">
+          Descargar Expediente ZIP 🡇
+        </button>
+
+        <!-- Firmar Dictamen -->
+        <button class="btn btn-primary btn-sm" id="btnSignAuditDictamen" data-i18n="audit.sign_btn">
+          Firmar Dictamen Final ✓
+        </button>
+      </div>
+    </div>
+
+    <!-- Compliance Gauge Card -->
+    <div class="kpi-card" style="margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: 700; color: var(--text-muted);" id="auditComplianceLabel">● Pendiente de Selección de Norma por el Auditor</span>
+        <span class="mono" style="font-size: 10.5px; color: var(--text-muted);" id="auditDigitalSeal">Sello SHA-256: Sin certificar</span>
+      </div>
+      <div style="height: 8px; background: var(--bg-muted); border-radius: 4px; overflow: hidden; display: flex;">
+        <div id="auditProgressBar" style="width: 0%; background: var(--accent-emerald); height: 100%;"></div>
+      </div>
+    </div>
+
+    <!-- Tabla Cláusula por Cláusula -->
+    <div class="table-card">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-i18n="audit.col_clause">Cláusula ISO / NOM-070</th>
+            <th data-i18n="audit.col_criteria">Criterio Técnico Evaluado</th>
+            <th data-i18n="audit.col_evidence">Evidencia del Modelo</th>
+            <th data-i18n="audit.col_status">Dictamen</th>
+            <th data-i18n="audit.col_verifier">Verificador</th>
+            <th data-i18n="audit.col_action">Acción</th>
+          </tr>
+        </thead>
+        <tbody id="auditClausesTableBody">
+          <!-- Renderizado dinámico -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- 10. MODAL: BÓVEDA DE DOCUMENTOS SQL, EXCEL, PDF (#modalDocuments) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalDocuments" role="dialog" aria-modal="true" aria-labelledby="modalDocsTitle">
+    <div class="modal-dialog" style="max-width: 860px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700;" id="modalDocsTitle" data-i18n="vault.title">Bóveda de Documentos & Base de Datos</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="vault.subtitle">
+            Custodia persistente de archivos SQL, Excel (.xlsx/.csv), informes PDF y evidencias creados por Analistas, Auditores y Clientes
+          </p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseDocsModal" aria-label="Cerrar Bóveda">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Subir nuevo archivo -->
+        <div id="vaultUploadBox" style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
+          <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 10px;" data-i18n="vault.upload_title">Subir Nuevo Archivo o Script a la Bóveda</h4>
+          <form id="formUploadDocument" onsubmit="return false;" style="display: grid; grid-template-columns: 2fr 1fr 140px; gap: 10px; align-items: flex-end;">
+            <div>
+              <label class="form-label" data-i18n="docs.title_label">Título / Descripción del Archivo</label>
+              <input type="text" class="form-input" id="inputDocTitle" placeholder="Ej. Factura CFE Mayo 2026 / Certificado OEC / Balances" required>
+            </div>
+            <div>
+              <label class="form-label" data-i18n="docs.file_label">Seleccionar Archivo Local</label>
+              <input type="file" id="inputFileDocument" class="form-input" style="padding-top: 5px; height: 36px;" accept=".sql,.xlsx,.xls,.csv,.pdf,.json,.zip,.png,.jpg" required>
+            </div>
+            <button type="submit" class="btn btn-primary" style="height: 36px;" id="btnSubmitDocUpload" data-i18n="vault.upload_btn">
+              Subir a Bóveda ➔
+            </button>
+          </form>
+          <div style="font-size: 9.5px; color: var(--text-dim); margin-top: 6px;" class="mono">
+            Formatos admitidos: .sql (scripts/dumps), .xlsx/.csv (Excel), .pdf (informes/recibos), .json (modelos), .zip (expedientes)
+          </div>
+        </div>
+
+        <!-- Tabla de Documentos Almacenados -->
+        <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 8px;" data-i18n="vault.table_title">Archivos Custodiados en Base de Datos Local</h4>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="vault.col_title">Título / Documento</th>
+              <th data-i18n="vault.col_type">Tipo</th>
+              <th data-i18n="vault.col_size">Tamaño</th>
+              <th data-i18n="vault.col_uploader">Subido Por</th>
+              <th data-i18n="vault.col_date">Fecha & Sello SHA-256</th>
+              <th data-i18n="vault.col_download">Acción</th>
+            </tr>
+          </thead>
+          <tbody id="docsTableBody">
+            <!-- Renderizado dinámico -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 10.5px; color: var(--text-muted);" data-i18n="vault.sha_custody_note">● Archivos custodiados en SQLite local con verificación de hash SHA-256.</span>
+        <button class="btn btn-secondary" id="btnDoneDocsModal" data-i18n="vault.close_btn">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 11. MODAL: CONECTAR PROCESOS EN EL LIENZO (#modalConnectNodes) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalConnectNodes">
+    <div class="modal-dialog" style="max-width: 480px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 16px; font-weight: 700;" data-i18n="connect.title">Conectar Procesos en el Lienzo</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="connect.subtitle">Establece un enlace tecnosférico o flujo de materia/energía entre etapas</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseConnectModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="padding: 10px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 11px;">
+          <div>Source: <strong id="connectSourceLabel">Process A</strong></div>
+          <div style="margin-top: 4px;">Destination: <strong id="connectTargetLabel">Process B</strong></div>
+        </div>
+
+        <form id="formConnectNodes" onsubmit="return false;">
+          <div class="form-group">
+            <label class="form-label" data-i18n="connect.flow_name_label">Seleccionar Flujo de Salida o Especificar Nombre</label>
+            <select class="form-input" id="selectConnectSourceFlow" style="margin-bottom: 6px; font-size: 11px;">
+              <option value="">-- Select output from source process --</option>
+            </select>
+            <input type="text" class="form-input" id="inputConnectFlowName" value="Clear PET preform" required placeholder="Name of transferred flow...">
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <div class="form-group">
+              <label class="form-label" data-i18n="connect.amount_label">Cantidad Transferida</label>
+              <input type="number" step="0.001" class="form-input mono" id="inputConnectAmount" value="1.000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="connect.unit_label">Unidad de Medida</label>
+              <input type="text" class="form-input mono" id="inputConnectUnit" value="kg" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; height: 38px; margin-top: 6px;" id="btnConfirmConnect" data-i18n="connect.submit_btn">
+            Crear Conexión en Lienzo ➔
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 12. MODAL WIZARD: + NUEVO SISTEMA PRODUCTO (#modalWizard) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalWizard">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700;" data-i18n="wiz.title">Nuevo Sistema Producto</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="wiz.subtitle">Definición de objetivo, alcance, unidad funcional y base de datos base (ISO 14040/14044)</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseWizardModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="formWizard" onsubmit="return false;">
+          <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.name_label">Nombre del Sistema Producto</label>
+              <input type="text" class="form-input" id="wizSystemName" placeholder="Ej. Envase Biodegradable PLA 500ml" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.code_label">Código / SKU (Automático)</label>
+              <input type="text" class="form-input mono" id="wizSystemCode" placeholder="SKU-AUTO" readonly style="background: var(--bg-subtle); color: var(--accent-emerald); font-weight: 700;">
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.cat_label">Sector / Categoría Industrial</label>
+              <select class="form-input" id="wizSystemCategory">
+                <option value="Polímeros & Envases Termoformados" selected>Polímeros & Envases Termoformados</option>
+                <option value="Agroindustria & Alimentos">Agroindustria & Alimentos</option>
+                <option value="Energía & Combustibles">Energía & Combustibles</option>
+                <option value="Construcción & Edificación">Construcción & Edificación</option>
+                <option value="Química & Farmacéutica">Química & Farmacéutica</option>
+                <option value="Metales & Minería">Metales & Minería</option>
+                <option value="Textil & Calzado">Textil & Calzado</option>
+                <option value="Electrónica & Componentes">Electrónica & Componentes</option>
+                <option value="Gestión de Residuos & Reciclaje">Gestión de Residuos & Reciclaje</option>
+                <option value="Transporte & Movilidad">Transporte & Movilidad</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.geo_label">Geografía del Estudio</label>
+              <select class="form-input" id="wizSystemGeo">
+                <option value="[MX] México (Red Nacional CFE)" selected>[MX] México (Red Nacional CFE)</option>
+                <option value="[GLO] Global (Promedio Mundial)">[GLO] Global (Promedio Mundial)</option>
+                <option value="[US] Estados Unidos (US-EI)">[US] Estados Unidos (US-EI)</option>
+                <option value="[RER] Europa (Mix Europeo RER)">[RER] Europa (Mix Europeo RER)</option>
+                <option value="[BR] Brasil">[BR] Brasil</option>
+                <option value="[CO] Colombia">[CO] Colombia</option>
+                <option value="[CL] Chile">[CL] Chile</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 140px 140px 1fr; gap: 14px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.amount_label">Valor Cuantitativo UF</label>
+              <input type="number" step="0.001" class="form-input mono" id="wizSystemAmount" value="1.000" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.unit_label">Unidad de Medida</label>
+              <select class="form-input mono" id="wizSystemUnit">
+                <option value="u" selected>u (pieza / unidad)</option>
+                <option value="kg">kg (kilogramo)</option>
+                <option value="t">t (tonelada métrica)</option>
+                <option value="m3">m³ (metro cúbico)</option>
+                <option value="l">l (litro)</option>
+                <option value="kWh">kWh (kilovatio-hora)</option>
+                <option value="MJ">MJ (megajulio)</option>
+                <option value="km">km (kilómetro)</option>
+                <option value="t*km">t·km (tonelada-kilómetro)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" data-i18n="wiz.limits_label">Límites del Sistema</label>
+              <select class="form-input" id="wizSystemLimits">
+                <option value="Cradle-to-Gate (De la cuna a la puerta)" selected>Cradle-to-Gate (De la cuna a la puerta)</option>
+                <option value="Cradle-to-Grave (De la cuna a la tumba)">Cradle-to-Grave (De la cuna a la tumba)</option>
+                <option value="Gate-to-Gate (De puerta a puerta)">Gate-to-Gate (De puerta a puerta)</option>
+                <option value="Cradle-to-Cradle (Circularidad total)">Cradle-to-Cradle (Circularidad total)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" data-i18n="wiz.db_label">Base de Datos LCI Base</label>
+            <div style="background: var(--accent-emerald-light); border: 1px solid var(--accent-emerald-border); border-radius: var(--radius-md); padding: 12px;">
+              <div style="font-size: 11.5px; font-weight: 700; color: var(--accent-emerald);">● ecoinvent 3.12 (Cutoff Unit)</div>
+              <div style="font-size: 10px; color: var(--text-secondary);">26,533 procesos unitarios oficiales conectados a la base local SQLite.</div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 10.5px; color: var(--text-muted);">● Se creará en modo borrador y se abrirá el lienzo de modelado.</span>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-secondary" id="btnCancelWizard" data-i18n="wiz.cancel">Cancelar</button>
+          <button class="btn btn-primary" id="btnSubmitWizard" data-i18n="wiz.submit">Crear y Abrir Lienzo ➔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 13. MODAL: CENTRO DE IMPORTACIÓN DE ARCHIVOS (REMOVIDO EN ESTE TIER) -->
+  <!-- ============================================================= -->
+
+  <!-- ============================================================= -->
+  <!-- 14. MODAL: INVITAR AUDITOR O CLIENTE (#modalInviteCollaborator) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalInviteCollaborator" role="dialog" aria-modal="true" aria-labelledby="modalInviteTitle">
+    <div class="modal-dialog" style="max-width: 520px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 17px; font-weight: 700;" id="modalInviteTitle">Invitar Colaborador al Proyecto</h2>
+          <p style="font-size: 11px; color: var(--text-muted);">Asigna un Auditor Líder acreditado o Cliente Productor para revisión</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseInviteModal">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="formInviteCollaborator" onsubmit="return false;">
+          <input type="hidden" id="inviteSystemId" value="">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Sistema Producto</label>
+            <input type="text" class="form-input" id="inviteSystemNameDisplay" readonly style="background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600;">
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Rol del Colaborador</label>
+            <select class="form-input" id="inviteCollaboratorRole">
+              <option value="auditor" selected>Auditor Líder (Revisión técnica, verificación y firma NOM-070)</option>
+              <option value="client">Cliente / Productor (Consulta de inventario LCI y aprobación)</option>
+              <option value="analyst">Analista de ACV (Edición y modelado conjunto)</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Nombre del Profesional</label>
+            <input type="text" class="form-input" id="inviteCollaboratorName" placeholder="Ej. Dr. Josué Arentería / Ing. Carlos Mendoza" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Correo Electrónico Oficial</label>
+            <input type="email" class="form-input" id="inviteCollaboratorEmail" placeholder="ejemplo@auditoria-ambiental.com" required>
+          </div>
+
+          <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 10.5px; color: var(--text-secondary);">
+            🔒 El colaborador invitado obtendrá acceso en su propio espacio de trabajo con permisos restringidos según su rol.
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btnCancelInvite">Cancelar</button>
+        <button class="btn btn-primary" id="btnSubmitInvite">Enviar Invitación & Asignar ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 15. MODAL ENRIQUECIDO DE AJUSTES & FACTURACIÓN (#modalSettings) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalSettings">
+    <div class="modal-dialog" style="max-width: 880px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 18px; font-weight: 700;" data-i18n="settings.title">Configuración & Facturación</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="settings.subtitle">Gestión de cuenta, espacio de trabajo, bases de datos y suscripción</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseSettingsModal">✕</button>
+      </div>
+
+      <div class="modal-body" style="display: grid; grid-template-columns: 190px 1fr; gap: 20px; padding: 18px 24px;">
+        <div style="display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--border-color); padding-right: 14px;">
+          <button class="nav-btn active" data-tab="billing" id="tabSettingsBilling" data-i18n="settings.tab_billing">Facturación & Plan</button>
+          <button class="nav-btn" data-tab="profile" id="tabSettingsProfile" data-i18n="settings.tab_profile">Mi Perfil</button>
+          <button class="nav-btn" data-tab="workspace" id="tabSettingsWorkspace" data-i18n="settings.tab_workspace">Espacio de Trabajo</button>
+          <button class="nav-btn" data-tab="databases" id="tabSettingsDatabases" data-i18n="settings.tab_databases">Bases de Datos LCI</button>
+          <button class="nav-btn" data-tab="crypto" id="tabSettingsCrypto" data-i18n="settings.tab_crypto">Sello Criptográfico</button>
+        </div>
+
+        <div id="settingsContentArea">
+          <!-- Contenido dinámico de ajustes -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 10.5px; color: var(--text-muted);">● Configuración persistida localmente.</span>
+        <button class="btn btn-secondary" id="btnDoneSettings" data-i18n="settings.close">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: AGREGAR OBSERVACIÓN TÉCNICA A PROCESO (#modalAddProcessComment) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalAddProcessComment" role="dialog" aria-modal="true" aria-labelledby="titleAddProcessComment" style="display: none;">
+    <div class="modal-dialog" style="max-width: 520px; width: 95vw;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● NOTA TÉCNICA VINCULADA</span>
+          <h2 id="titleAddProcessComment" style="font-size: 16px; font-weight: 700;">Agregar Observación Técnica</h2>
+          <p id="subAddProcessComment" style="font-size: 11px; color: var(--text-muted);">Proceso: Inyección de Preformas PET</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseAddProcessComment" aria-label="Cerrar Modal">✕</button>
+      </div>
+      <div class="modal-body" style="padding: 16px 20px;">
+        <div style="margin-bottom: 12px;">
+          <label class="form-label" style="font-size: 11.5px; font-weight: 600; margin-bottom: 4px; display: block;">Tipo de Observación / Auditoría</label>
+          <select class="form-input" id="selectProcessCommentType" style="font-size: 12px; width: 100%;">
+            <option value="Observación Técnica">📝 Observación Técnica / Balance de Masa</option>
+            <option value="Hallazgo Normativo">🔍 Hallazgo Normativo ISO 14044 / NOM-070</option>
+            <option value="Verificación de Insumo">📊 Verificación de Factor de Emisión / Insumo</option>
+          </select>
+        </div>
+        <div style="margin-bottom: 12px;">
+          <label class="form-label" style="font-size: 11.5px; font-weight: 600; margin-bottom: 4px; display: block;">Contenido de la Nota Técnica</label>
+          <textarea class="form-input" id="inputProcessCommentText" rows="4" placeholder="Escribe aquí los detalles técnicos u observaciones para este proceso..." style="resize: vertical; font-size: 12px; width: 100%;"></textarea>
+        </div>
+        <div style="font-size: 10.5px; color: var(--text-muted); display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); padding: 6px 10px; border-radius: var(--radius-sm);">
+          <span id="commentAuthorDisplay">👤 Publicando como: Carla Méndez (Analista)</span>
+          <span>📌 Se ancla como nota adhesiva</span>
+        </div>
+      </div>
+      <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="btnCancelAddProcessComment">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btnSaveAddProcessComment">Guardar Nota Técnica ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 15. MODAL: EDITOR VISUAL DE PROCESO (PENPOT VISTA 1 PROCESS EDITOR) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalProcessEditor" role="dialog" aria-modal="true" aria-labelledby="procEditorTitle" style="display: none;">
+    <div class="modal-dialog" style="max-width: 1060px; width: 95vw;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● PENPOT VISTA 1 · VISUAL PROCESS EDITOR</span>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 id="procEditorTitle" style="font-size: 18px; font-weight: 700; margin: 0;" data-i18n="editor.title">Editor Interactivo de Proceso Unitario</h2>
+            <span id="procEditIdBadge" class="badge-pill badge-outline mono" style="font-size: 11.5px; color: var(--accent-emerald); font-weight: 700;">ID: #100001</span>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="editor.subtitle">Organización de insumos técnicos, balance de materia y energía y salidas del proceso (ISO 14044)</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseProcessEditor" aria-label="Cerrar Editor">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px;">
+        <!-- Metadatos Básicos -->
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+          <div>
+            <label class="form-label" data-i18n="editor.name_label">Nombre del Proceso</label>
+            <input type="text" class="form-input" id="procEditName" required>
+          </div>
+          <div>
+            <label class="form-label" data-i18n="editor.code_label">Código / ID</label>
+            <input type="text" class="form-input mono" id="procEditCode">
+          </div>
+          <div>
+            <label class="form-label" data-i18n="editor.category_label">Categoría / Sector</label>
+            <input type="text" class="form-input" id="procEditCategory">
+          </div>
+          <div>
+            <label class="form-label" data-i18n="editor.location_label">Ubicación / Geografía</label>
+            <input type="text" class="form-input" id="procEditLocation">
+          </div>
+        </div>
+
+        <!-- 3-Column Interactive Penpot Vista 1 Layout -->
+        <div style="display: grid; grid-template-columns: 310px 1fr 310px; gap: 14px; align-items: start;">
+          <!-- Columna 1: ENTRADAS / INPUTS (Dropzone) -->
+          <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; min-height: 380px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--accent-blue);">🡇 <span data-i18n="editor.tab_inputs">ENTRADAS / INPUTS (FLUJOS)</span> (<span id="procEditorInputCount">0</span>)</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnAddProcInput" style="padding: 2px 6px; font-size: 10px;" data-i18n="editor.add_input">+ Añadir Flujo</button>
+            </div>
+            <div style="font-size: 9.5px; color: var(--text-dim); margin-bottom: 8px;">Flujos de productos consumidos + Proceso proveedor asignado</div>
+            <div id="procEditorInputsContainer" style="display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; max-height: 340px; padding-right: 2px;">
+              <!-- Tarjetas dinámicas de inputs -->
+            </div>
+          </div>
+
+          <!-- Columna 2: NODO MAESTRO CENTRAL & BALANCE DE MASA -->
+          <div style="background: #FFFFFF; border: 2px solid var(--accent-emerald-border); border-radius: var(--radius-lg); padding: 16px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow-sm);">
+            <div style="text-align: center;">
+              <span class="badge-pill badge-emerald">PRIMARY UNIT PROCESS</span>
+              <h3 id="procEditMasterTitle" style="font-size: 14px; font-weight: 700; margin-top: 6px; color: var(--text-primary);">PET Preform Injection Molding</h3>
+              <div id="procEditMasterGeo" style="font-size: 10px; color: var(--text-muted);">[MX] Polymer Transformation</div>
+            </div>
+
+            <!-- Flujo de Referencia -->
+            <div style="background: var(--accent-emerald-light); border: 1px solid var(--accent-emerald-border); border-radius: var(--radius-md); padding: 10px 12px;">
+              <div style="font-size: 10.5px; font-weight: 700; color: var(--accent-emerald); margin-bottom: 6px;" data-i18n="editor.ref_box_title">★ QUANTITATIVE REFERENCE (FLOW)</div>
+              <div style="display: flex; flex-direction: column; gap: 6px;">
+                <input type="text" class="form-input" id="procEditRefFlowName" placeholder="Quantitative reference flow name" style="font-size: 11px; height: 30px;" data-i18n-placeholder="editor.ref_name_label">
+                <div style="display: flex; gap: 6px;">
+                  <input type="number" step="0.001" class="form-input mono" id="procEditRefAmount" value="1.000" style="font-size: 11px; height: 30px; width: 100px;">
+                  <input type="text" class="form-input mono" id="procEditRefUnit" value="kg" style="font-size: 11px; height: 30px; width: 60px;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Indicador Reactivo de Balance de Masa -->
+            <div id="procEditorMassBalanceBox" style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 10px 12px; font-family: var(--font-mono); font-size: 11px;">
+              <div style="font-size: 10px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; font-family: var(--font-sans);">MASS CONSERVATION ISO 14044 (kg):</div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                <span>Total Inputs:</span>
+                <strong id="procBalanceInVal" style="color: var(--accent-blue);">0.000 kg</strong>
+              </div>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span>Total Outputs:</span>
+                <strong id="procBalanceOutVal" style="color: var(--accent-emerald);">0.000 kg</strong>
+              </div>
+              <div style="border-top: 1px solid var(--border-color); padding-top: 4px; display: flex; justify-content: space-between; align-items: center;">
+                <span>Difference (Δ):</span>
+                <span id="procBalanceDeltaBadge" class="badge-pill badge-emerald">0.000 kg (100% Balanced)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Columna 3: SALIDAS / RESIDUOS / EMISIONES (Dropzone) -->
+          <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; display: flex; flex-direction: column; min-height: 380px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--accent-emerald);">🡆 <span data-i18n="editor.tab_outputs">SALIDAS / OUTPUTS (FLUJOS)</span> (<span id="procEditorOutputCount">0</span>)</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnAddProcOutput" style="padding: 2px 6px; font-size: 10px;" data-i18n="editor.add_output">+ Añadir Flujo</button>
+            </div>
+            <div style="font-size: 9.5px; color: var(--text-dim); margin-bottom: 8px;">Flujo de referencia principal + Residuos (Waste) y Emisiones</div>
+            <div id="procEditorOutputsContainer" style="display: flex; flex-direction: column; gap: 6px; flex: 1; overflow-y: auto; max-height: 340px; padding-right: 2px;">
+              <!-- Tarjetas dinámicas de outputs -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end;">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelProcessEditor" data-i18n="editor.cancel_btn">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSaveProcessEditor" data-i18n="editor.save_btn">Guardar Cambios en el Proceso ➔</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 15.1. MODAL: SELECCIONAR FLUJO EXISTENTE DE BASE DE DATOS LCI -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalSelectDbFlow" role="dialog" aria-modal="true" aria-labelledby="selectFlowTitle" style="display: none; z-index: 1100;">
+    <div class="modal-dialog" style="max-width: 660px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● OPENLCA ONTOLOGY · FLOW SELECTOR</span>
+          <h2 id="selectFlowTitle" style="font-size: 17px; font-weight: 700;" data-i18n="dbflow.title">Seleccionar Flujo (Flows)</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="dbflow.subtitle">Selecciona un flujo de la base de datos (ecoinvent / propios) para agregarlo a los intercambios del proceso.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseSelectFlowModal" aria-label="Cerrar Selector">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <input type="text" class="form-input" id="inputSearchDbFlows" placeholder="Buscar flujo por nombre (ej. electricity, water, polyethylene, CO2)..." style="flex: 1;" data-i18n-placeholder="dbflow.search_ph">
+          <select id="selectDbFlowType" class="form-input" style="width: 190px;">
+            <option value="ALL" data-i18n="dbflow.all_types">Todos los tipos de flujo</option>
+            <option value="PRODUCT_FLOW" data-i18n="dbflow.prod_type">⚙️ Product flow (Insumo)</option>
+            <option value="WASTE_FLOW" data-i18n="dbflow.waste_type">🗑️ Waste flow (Residuo)</option>
+            <option value="ELEMENTARY_FLOW" data-i18n="dbflow.elem_type">🍃 Elementary (Biosférico)</option>
+          </select>
+        </div>
+
+        <div id="dbFlowsListContainer" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+          <!-- Lista dinámica de flujos oficiales -->
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnOpenCreateCustomFlowModal" style="color: var(--accent-emerald); font-weight: 600; border-color: rgba(5, 150, 105, 0.4);">
+          ✨ + Crear Flujo Propio en Blanco (New Flow)
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary" id="btnCancelSelectFlowModal" data-i18n="dbflow.cancel">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 15.1.1. MODAL: CREAR FLUJO PROPIO EN BLANCO (ESTILO OPENLCA) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalCreateCustomFlow" role="dialog" aria-modal="true" aria-labelledby="createCustomFlowTitle" style="display: none; z-index: 1200;">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● OPENLCA ONTOLOGY · NEW FLOW</span>
+          <h2 id="createCustomFlowTitle" style="font-size: 16px; font-weight: 700;">Crear Nuevo Flujo (New Flow)</h2>
+          <p style="font-size: 11px; color: var(--text-muted);">Los intercambios de un proceso en ACV son estrictamente <strong>flujos</strong> (productos, residuos o elementales).</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseCreateCustomFlowModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body" style="display: flex; flex-direction: column; gap: 12px;">
+        <div>
+          <label class="form-label" style="font-size: 11px;">Name (Nombre del Flujo) *</label>
+          <input type="text" class="form-input" id="inputNewFlowName" placeholder="Ej. Resina Reciclada PCR o Botella PET 500ml" required>
+        </div>
+        <div>
+          <label class="form-label" style="font-size: 11px;">Description (Descripción técnica o estándar ISO)</label>
+          <textarea class="form-input" id="inputNewFlowDesc" rows="2" placeholder="Especificaciones químicas, pureza o estándar aplicable..."></textarea>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label class="form-label" style="font-size: 11px;">Flow type (Tipo de Flujo)</label>
+            <select class="form-input" id="selectNewFlowType">
+              <option value="PRODUCT_FLOW">⚙️ Product flow (Flujo de Producto)</option>
+              <option value="WASTE_FLOW">🗑️ Waste flow (Flujo de Residuo)</option>
+              <option value="ELEMENTARY_FLOW">🍃 Elementary flow (Biosférico)</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label" style="font-size: 11px;">Reference flow property</label>
+            <select class="form-input" id="selectNewFlowProperty">
+              <option value="Mass" data-unit="kg">⚖️ Mass (Masa - kg)</option>
+              <option value="Volume" data-unit="m3">💧 Volume (Volumen - m3)</option>
+              <option value="Energy" data-unit="kWh">⚡ Energy (Energía - kWh)</option>
+              <option value="Items" data-unit="u">📦 Number of items (Unidades - u)</option>
+              <option value="Transport" data-unit="t*km">🚚 Transport (t*km)</option>
+            </select>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <label class="form-label" style="font-size: 11px;">Unit (Unidad de Referencia)</label>
+            <input type="text" class="form-input mono" id="inputNewFlowUnit" value="kg" placeholder="kg, kWh, m3, u, t*km">
+          </div>
+          <div>
+            <label class="form-label" style="font-size: 11px;">Category (Destino en Explorador)</label>
+            <input type="text" class="form-input" value="Custom processes & flows" readonly style="background: var(--bg-muted); color: var(--text-muted); font-size: 11px;">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button type="button" class="btn btn-secondary" id="btnCancelCreateCustomFlow">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSaveCreateCustomFlow">Guardar Flujo ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 15.2. MODAL: SELECCIONAR PROCESO PROVEEDOR (ESTILO OPENLCA)   -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalSelectProvider" role="dialog" aria-modal="true" aria-labelledby="selectProviderTitle" style="display: none; z-index: 1150;">
+    <div class="modal-dialog" style="max-width: 680px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● PROVEEDOR OPENLCA · BASE DE DATOS</span>
+          <h2 id="selectProviderTitle" style="font-size: 17px; font-weight: 700;" data-i18n="provider.title">Seleccionar Proceso Proveedor del Flujo</h2>
+          <p id="selectProviderSubtitle" style="font-size: 11px; color: var(--text-muted);" data-i18n="provider.subtitle">
+            Procesos unitarios de ecoinvent 3.12 que producen este flujo como flujo de referencia
+          </p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseSelectProviderModal" aria-label="Cerrar Proveedores">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div style="margin-bottom: 10px;">
+          <input type="text" class="form-input" id="inputSearchProvider" placeholder="Filtrar proveedor o geografía [GLO, RER, MX]..." style="width: 100%;" data-i18n-placeholder="provider.search_ph">
+        </div>
+        <div id="providerListContainer" style="max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+          <!-- Lista dinámica de proveedores oficiales -->
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 10px; color: var(--text-muted);">● Vinculación estricta de procedencia conforme a ISO 14044 (Cradle-to-Gate).</span>
+        <button type="button" class="btn btn-secondary" id="btnCancelSelectProviderModal" data-i18n="provider.cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 16. MODAL: PANTALLA DE SUSCRIPCIÓN EXCLUSIVA PARA ANALISTA    -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalSubscription" role="dialog" aria-modal="true" aria-labelledby="subModalTitle" style="display: none;">
+    <div class="modal-dialog" style="max-width: 920px;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● ACTIVACIÓN DE ESPACIO · ANALISTA DE ACV</span>
+          <h2 id="subModalTitle" style="font-size: 20px; font-weight: 700;" data-i18n="sub.title">Planes de Suscripción ECONODE Studio</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="sub.subtitle">Selecciona tu plan para activar tu entorno de modelado de producto y compartir proyectos con Auditores y Clientes.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseSubModal" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-body" style="padding: 24px;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <!-- Plan Starter -->
+          <div style="border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="font-size: 15px; font-weight: 700;" data-i18n="sub.starter_title">Starter ACV</h3>
+              <p style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;" data-i18n="sub.starter_sub">Para consultores individuales y prototipado rápido.</p>
+              <div style="margin: 14px 0;">
+                <span style="font-size: 26px; font-weight: 700;">$99</span>
+                <span style="font-size: 11px; color: var(--text-muted);">USD / mes</span>
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; font-size: 11px; line-height: 1.8; color: var(--text-secondary);">
+                <li>✓ Hasta 5 Sistemas Producto</li>
+                <li>✓ ecoinvent 3.12 (Cutoff Unit)</li>
+                <li>✓ 1 Asiento de Analista</li>
+                <li>✓ Exportación básica a CSV</li>
+                <li>○ Sin firma criptográfica SHA-256</li>
+              </ul>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 18px;" onclick="window.EconodeApp.activateSubscription('starter')">Seleccionar Starter</button>
+          </div>
+
+          <!-- Plan Profesional (Recomendado) -->
+          <div style="border: 2px solid var(--accent-emerald); border-radius: var(--radius-lg); padding: 20px; background: #FFFFFF; position: relative; box-shadow: var(--shadow-md); display: flex; flex-direction: column; justify-content: space-between;">
+            <div style="position: absolute; top: -11px; left: 50%; transform: translateX(-50%); background: var(--accent-emerald); color: #FFFFFF; font-size: 9px; font-weight: 700; padding: 2px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.05em;">
+              Recomendado NOM-070
+            </div>
+            <div>
+              <h3 style="font-size: 15px; font-weight: 700; color: var(--accent-emerald);" data-i18n="sub.pro_title">Profesional Bureau</h3>
+              <p style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;" data-i18n="sub.pro_sub">Modelado completo, colaboración multi-rol y auditoría oficial.</p>
+              <div style="margin: 14px 0;">
+                <span style="font-size: 26px; font-weight: 700; color: var(--text-primary);">$240</span>
+                <span style="font-size: 11px; color: var(--text-muted);">USD / mes (facturación anual)</span>
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; font-size: 11px; line-height: 1.8; color: var(--text-secondary);">
+                <li>✓ <strong>Sistemas Producto Ilimitados</strong></li>
+                <li>✓ Base Completa ecoinvent 3.12 (26,533 procesos)</li>
+                <li>✓ <strong>Invitación ilimitada a Auditores y Clientes</strong></li>
+                <li>✓ Bóveda de Documentos por Proyecto compartida</li>
+                <li>✓ Exportaciones openLCA, ILCD, SimaPro y ZIP</li>
+                <li>✓ <strong>Sellos Criptográficos HMAC-SHA256 oficiales</strong></li>
+              </ul>
+            </div>
+            <button class="btn btn-primary" style="width: 100%; height: 38px; margin-top: 18px;" onclick="window.EconodeApp.activateSubscription('pro')" data-i18n="sub.pro_btn">
+              Activar Plan Profesional ➔
+            </button>
+          </div>
+
+          <!-- Plan Enterprise -->
+          <div style="border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 20px; background: var(--bg-card); display: flex; flex-direction: column; justify-content: space-between;">
+            <div>
+              <h3 style="font-size: 15px; font-weight: 700;" data-i18n="sub.enterprise_title">Enterprise Corporate</h3>
+              <p style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;" data-i18n="sub.enterprise_sub">Grandes corporativos e instituciones de certificación.</p>
+              <div style="margin: 14px 0;">
+                <span style="font-size: 26px; font-weight: 700;">$590</span>
+                <span style="font-size: 11px; color: var(--text-muted);">USD / mes</span>
+              </div>
+              <ul style="list-style: none; padding: 0; margin: 0; font-size: 11px; line-height: 1.8; color: var(--text-secondary);">
+                <li>✓ Todo lo del Plan Profesional</li>
+                <li>✓ Despliegue On-Premise o VPC privada</li>
+                <li>✓ Soporte técnico 24/7 y SLA del 99.9%</li>
+                <li>✓ Motor Matricial Leontief Tier 2 incluido</li>
+                <li>✓ SSO SAML / Okta / Azure AD</li>
+              </ul>
+            </div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 18px;" onclick="window.EconodeApp.activateSubscription('enterprise')">Contactar Enterprise</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span style="font-size: 10.5px; color: var(--text-muted);">● Los perfiles de Auditor y Cliente se activan sin costo adicional al compartirles proyectos.</span>
+        <button class="btn btn-secondary" id="btnSkipSubscription">Comenzar con Periodo de Prueba ➔</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA FLOTANTE DE SELECCIÓN ESTILO NOTION / MEDIUM (SIN TENER QUE SUBIR ARRIBA) -->
+  <div id="reportBubbleToolbar" style="display: none; position: absolute; z-index: 1000; background: #0F172A; border-radius: var(--radius-md); padding: 4px 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); display: none; align-items: center; gap: 4px; pointer-events: auto;">
+    <button type="button" class="bubble-btn" id="bubbleBold" title="Negrita (Ctrl+B)"><b>B</b></button>
+    <button type="button" class="bubble-btn" id="bubbleItalic" title="Cursiva (Ctrl+I)"><i>I</i></button>
+    <button type="button" class="bubble-btn" id="bubbleUnderline" title="Subrayado"><u>U</u></button>
+    <div style="height: 14px; width: 1px; background: rgba(255,255,255,0.2); margin: 0 2px;"></div>
+    <button type="button" class="bubble-btn" id="bubbleYellow" title="Subrayar Amarillo" style="background: #FEF08A; color: #854D0E; font-size: 10px;">🖍</button>
+    <button type="button" class="bubble-btn" id="bubbleGreen" title="Subrayar Verde (Conforme)" style="background: #BBF7D0; color: #166534; font-size: 10px;">🖍</button>
+    <button type="button" class="bubble-btn" id="bubbleClear" title="Quitar formato" style="font-size: 10px; color: #94A3B8;">✕</button>
+    <div style="height: 14px; width: 1px; background: rgba(255,255,255,0.2); margin: 0 2px;"></div>
+    <button type="button" class="bubble-btn" id="bubbleQuote" title="Crear Observación / Citar para Auditoría" style="font-size: 10.5px; padding: 2px 6px;">💬 Citar</button>
+  </div>
+
+  <!-- Scripts con Anti-Caché -->
+  <script src="js/i18n.js?v=20261012_i18n_canvas_buttons_v42"></script>
+  <script src="js/app.js?v=20261012_i18n_canvas_buttons_v42"></script>
+</body>
+</html>

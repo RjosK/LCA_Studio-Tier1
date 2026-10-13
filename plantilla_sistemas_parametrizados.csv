@@ -1,0 +1,6 @@
+nombre,capacidad_ml,peso_envase_g,tasa_reciclaje_pct,distancia_transporte_km,contenido_reciclado_pct
+Botellin PET 330 ml (Consumo Rapido),330,16.0,25.0,80,0.0
+Botella PET 500 ml Estandar,500,24.0,40.0,120,0.0
+Botella PET 1 Litro Familiar,1000,34.0,55.0,180,15.0
+Garrafa PET 1.5 L Alta Circularidad,1500,42.0,75.0,250,50.0
+Bidon PET 5 Litros Agua Purificada,5000,98.0,60.0,350,20.0

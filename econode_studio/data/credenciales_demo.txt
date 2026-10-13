@@ -1,0 +1,35 @@
+# ==============================================================================
+# ECONODE STUDIO - ARCHIVO INTERNO DE CREDENCIALES (SOLO PARA CONSULTA LOCAL)
+# ==============================================================================
+# Este archivo es para consulta directa del administrador/desarrollador.
+# Las contraseñas en el backend se procesan con hashing criptográfico (PBKDF2-HMAC-SHA256).
+# ==============================================================================
+
+[USUARIOS OFICIALES / CUENTAS PRECONFIGURADAS]
+
+1. ANALISTA DE CICLO DE VIDA (CREADOR)
+   - Rol: analyst
+   - Nombre: Carla Méndez
+   - Correo: carla.mendez@econode.io
+   - Usuario: analista
+   - Contraseña: Carla123!
+   - Permisos: Modelado de sistemas, balances de masa, edición de lienzo, catálogo LCI, importación CSV.
+
+2. AUDITOR LÍDER ACV (VERIFICADOR OFICIAL)
+   - Rol: auditor
+   - Nombre: Josué Arentería
+   - Correo: josuearenteriaz09@gmail.com
+   - Usuario: auditor
+   - Contraseña: Josue123!
+   - Permisos: Checklist normativo NOM-070-SE-2024, observaciones y dictamen, firma digital HMAC-SHA256.
+
+3. CLIENTE / PRODUCTOR INDUSTRIAL (EMPRESA AUDITADA)
+   - Rol: client
+   - Nombre: Elena Ramírez
+   - Correo: elena.ramirez@biopack-mexico.com
+   - Usuario: cliente
+   - Contraseña: Elena123!
+   - Permisos: Bóveda documental, carga de facturas y evidencias de planta, consulta de reporte final.
+
+==============================================================================
+

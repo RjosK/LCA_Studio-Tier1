@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+
+# Environment Variables & Secrets
+.env
+.env.local
+
+# Heavy Database & Raw ecoinvent Dumps (> 100MB violates GitHub limits)
+ecoinvent/
+ecoinvent_cutoff.db
+*.zolca
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Bóveda temporal local
+econode_studio/data/documents/*
+ECONODE_VAULT/
+
+# CSV data dumps generados para migración (los datos ya están en Supabase)
+supabase/data/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
