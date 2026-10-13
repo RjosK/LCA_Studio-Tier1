@@ -1,12 +1,10 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index.py" },
-    { "source": "/css/(.*)", "destination": "/econode_studio/web/css/$1" },
-    { "source": "/js/(.*)", "destination": "/econode_studio/web/js/$1" },
-    { "source": "/", "destination": "/econode_studio/web/index.html" },
-    { "source": "/index.html", "destination": "/econode_studio/web/index.html" },
-    { "source": "/(.*)", "destination": "/econode_studio/web/$1" }
+    { "source": "/api/:match*", "destination": "/api/index.py?__slug=:match*" },
+    { "source": "/css/(.*)", "destination": "/css/$1" },
+    { "source": "/js/(.*)", "destination": "/js/$1" },
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/$1" }
   ]
 }
-
