@@ -769,7 +769,7 @@ def get_top_lci_categories(conn: sqlite3.Connection, limit: int = 50) -> List[Di
             JOIN processes p ON p.category_id = c.id
             WHERE c.id != 999999 AND c.name NOT LIKE '%propio%'
             GROUP BY c.id, c.name
-            HAVING process_count > 0
+            HAVING count(p.id) > 0
         )
         ORDER BY CASE WHEN id = 999999 OR name LIKE '%propio%' THEN 0 ELSE 1 END,
                  process_count DESC

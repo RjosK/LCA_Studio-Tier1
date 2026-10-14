@@ -17,6 +17,9 @@ for p in (ROOT_DIR, STUDIO_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
+import json
+import traceback
+
 from econode_studio.server import EconodeRequestHandler
 
 # Clase 'handler' esperada nativamente por el runtime de Python en Vercel
@@ -50,18 +53,55 @@ class handler(EconodeRequestHandler):
         if self.path.startswith("/api/index.py/"):
             self.path = self.path.replace("/api/index.py/", "/api/", 1)
 
+    def _send_serverless_error(self, exc: Exception, status: int = 500):
+        tb = traceback.format_exc()
+        sys.stderr.write(f"[ECONODE VERCEL SERVERLESS ERROR] {tb}\n")
+        try:
+            body = json.dumps({
+                "status": "error",
+                "message": str(exc),
+                "type": type(exc).__name__,
+                "traceback": tb
+            }, indent=2).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.end_headers()
+            self.wfile.write(body)
+            try:
+                self.wfile.flush()
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def do_GET(self):
-        self._resolve_real_path()
-        super().do_GET()
+        try:
+            self._resolve_real_path()
+            super().do_GET()
+        except Exception as e:
+            self._send_serverless_error(e)
 
     def do_POST(self):
-        self._resolve_real_path()
-        super().do_POST()
+        try:
+            self._resolve_real_path()
+            super().do_POST()
+        except Exception as e:
+            self._send_serverless_error(e)
 
     def do_OPTIONS(self):
-        self._resolve_real_path()
-        super().do_OPTIONS()
+        try:
+            self._resolve_real_path()
+            super().do_OPTIONS()
+        except Exception as e:
+            self._send_serverless_error(e)
 
     def do_HEAD(self):
-        self._resolve_real_path()
-        super().do_HEAD()
+        try:
+            self._resolve_real_path()
+            super().do_HEAD()
+        except Exception as e:
+            self._send_serverless_error(e)

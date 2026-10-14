@@ -78,13 +78,17 @@ def init_auth_db(default_accounts: Optional[List[Dict[str, Any]]] = None) -> Non
                 ))
 
 
-def _row_to_user_dict(row: sqlite3.Row) -> Dict[str, Any]:
-    """Convierte una fila de SQLite a un diccionario deserializando permissions_json."""
+def _row_to_user_dict(row: Any) -> Dict[str, Any]:
+    """Convierte una fila de SQLite/Postgres a un diccionario deserializando permissions_json y normalizando fechas."""
     d = dict(row)
     try:
         d["permissions"] = json.loads(d.get("permissions_json") or "[]")
     except Exception:
         d["permissions"] = []
+    for k in ("created_at", "updated_at"):
+        val = d.get(k)
+        if val is not None and hasattr(val, "isoformat"):
+            d[k] = val.isoformat()
     return d
 
 

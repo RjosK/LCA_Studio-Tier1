@@ -80,7 +80,31 @@ from application import (
 from infrastructure import get_active_db_connection, get_configured_client_id
 
 WEB_DIR = os.path.join(STUDIO_DIR, "web")
+if not os.path.exists(WEB_DIR):
+    public_alt = os.path.join(os.path.dirname(STUDIO_DIR), "public")
+    if os.path.exists(public_alt):
+        WEB_DIR = public_alt
+    else:
+        WEB_DIR = os.path.abspath(os.curdir)
+
 TEMPLATE_CSV_PATH = os.path.join(os.path.dirname(STUDIO_DIR), "plantilla_sistemas_parametrizados.csv")
+
+def _json_serializer(obj: Any) -> Any:
+    """Serializador universal de tipos PostgreSQL / SQLite para JSON REST API."""
+    if hasattr(obj, "isoformat"):
+        return obj.isoformat()
+    try:
+        import decimal
+        if isinstance(obj, decimal.Decimal):
+            return float(obj)
+    except Exception:
+        pass
+    if isinstance(obj, bytes):
+        try:
+            return obj.decode("utf-8")
+        except Exception:
+            return str(obj)
+    return str(obj)
 
 class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -128,7 +152,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
             return {}
 
     def _send_json(self, data: Any, status=200):
-        body_bytes = json.dumps(data, ensure_ascii=False, indent=2).encode("utf-8")
+        body_bytes = json.dumps(data, ensure_ascii=False, indent=2, default=_json_serializer).encode("utf-8")
         self._set_headers(status, "application/json", extra_headers={"Content-Length": str(len(body_bytes))})
         self.wfile.write(body_bytes)
         try:
