@@ -159,6 +159,9 @@ const I18N_DICTIONARY = {
     "canvas.toggle_inspector_tip": "Mostrar/Ocultar Inspector de Proceso (Panel Derecho)",
     "canvas.toggle_full": "Maximizar",
     "canvas.toggle_full_tip": "Maximizar Lienzo (Ocultar ambos paneles laterales)",
+    "canvas.zoom_in": "Acercar (Ctrl + Rueda Arriba)",
+    "canvas.zoom_out": "Alejar (Ctrl + Rueda Abajo)",
+    "canvas.zoom_reset": "Restablecer Escala (100%)",
 
     // Catalog LCI
     "catalog.title": "Explorador de Procesos LCI (ecoinvent 3.12)",
@@ -572,6 +575,9 @@ const I18N_DICTIONARY = {
     "canvas.toggle_inspector_tip": "Show/Hide Process Inspector (Right Panel)",
     "canvas.toggle_full": "Maximize",
     "canvas.toggle_full_tip": "Maximize Canvas (Hide both side panels)",
+    "canvas.zoom_in": "Zoom In (Ctrl + Wheel Up)",
+    "canvas.zoom_out": "Zoom Out (Ctrl + Wheel Down)",
+    "canvas.zoom_reset": "Reset Zoom (100%)",
 
     // Catalog LCI
     "catalog.title": "LCI Process Explorer (ecoinvent 3.12)",

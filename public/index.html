@@ -699,6 +699,15 @@
       </div>
 
       <div style="display: flex; align-items: center; gap: 8px;">
+        <!-- Control de Zoom en Toolbar (Segmented Apple HIG) -->
+        <div class="sankey-toggle-group" id="canvasZoomToolbarGroup" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Control de Zoom">
+          <button type="button" class="segmented-btn" id="btnTbZoomOut" title="Alejar (Ctrl + Rueda Abajo)" data-i18n-title="canvas.zoom_out" style="padding: 4px 7px; font-size: 11px; font-weight: 700;">−</button>
+          <button type="button" class="segmented-btn mono" id="btnTbZoomReset" title="Restablecer escala al 100%" data-i18n-title="canvas.zoom_reset" style="padding: 4px 8px; font-size: 10.5px; min-width: 46px; text-align: center;">
+            <span id="canvasTbZoomPercentLabel">100%</span>
+          </button>
+          <button type="button" class="segmented-btn" id="btnTbZoomIn" title="Acercar (Ctrl + Rueda Arriba)" data-i18n-title="canvas.zoom_in" style="padding: 4px 7px; font-size: 11px; font-weight: 700;">+</button>
+        </div>
+
         <!-- Modo Sankey Segmented Control -->
         <div class="sankey-toggle-group" id="canvasSankeyToolbarGroup" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Visualización Sankey">
           <button class="segmented-btn active" id="btnSankeyModeNone" data-sankey="none" data-i18n="canvas.sankey_std" style="padding: 4px 8px; font-size: 10px;">Estándar</button>
@@ -786,6 +795,19 @@
             <button class="btn btn-primary btn-sm canvas-slide-pill" id="btnSlideToTableView" title="Deslizar hacia abajo a la vista de hoja de cálculo" data-i18n-title="canvas.slide_to_table_tip">
               <span data-i18n="canvas.slide_to_table">📊 Deslizar a Hoja de Cálculo (Excel)</span>
               <span class="slide-down-arrow" style="font-size: 12px; margin-left: 6px;">▼</span>
+            </button>
+          </div>
+
+          <!-- Dock Flotante de Zoom (Apple HIG) -->
+          <div class="canvas-floating-zoom" id="canvasFloatingZoom" role="group" aria-label="Control de Zoom del Lienzo">
+            <button type="button" class="btn-zoom-action" id="btnZoomOut" title="Alejar (Ctrl + Rueda Abajo)" data-i18n-title="canvas.zoom_out">
+              <span style="font-size: 13px; font-weight: 700; line-height: 1;">−</span>
+            </button>
+            <button type="button" class="btn-zoom-value mono" id="btnZoomReset" title="Restablecer Escala (100%)" data-i18n-title="canvas.zoom_reset">
+              <span id="canvasZoomPercentLabel">100%</span>
+            </button>
+            <button type="button" class="btn-zoom-action" id="btnZoomIn" title="Acercar (Ctrl + Rueda Arriba)" data-i18n-title="canvas.zoom_in">
+              <span style="font-size: 13px; font-weight: 700; line-height: 1;">+</span>
             </button>
           </div>
         </div>

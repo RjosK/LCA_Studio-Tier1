@@ -754,6 +754,81 @@ body {
 }
 
 /* -------------------------------------------------------------
+   CANVAS ZOOM CONTROLS (Apple HIG Floating & Toolbar)
+------------------------------------------------------------- */
+.canvas-floating-zoom {
+  position: absolute;
+  bottom: 14px;
+  right: 20px;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 2px 4px;
+  user-select: none;
+}
+
+.btn-zoom-action {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-zoom-action:hover {
+  background: var(--bg-muted);
+  color: var(--text-primary);
+}
+
+.btn-zoom-action:active {
+  transform: scale(0.92);
+}
+
+.btn-zoom-value {
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 3px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 46px;
+  text-align: center;
+  font-feature-settings: "tnum";
+  transition: all 0.15s ease;
+}
+
+.btn-zoom-value:hover {
+  background: var(--bg-muted);
+  color: var(--accent-emerald);
+}
+
+.btn-zoom-value:active {
+  transform: scale(0.96);
+}
+
+#canvasZoomContainer {
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* -------------------------------------------------------------
    LCI SPREADSHEET TABLE (Excel / Numbers Ergonomics)
 ------------------------------------------------------------- */
 .lci-table-scroll-wrapper {

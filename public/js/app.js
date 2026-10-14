@@ -41,7 +41,8 @@
     tableFlowFilter: "ALL", // "ALL" | "INPUTS" | "OUTPUTS" | "CONNECTIONS"
     leftPanelVisible: true, // Visibilidad del catálogo (panel izquierdo)
     rightPanelVisible: true, // Visibilidad del inspector (panel derecho en diagrama)
-    rightPanelTableVisible: false // Visibilidad del inspector en modo tabla
+    rightPanelTableVisible: false, // Visibilidad del inspector en modo tabla
+    canvasZoom: 1.0 // Nivel de zoom del lienzo (0.5 a 1.75, 1.0 por defecto)
   };
 
   // =========================================================================
@@ -1039,21 +1040,86 @@
     ` : '';
 
     stage.innerHTML = `
-      <svg id="canvasSvgOverlay" style="position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none; z-index: 2;">
-      </svg>
-      <div id="canvasNodesLayer" style="position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none; z-index: 4;"></div>
-      <div id="canvasStickyNotesLayer" style="position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
-      ${emptyGuideHtml}
+      <div id="canvasZoomContainer" style="position: absolute; top:0; left:0; width: 100%; height: 100%; min-width: 2400px; min-height: 1600px; transform-origin: 0 0; transform: scale(${state.canvasZoom || 1}); transition: transform 0.12s ease-out;">
+        <svg id="canvasSvgOverlay" style="position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none; z-index: 2;">
+        </svg>
+        <div id="canvasNodesLayer" style="position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none; z-index: 4;"></div>
+        <div id="canvasStickyNotesLayer" style="position: absolute; top:0; left:0; width: 100%; height: 100%; pointer-events: none; z-index: 10;"></div>
+        ${emptyGuideHtml}
+      </div>
     `;
 
-    // Deseleccionar al hacer clic sobre el fondo del lienzo
+    // Configurar paneo arrastrando sobre el fondo del lienzo y zoom con rueda (Ctrl + Rueda)
+    let didPan = false;
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let scrollStartX = 0;
+    let scrollStartY = 0;
+
+    if (!stage.dataset.panBound) {
+      stage.dataset.panBound = "true";
+
+      stage.addEventListener("mousedown", (e) => {
+        if (e.target.closest(".process-node-card") || 
+            e.target.closest(".btn-node-comment") || 
+            e.target.closest(".node-port") || 
+            e.target.closest(".canvas-floating-zoom") ||
+            e.target.closest(".canvas-bottom-dock") ||
+            e.target.closest(".canvas-edge-group") ||
+            e.target.closest(".canvas-sticky-note") ||
+            (e.button !== 0 && e.button !== 1)) {
+          return;
+        }
+        isPanning = true;
+        didPan = false;
+        panStartX = e.clientX;
+        panStartY = e.clientY;
+        scrollStartX = stage.scrollLeft;
+        scrollStartY = stage.scrollTop;
+      });
+
+      window.addEventListener("mousemove", (e) => {
+        if (!isPanning) return;
+        const dx = e.clientX - panStartX;
+        const dy = e.clientY - panStartY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+          didPan = true;
+          stage.style.cursor = "grabbing";
+          stage.scrollLeft = scrollStartX - dx;
+          stage.scrollTop = scrollStartY - dy;
+        }
+      });
+
+      window.addEventListener("mouseup", () => {
+        if (isPanning) {
+          isPanning = false;
+          stage.style.cursor = "";
+          setTimeout(() => { didPan = false; }, 50);
+        }
+      });
+
+      // Zoom con Ctrl + Rueda o gesto pinch en trackpad
+      stage.addEventListener("wheel", (e) => {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+          applyCanvasZoom((state.canvasZoom || 1.0) * zoomFactor, e.clientX, e.clientY);
+        }
+      }, { passive: false });
+    }
+
+    // Deseleccionar al hacer clic sobre el fondo del lienzo (solo si no se estaba paneando)
     if (!stage.dataset.bgClickBound) {
       stage.dataset.bgClickBound = "true";
       stage.addEventListener("click", (e) => {
+        if (didPan) return;
         if (!e.target.closest(".process-node-card") && 
             !e.target.closest(".btn-node-comment") && 
             !e.target.closest(".node-port") && 
             !e.target.closest(".canvas-top-bar") &&
+            !e.target.closest(".canvas-floating-zoom") &&
+            !e.target.closest(".canvas-bottom-dock") &&
             !e.target.closest(".canvas-edge-group") &&
             !e.target.closest(".canvas-edge-badge")) {
           inspectNode(null);
@@ -1080,8 +1146,9 @@
           try {
             const item = JSON.parse(rawData);
             const rect = stage.getBoundingClientRect();
-            const dropX = Math.max(20, e.clientX - rect.left - 100);
-            const dropY = Math.max(20, e.clientY - rect.top - 40);
+            const zoom = state.canvasZoom || 1;
+            const dropX = Math.max(20, Math.round((e.clientX - rect.left + stage.scrollLeft) / zoom - 100));
+            const dropY = Math.max(20, Math.round((e.clientY - rect.top + stage.scrollTop) / zoom - 40));
             addNodeToCanvas(item.name, item.category || item.cat, item.unit, dropX, dropY, item.inputs, item.outputs, item.process_id || item.id);
             if (state.paletteProcesses && (item.id || item.process_id)) {
               const pIdx = state.paletteProcesses.findIndex(p => String(p.id) === String(item.id) || String(p.process_id) === String(item.process_id || item.id));
@@ -1207,6 +1274,7 @@
     renderPaletteProcesses();
     updateSankeyLegend();
     renderCanvasStickyNotes();
+    updateZoomLabels();
   }
 
   function loadOfficial3ProcessModel() {
@@ -1629,12 +1697,13 @@
     const startY = e.clientY;
     const initialLeft = node.x || 60;
     const initialTop = node.y || 140;
+    const zoom = state.canvasZoom || 1.0;
 
     function onMouseMove(moveEvent) {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-      node.x = Math.max(10, initialLeft + dx);
-      node.y = Math.max(10, initialTop + dy);
+      const dx = (moveEvent.clientX - startX) / zoom;
+      const dy = (moveEvent.clientY - startY) / zoom;
+      node.x = Math.max(10, Math.round(initialLeft + dx));
+      node.y = Math.max(10, Math.round(initialTop + dy));
       el.style.left = `${node.x}px`;
       el.style.top = `${node.y}px`;
       renderCanvasEdges();
@@ -3398,17 +3467,61 @@
     }
   }
 
+  function updateZoomLabels() {
+    const pct = Math.round((state.canvasZoom || 1.0) * 100);
+    const labelFloat = document.getElementById("canvasZoomPercentLabel");
+    const labelTb = document.getElementById("canvasTbZoomPercentLabel");
+    if (labelFloat) labelFloat.textContent = `${pct}%`;
+    if (labelTb) labelTb.textContent = `${pct}%`;
+  }
+
+  function applyCanvasZoom(newZoom, mouseClientX, mouseClientY) {
+    const stage = document.getElementById("canvasStage");
+    const zoomContainer = document.getElementById("canvasZoomContainer");
+    if (!stage || !zoomContainer) return;
+
+    const oldZoom = state.canvasZoom || 1.0;
+    // Acotar el zoom entre 50% (0.50) y 175% (1.75) para un rango ergonómico suave
+    const clampedZoom = Math.max(0.5, Math.min(1.75, Math.round(newZoom * 100) / 100));
+    state.canvasZoom = clampedZoom;
+
+    // Calcular punto focal (cursor del ratón o centro de la vista visible)
+    const rect = stage.getBoundingClientRect();
+    const targetX = (mouseClientX !== undefined && mouseClientX !== null) ? mouseClientX : (rect.left + rect.width / 2);
+    const targetY = (mouseClientY !== undefined && mouseClientY !== null) ? mouseClientY : (rect.top + rect.height / 2);
+
+    const viewX = targetX - rect.left + stage.scrollLeft;
+    const viewY = targetY - rect.top + stage.scrollTop;
+
+    const canvasX = viewX / oldZoom;
+    const canvasY = viewY / oldZoom;
+
+    zoomContainer.style.transform = `scale(${clampedZoom})`;
+
+    // Ajustar scroll para mantener el punto focal
+    const newViewX = canvasX * clampedZoom;
+    const newViewY = canvasY * clampedZoom;
+    stage.scrollLeft = newViewX - (targetX - rect.left);
+    stage.scrollTop = newViewY - (targetY - rect.top);
+
+    updateZoomLabels();
+  }
+
   function switchCanvasViewMode(mode) {
     state.canvasViewMode = mode;
     const visualContainer = document.getElementById("canvasVisualStageContainer");
     const tableContainer = document.getElementById("canvasTableStageContainer");
     const btnVisual = document.getElementById("btnCanvasViewVisual");
     const btnTable = document.getElementById("btnCanvasViewTable");
+    const zoomTbGroup = document.getElementById("canvasZoomToolbarGroup");
+    const sankeyTbGroup = document.getElementById("canvasSankeyToolbarGroup");
 
     updateCanvasPanelLayout();
 
     if (btnVisual) btnVisual.classList.toggle("active", mode === "visual");
     if (btnTable) btnTable.classList.toggle("active", mode === "table");
+    if (zoomTbGroup) zoomTbGroup.style.display = mode === "table" ? "none" : "flex";
+    if (sankeyTbGroup) sankeyTbGroup.style.display = mode === "table" ? "none" : "flex";
 
     if (mode === "table") {
       if (visualContainer) {
@@ -6184,6 +6297,25 @@
     if (btnCollapseCat) btnCollapseCat.addEventListener("click", () => toggleLeftPanel(false));
     if (btnCollapseInsp) btnCollapseInsp.addEventListener("click", () => toggleRightPanel(false));
 
+    // Controles de Zoom del Lienzo (Toolbar & Floating Dock)
+    const btnZIn = document.getElementById("btnZoomIn");
+    const btnZOut = document.getElementById("btnZoomOut");
+    const btnZReset = document.getElementById("btnZoomReset");
+    const btnTbZIn = document.getElementById("btnTbZoomIn");
+    const btnTbZOut = document.getElementById("btnTbZoomOut");
+    const btnTbZReset = document.getElementById("btnTbZoomReset");
+
+    const doZoomIn = () => applyCanvasZoom((state.canvasZoom || 1.0) + 0.1);
+    const doZoomOut = () => applyCanvasZoom((state.canvasZoom || 1.0) - 0.1);
+    const doZoomReset = () => applyCanvasZoom(1.0);
+
+    if (btnZIn) btnZIn.addEventListener("click", doZoomIn);
+    if (btnTbZIn) btnTbZIn.addEventListener("click", doZoomIn);
+    if (btnZOut) btnZOut.addEventListener("click", doZoomOut);
+    if (btnTbZOut) btnTbZOut.addEventListener("click", doZoomOut);
+    if (btnZReset) btnZReset.addEventListener("click", doZoomReset);
+    if (btnTbZReset) btnTbZReset.addEventListener("click", doZoomReset);
+
     // Filtros de la Hoja de Cálculo LCI
     const inputTableSearch = document.getElementById("inputTableFilter");
     if (inputTableSearch) {
@@ -6432,6 +6564,17 @@
         if (tag !== "INPUT" && tag !== "TEXTAREA" && !document.activeElement.isContentEditable) {
           e.preventDefault();
           window.EconodeApp.removeNode(state.selectedNode.id);
+        }
+      } else if ((e.ctrlKey || e.metaKey) && state.currentView === "canvas" && state.canvasViewMode === "visual") {
+        if (e.key === "+" || e.key === "=") {
+          e.preventDefault();
+          applyCanvasZoom((state.canvasZoom || 1.0) + 0.1);
+        } else if (e.key === "-" || e.key === "_") {
+          e.preventDefault();
+          applyCanvasZoom((state.canvasZoom || 1.0) - 0.1);
+        } else if (e.key === "0") {
+          e.preventDefault();
+          applyCanvasZoom(1.0);
         }
       }
     });
@@ -6738,6 +6881,8 @@
     toggleRightPanel: (force) => toggleRightPanel(force),
     toggleFullCanvas: () => toggleFullCanvas(),
     updateCanvasPanelLayout: () => updateCanvasPanelLayout(),
+    applyCanvasZoom: (z, x, y) => applyCanvasZoom(z, x, y),
+    getZoom: () => state.canvasZoom || 1.0,
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();
