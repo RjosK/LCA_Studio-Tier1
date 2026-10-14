@@ -153,6 +153,12 @@ const I18N_DICTIONARY = {
     "canvas.connect_submit": "Establecer Vínculo",
     "canvas.connect_cancel": "Cancelar",
     "canvas.csv_exported_ok": "Hoja de cálculo exportada en CSV compatible con Excel.",
+    "canvas.toggle_catalog": "Catálogo",
+    "canvas.toggle_catalog_tip": "Mostrar/Ocultar Catálogo de Procesos (Panel Izquierdo)",
+    "canvas.toggle_inspector": "Inspector",
+    "canvas.toggle_inspector_tip": "Mostrar/Ocultar Inspector de Proceso (Panel Derecho)",
+    "canvas.toggle_full": "Maximizar",
+    "canvas.toggle_full_tip": "Maximizar Lienzo (Ocultar ambos paneles laterales)",
 
     // Catalog LCI
     "catalog.title": "Explorador de Procesos LCI (ecoinvent 3.12)",
@@ -560,6 +566,12 @@ const I18N_DICTIONARY = {
     "canvas.connect_submit": "Establish Link",
     "canvas.connect_cancel": "Cancel",
     "canvas.csv_exported_ok": "Spreadsheet exported to Excel-compatible CSV.",
+    "canvas.toggle_catalog": "Catalog",
+    "canvas.toggle_catalog_tip": "Show/Hide Process Catalog (Left Panel)",
+    "canvas.toggle_inspector": "Inspector",
+    "canvas.toggle_inspector_tip": "Show/Hide Process Inspector (Right Panel)",
+    "canvas.toggle_full": "Maximize",
+    "canvas.toggle_full_tip": "Maximize Canvas (Hide both side panels)",
 
     // Catalog LCI
     "catalog.title": "LCI Process Explorer (ecoinvent 3.12)",

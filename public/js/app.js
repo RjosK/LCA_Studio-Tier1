@@ -38,7 +38,10 @@
     showCanvasStickyNotes: true, // Visualización de sticky notes en lienzo
     canvasViewMode: "visual", // "visual" (diagrama) | "table" (hoja de cálculo)
     tableFilterText: "",
-    tableFlowFilter: "ALL" // "ALL" | "INPUTS" | "OUTPUTS" | "CONNECTIONS"
+    tableFlowFilter: "ALL", // "ALL" | "INPUTS" | "OUTPUTS" | "CONNECTIONS"
+    leftPanelVisible: true, // Visibilidad del catálogo (panel izquierdo)
+    rightPanelVisible: true, // Visibilidad del inspector (panel derecho en diagrama)
+    rightPanelTableVisible: false // Visibilidad del inspector en modo tabla
   };
 
   // =========================================================================
@@ -3290,17 +3293,113 @@
       .replace(/'/g, "&#039;");
   }
 
+  function updateCanvasPanelLayout() {
+    const canvasWrapper = document.getElementById("canvasWrapper");
+    if (!canvasWrapper) return;
+
+    const isTable = state.canvasViewMode === "table";
+    const hideLeft = state.leftPanelVisible === false;
+    // En modo tabla, el inspector está oculto por defecto a menos que se active explícitamente
+    const hideRight = isTable ? (state.rightPanelTableVisible !== true) : (state.rightPanelVisible === false);
+
+    canvasWrapper.classList.toggle("table-mode", isTable);
+    canvasWrapper.classList.toggle("hide-left", hideLeft);
+    canvasWrapper.classList.toggle("hide-right", hideRight);
+    canvasWrapper.classList.toggle("show-right", isTable && state.rightPanelTableVisible === true);
+
+    const btnLeft = document.getElementById("btnToggleLeftSidebar");
+    const btnRight = document.getElementById("btnToggleRightSidebar");
+    const btnFull = document.getElementById("btnToggleFullCanvas");
+
+    if (btnLeft) {
+      btnLeft.classList.toggle("active", !hideLeft);
+      btnLeft.setAttribute("aria-pressed", !hideLeft ? "true" : "false");
+    }
+    if (btnRight) {
+      btnRight.classList.toggle("active", !hideRight);
+      btnRight.setAttribute("aria-pressed", !hideRight ? "true" : "false");
+    }
+    if (btnFull) {
+      const isBothHidden = hideLeft && hideRight;
+      btnFull.classList.toggle("active", isBothHidden);
+      btnFull.setAttribute("aria-pressed", isBothHidden ? "true" : "false");
+    }
+  }
+
+  function toggleLeftPanel(forceState) {
+    if (forceState !== undefined) {
+      state.leftPanelVisible = forceState;
+    } else {
+      state.leftPanelVisible = (state.leftPanelVisible === false);
+    }
+    updateCanvasPanelLayout();
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+    showNotification(state.leftPanelVisible ? 
+      (isEn ? "Process catalog expanded." : "Catálogo de procesos visible.") : 
+      (isEn ? "Process catalog hidden (more space for canvas)." : "Catálogo ocultado para ampliar el espacio de trabajo."));
+  }
+
+  function toggleRightPanel(forceState) {
+    const isTable = state.canvasViewMode === "table";
+    if (isTable) {
+      if (forceState !== undefined) {
+        state.rightPanelTableVisible = forceState;
+      } else {
+        state.rightPanelTableVisible = !state.rightPanelTableVisible;
+      }
+    } else {
+      if (forceState !== undefined) {
+        state.rightPanelVisible = forceState;
+      } else {
+        state.rightPanelVisible = (state.rightPanelVisible === false);
+      }
+    }
+    updateCanvasPanelLayout();
+    const isVisible = isTable ? state.rightPanelTableVisible : state.rightPanelVisible;
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+    showNotification(isVisible ? 
+      (isEn ? "Process inspector expanded." : "Inspector de proceso visible.") : 
+      (isEn ? "Process inspector hidden (more space for canvas)." : "Inspector ocultado para ampliar el espacio de trabajo."));
+  }
+
+  function toggleFullCanvas() {
+    const isTable = state.canvasViewMode === "table";
+    const hideLeft = state.leftPanelVisible === false;
+    const hideRight = isTable ? (state.rightPanelTableVisible !== true) : (state.rightPanelVisible === false);
+
+    if (hideLeft && hideRight) {
+      // Restaurar paneles
+      state.leftPanelVisible = true;
+      if (isTable) {
+        state.rightPanelTableVisible = false;
+      } else {
+        state.rightPanelVisible = true;
+      }
+      updateCanvasPanelLayout();
+      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+      showNotification(isEn ? "Side panels restored." : "Paneles laterales restaurados.");
+    } else {
+      // Ocultar ambos paneles laterales para máxima amplitud
+      state.leftPanelVisible = false;
+      if (isTable) {
+        state.rightPanelTableVisible = false;
+      } else {
+        state.rightPanelVisible = false;
+      }
+      updateCanvasPanelLayout();
+      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+      showNotification(isEn ? "Canvas maximized (100% width)." : "Lienzo maximizado al 100% de amplitud.");
+    }
+  }
+
   function switchCanvasViewMode(mode) {
     state.canvasViewMode = mode;
-    const canvasWrapper = document.getElementById("canvasWrapper");
     const visualContainer = document.getElementById("canvasVisualStageContainer");
     const tableContainer = document.getElementById("canvasTableStageContainer");
     const btnVisual = document.getElementById("btnCanvasViewVisual");
     const btnTable = document.getElementById("btnCanvasViewTable");
 
-    if (canvasWrapper) {
-      canvasWrapper.classList.toggle("table-mode", mode === "table");
-    }
+    updateCanvasPanelLayout();
 
     if (btnVisual) btnVisual.classList.toggle("active", mode === "visual");
     if (btnTable) btnTable.classList.toggle("active", mode === "table");
@@ -6066,6 +6165,19 @@
     if (btnSlideToTable) btnSlideToTable.addEventListener("click", () => switchCanvasViewMode("table"));
     if (btnSlideToVisual) btnSlideToVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
 
+    // Controles de Visibilidad de Paneles Laterales (Expandir/Maximizar Lienzo)
+    const btnToggleLeft = document.getElementById("btnToggleLeftSidebar");
+    const btnToggleRight = document.getElementById("btnToggleRightSidebar");
+    const btnToggleFull = document.getElementById("btnToggleFullCanvas");
+    const btnCollapseCat = document.getElementById("btnCollapseCatalog");
+    const btnCollapseInsp = document.getElementById("btnCollapseInspector");
+
+    if (btnToggleLeft) btnToggleLeft.addEventListener("click", () => toggleLeftPanel());
+    if (btnToggleRight) btnToggleRight.addEventListener("click", () => toggleRightPanel());
+    if (btnToggleFull) btnToggleFull.addEventListener("click", () => toggleFullCanvas());
+    if (btnCollapseCat) btnCollapseCat.addEventListener("click", () => toggleLeftPanel(false));
+    if (btnCollapseInsp) btnCollapseInsp.addEventListener("click", () => toggleRightPanel(false));
+
     // Filtros de la Hoja de Cálculo LCI
     const inputTableSearch = document.getElementById("inputTableFilter");
     if (inputTableSearch) {
@@ -6609,6 +6721,10 @@
     tableAddFlow: (nodeId, type) => tableAddFlow(nodeId, type),
     tableUpdateEdgeAmount: (edgeId, val) => tableUpdateEdgeAmount(edgeId, val),
     tableDeleteEdge: (edgeId) => tableDeleteEdge(edgeId),
+    toggleLeftPanel: (force) => toggleLeftPanel(force),
+    toggleRightPanel: (force) => toggleRightPanel(force),
+    toggleFullCanvas: () => toggleFullCanvas(),
+    updateCanvasPanelLayout: () => updateCanvasPanelLayout(),
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();

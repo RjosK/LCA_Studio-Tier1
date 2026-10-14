@@ -677,11 +677,24 @@
   <!-- ============================================================= -->
   <main class="view-container" id="viewCanvas">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;" role="toolbar" aria-label="Herramientas del lienzo">
-      <!-- Conmutador de Vista: Diagrama vs Hoja de Cálculo -->
-      <div style="display: flex; align-items: center; gap: 8px;">
+      <!-- Conmutador de Vista y Controles de Paneles Laterales (Apple HIG) -->
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
         <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Modo de vista">
           <button class="segmented-btn active" id="btnCanvasViewVisual" data-mode="visual" data-i18n="canvas.view_diagram" style="padding: 4px 10px; font-size: 11px;">🗺️ Diagrama</button>
           <button class="segmented-btn" id="btnCanvasViewTable" data-mode="table" data-i18n="canvas.view_table" style="padding: 4px 10px; font-size: 11px;">📊 Hoja de Cálculo</button>
+        </div>
+
+        <!-- Conmutadores de Paneles Laterales (Para expandir/maximizar el lienzo) -->
+        <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Control de paneles laterales">
+          <button type="button" class="segmented-btn active" id="btnToggleLeftSidebar" title="Mostrar/Ocultar Catálogo (Panel Izquierdo)" data-i18n-title="canvas.toggle_catalog_tip" style="padding: 4px 8px; font-size: 11px;">
+            <span style="font-size: 11px;">◧</span> <span data-i18n="canvas.toggle_catalog">Catálogo</span>
+          </button>
+          <button type="button" class="segmented-btn active" id="btnToggleRightSidebar" title="Mostrar/Ocultar Inspector (Panel Derecho)" data-i18n-title="canvas.toggle_inspector_tip" style="padding: 4px 8px; font-size: 11px;">
+            <span style="font-size: 11px;">◨</span> <span data-i18n="canvas.toggle_inspector">Inspector</span>
+          </button>
+          <button type="button" class="segmented-btn" id="btnToggleFullCanvas" title="Maximizar Lienzo (Ocultar ambos paneles)" data-i18n-title="canvas.toggle_full_tip" style="padding: 4px 8px; font-size: 11px;">
+            <span style="font-size: 11px;">🗖</span> <span data-i18n="canvas.toggle_full">Maximizar</span>
+          </button>
         </div>
       </div>
 
@@ -724,9 +737,12 @@
     <div class="canvas-wrapper" id="canvasWrapper">
       <!-- Left Panel: Process Palette (Draggable) -->
       <div class="canvas-panel catalog-panel" role="region" aria-label="Catálogo de Procesos Arrastrables">
-        <div class="panel-header">
-          <span data-i18n="canvas.palette_title">Catálogo de Procesos (Arrastrar)</span>
-          <span class="badge-pill badge-slate">ecoinvent 3.12</span>
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span data-i18n="canvas.palette_title">Catálogo de Procesos (Arrastrar)</span>
+            <span class="badge-pill badge-slate">ecoinvent 3.12</span>
+          </div>
+          <button type="button" class="panel-collapse-btn" id="btnCollapseCatalog" title="Ocultar catálogo para ampliar el lienzo" data-i18n-title="canvas.collapse_catalog_tip">◀</button>
         </div>
         <div style="padding: 8px; border-bottom: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 6px;">
           <input type="text" class="form-input" placeholder="Filtrar insumos arrastrables..." id="inputPaletteSearch" data-i18n-placeholder="canvas.palette_search_ph">
@@ -821,9 +837,12 @@
 
       <!-- Right Panel: Node Inspector (Hidden when in table mode) -->
       <div class="canvas-panel inspector-panel" id="panelNodeInspector">
-        <div class="panel-header">
-          <span data-i18n="canvas.inspector_title">Inspector de Proceso</span>
-          <span class="badge-pill badge-slate" id="inspCategoryBadge" data-i18n="canvas.inspector_none">Ningún proceso seleccionado</span>
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span data-i18n="canvas.inspector_title">Inspector de Proceso</span>
+            <span class="badge-pill badge-slate" id="inspCategoryBadge" data-i18n="canvas.inspector_none">Ningún proceso seleccionado</span>
+          </div>
+          <button type="button" class="panel-collapse-btn" id="btnCollapseInspector" title="Ocultar inspector para ampliar el lienzo" data-i18n-title="canvas.collapse_inspector_tip">▶</button>
         </div>
         <div style="padding: 14px; overflow-y: auto;" id="inspectorDetails">
           <div style="padding: 24px 12px; text-align: center; color: var(--text-muted);">
@@ -1856,7 +1875,7 @@
   </div>
 
   <!-- Scripts con Anti-Caché -->
-  <script src="js/i18n.js?v=20261014_excel_table_view"></script>
-  <script src="js/app.js?v=20261014_excel_table_view"></script>
+  <script src="js/i18n.js?v=20261014_panels_toggle_v2"></script>
+  <script src="js/app.js?v=20261014_panels_toggle_v2"></script>
 </body>
 </html>
