@@ -676,44 +676,54 @@
   <!-- 6. VISTA: MODELADO EN LIENZO VISUAL (#viewCanvas) -->
   <!-- ============================================================= -->
   <main class="view-container" id="viewCanvas">
-    <div style="display: flex; justify-content: flex-end; align-items: center; margin-bottom: 12px; gap: 8px;" role="toolbar" aria-label="Herramientas del lienzo">
-      <!-- Modo Sankey Segmented Control -->
-      <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Visualización Sankey">
-        <button class="segmented-btn active" id="btnSankeyModeNone" data-sankey="none" data-i18n="canvas.sankey_std" style="padding: 4px 8px; font-size: 10px;">Estándar</button>
-        <button class="segmented-btn" id="btnSankeyModeMass" data-sankey="mass" data-i18n="canvas.sankey_mass" style="padding: 4px 8px; font-size: 10px;">Sankey Masa</button>
-        <button class="segmented-btn" id="btnSankeyModeEnergy" data-sankey="energy" data-i18n="canvas.sankey_energy" style="padding: 4px 8px; font-size: 10px;">Sankey Energía</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;" role="toolbar" aria-label="Herramientas del lienzo">
+      <!-- Conmutador de Vista: Diagrama vs Hoja de Cálculo -->
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Modo de vista">
+          <button class="segmented-btn active" id="btnCanvasViewVisual" data-mode="visual" data-i18n="canvas.view_diagram" style="padding: 4px 10px; font-size: 11px;">🗺️ Diagrama</button>
+          <button class="segmented-btn" id="btnCanvasViewTable" data-mode="table" data-i18n="canvas.view_table" style="padding: 4px 10px; font-size: 11px;">📊 Hoja de Cálculo</button>
+        </div>
       </div>
 
-      <!-- Sticky Notes Controls on Canvas (Toggle de visualización) -->
-      <button class="btn btn-secondary btn-sm" id="btnToggleCanvasStickyNotes" title="Mostrar/Ocultar notas adhesivas en el lienzo" data-i18n-title="canvas.sticky_notes_title">
-        📌 <span id="labelStickyNotesToggle" data-i18n="canvas.sticky_notes_on">Notas (On)</span>
-      </button>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <!-- Modo Sankey Segmented Control -->
+        <div class="sankey-toggle-group" id="canvasSankeyToolbarGroup" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Visualización Sankey">
+          <button class="segmented-btn active" id="btnSankeyModeNone" data-sankey="none" data-i18n="canvas.sankey_std" style="padding: 4px 8px; font-size: 10px;">Estándar</button>
+          <button class="segmented-btn" id="btnSankeyModeMass" data-sankey="mass" data-i18n="canvas.sankey_mass" style="padding: 4px 8px; font-size: 10px;">Sankey Masa</button>
+          <button class="segmented-btn" id="btnSankeyModeEnergy" data-sankey="energy" data-i18n="canvas.sankey_energy" style="padding: 4px 8px; font-size: 10px;">Sankey Energía</button>
+        </div>
 
-      <!-- Botón Global de Exportación (Menú Desplegable) -->
-      <div class="canvas-export-dropdown-wrapper">
-        <button class="btn btn-secondary btn-sm" id="btnCanvasExportDropdown" title="Exportar modelo a formatos industriales" data-i18n-title="canvas.export_dropdown_title">
-          📥 <span id="labelCanvasExportDropdown" data-i18n="canvas.export_model">Exportar Modelo</span> ▾
+        <!-- Sticky Notes Controls on Canvas (Toggle de visualización) -->
+        <button class="btn btn-secondary btn-sm" id="btnToggleCanvasStickyNotes" title="Mostrar/Ocultar notas adhesivas en el lienzo" data-i18n-title="canvas.sticky_notes_title">
+          📌 <span id="labelStickyNotesToggle" data-i18n="canvas.sticky_notes_on">Notas (On)</span>
         </button>
-        <div class="canvas-export-menu" id="canvasExportMenu">
-          <button type="button" class="canvas-export-item" id="btnExportOpenLca">
-            <span data-i18n="canvas.export_openlca">openLCA JSON-LD</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">ZIP</span>
+
+        <!-- Botón Global de Exportación (Menú Desplegable) -->
+        <div class="canvas-export-dropdown-wrapper">
+          <button class="btn btn-secondary btn-sm" id="btnCanvasExportDropdown" title="Exportar modelo a formatos industriales" data-i18n-title="canvas.export_dropdown_title">
+            📥 <span id="labelCanvasExportDropdown" data-i18n="canvas.export_model">Exportar Modelo</span> ▾
           </button>
-          <button type="button" class="canvas-export-item" id="btnExportIlcd">
-            <span data-i18n="canvas.export_ilcd">ILCD / Sphera</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">XML</span>
-          </button>
-          <button type="button" class="canvas-export-item" id="btnExportSimaPro">
-            <span data-i18n="canvas.export_simapro">SimaPro</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
-          </button>
-          <button type="button" class="canvas-export-item" id="btnExportLciCsv">
-            <span data-i18n="canvas.export_lci_csv">LCI Consolidado</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
-          </button>
+          <div class="canvas-export-menu" id="canvasExportMenu">
+            <button type="button" class="canvas-export-item" id="btnExportOpenLca">
+              <span data-i18n="canvas.export_openlca">openLCA JSON-LD</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">ZIP</span>
+            </button>
+            <button type="button" class="canvas-export-item" id="btnExportIlcd">
+              <span data-i18n="canvas.export_ilcd">ILCD / Sphera</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">XML</span>
+            </button>
+            <button type="button" class="canvas-export-item" id="btnExportSimaPro">
+              <span data-i18n="canvas.export_simapro">SimaPro</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
+            </button>
+            <button type="button" class="canvas-export-item" id="btnExportLciCsv">
+              <span data-i18n="canvas.export_lci_csv">LCI Consolidado</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="canvas-wrapper">
+    <div class="canvas-wrapper" id="canvasWrapper">
       <!-- Left Panel: Process Palette (Draggable) -->
-      <div class="canvas-panel" role="region" aria-label="Catálogo de Procesos Arrastrables">
+      <div class="canvas-panel catalog-panel" role="region" aria-label="Catálogo de Procesos Arrastrables">
         <div class="panel-header">
           <span data-i18n="canvas.palette_title">Catálogo de Procesos (Arrastrar)</span>
           <span class="badge-pill badge-slate">ecoinvent 3.12</span>
@@ -729,30 +739,88 @@
         </div>
       </div>
 
-      <!-- Center Stage: Drag & Drop Canvas with Visual Connectors -->
-      <div class="canvas-panel" style="position: relative;">
-        <!-- Leyenda Flotante Sankey -->
-        <div id="canvasSankeyLegend" class="sankey-legend-box" style="display: none;">
-          <div style="font-weight: 700; font-size: 11px; margin-bottom: 4px;" id="sankeyLegendTitle">Diagrama Sankey por Masa (kg)</div>
-          <div style="font-size: 10px; color: var(--text-secondary);">
-            <span id="sankeyLabelTotal">Flujo Total en Cadena</span>: <strong class="mono" id="sankeyStatTotal" style="color: var(--accent-emerald);">0.000 kg</strong><br>
-            <span id="sankeyLabelMax">Flujo Máximo</span>: <strong class="mono" id="sankeyStatMax">0.000 kg</strong>
+      <!-- Center Stage: Drag & Drop Canvas with Visual Connectors & Table View -->
+      <div class="canvas-panel center-panel" style="position: relative; overflow: hidden;">
+        
+        <!-- ============================================== -->
+        <!-- SUB-VISTA 1: LIENZO GRÁFICO (Diagrama de Nodos) -->
+        <!-- ============================================== -->
+        <div id="canvasVisualStageContainer" class="canvas-subview-container active" style="width: 100%; height: 100%; position: relative; display: flex; flex-direction: column;">
+          <!-- Leyenda Flotante Sankey -->
+          <div id="canvasSankeyLegend" class="sankey-legend-box" style="display: none;">
+            <div style="font-weight: 700; font-size: 11px; margin-bottom: 4px;" id="sankeyLegendTitle">Diagrama Sankey por Masa (kg)</div>
+            <div style="font-size: 10px; color: var(--text-secondary);">
+              <span id="sankeyLabelTotal">Flujo Total en Cadena</span>: <strong class="mono" id="sankeyStatTotal" style="color: var(--accent-emerald);">0.000 kg</strong><br>
+              <span id="sankeyLabelMax">Flujo Máximo</span>: <strong class="mono" id="sankeyStatMax">0.000 kg</strong>
+            </div>
+          </div>
+
+          <!-- Instrucción de Conexión Activa Banner -->
+          <div id="connectHelpBanner" style="display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; padding: 6px 14px; border-radius: var(--radius-md); font-size: 10.5px; z-index: 90; box-shadow: var(--shadow-md);">
+            ⚡ Haz clic en el puerto de entrada [🡇] del proceso destino para conectar el flujo. <button id="btnCancelConnect" style="background: transparent; border: none; color: #FCA5A5; margin-left: 8px; cursor: pointer;">Cancelar</button>
+          </div>
+
+          <div class="canvas-stage" id="canvasStage" style="width: 100%; height: 100%; min-height: 520px; position: relative;">
+            <!-- SVG Overlay y Nodos dinámicos -->
+            <div id="canvasStickyNotesLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40;"></div>
+          </div>
+
+          <!-- Píldora Flotante con Flechita hacia abajo para deslizar a Hoja de Cálculo -->
+          <div class="canvas-bottom-dock" style="position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 50;">
+            <button class="btn btn-primary btn-sm canvas-slide-pill" id="btnSlideToTableView" title="Deslizar hacia abajo a la vista de hoja de cálculo" data-i18n-title="canvas.slide_to_table_tip">
+              <span data-i18n="canvas.slide_to_table">📊 Deslizar a Hoja de Cálculo (Excel)</span>
+              <span class="slide-down-arrow" style="font-size: 12px; margin-left: 6px;">▼</span>
+            </button>
           </div>
         </div>
 
-        <!-- Instrucción de Conexión Activa Banner -->
-        <div id="connectHelpBanner" style="display: none; position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: #0F172A; color: #FFFFFF; padding: 6px 14px; border-radius: var(--radius-md); font-size: 10.5px; z-index: 90; box-shadow: var(--shadow-md);">
-          ⚡ Haz clic en el puerto de entrada [🡇] del proceso destino para conectar el flujo. <button id="btnCancelConnect" style="background: transparent; border: none; color: #FCA5A5; margin-left: 8px; cursor: pointer;">Cancelar</button>
+        <!-- ============================================== -->
+        <!-- SUB-VISTA 2: HOJA DE CÁLCULO / MATRIZ LCI      -->
+        <!-- ============================================== -->
+        <div id="canvasTableStageContainer" class="canvas-subview-container" style="width: 100%; height: 100%; display: none; flex-direction: column; background: var(--bg-card);">
+          <!-- Encabezado de la Hoja de Cálculo -->
+          <div class="panel-header" style="border-bottom: 1px solid var(--border-color); background: var(--bg-subtle); display: flex; justify-content: space-between; align-items: center; padding: 10px 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <button class="btn btn-secondary btn-sm" id="btnSlideToVisualView" title="Volver al diagrama visual" data-i18n-title="canvas.slide_to_visual_tip" style="padding: 4px 10px;">
+                ▲ <span data-i18n="canvas.slide_to_visual">Volver al Diagrama</span>
+              </button>
+              <div style="display: flex; flex-direction: column;">
+                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);" data-i18n="canvas.table_title">Hoja de Cálculo LCI: Balance e Intercambios</span>
+                <span style="font-size: 10px; color: var(--text-muted);" data-i18n="canvas.table_subtitle">Desglose de procesos, insumos, salidas y conexiones directas de la cadena</span>
+              </div>
+            </div>
+
+            <!-- Acciones y Filtros de la Tabla -->
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <input type="text" class="form-input" placeholder="Filtrar por proceso o material..." id="inputTableFilter" style="height: 28px; font-size: 11px; width: 200px; padding: 2px 8px;" data-i18n-placeholder="canvas.table_search_ph">
+              <select id="selectTableFlowFilter" class="form-input" style="height: 28px; font-size: 11px; padding: 2px 6px;">
+                <option value="ALL" data-i18n="canvas.filter_all">Todos los Flujos</option>
+                <option value="INPUTS" data-i18n="canvas.filter_inputs">Solo Entradas (Insumos/Energía)</option>
+                <option value="OUTPUTS" data-i18n="canvas.filter_outputs">Solo Salidas (Productos/Residuos)</option>
+                <option value="CONNECTIONS" data-i18n="canvas.filter_connections">Solo Conexiones Internas</option>
+              </select>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddProcess" style="font-size: 11px; padding: 4px 8px;">
+                + <span data-i18n="canvas.table_add_process">Agregar Proceso</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddConnection" style="font-size: 11px; padding: 4px 8px;">
+                🔗 <span data-i18n="canvas.table_add_connection">Conectar</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnTableExportCsv" style="font-size: 11px; padding: 4px 8px;" title="Descargar como CSV compatible con Excel">
+                📥 <span data-i18n="canvas.table_export_csv">Exportar CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Área de Tabla con Scroll -->
+          <div class="lci-table-scroll-wrapper" id="canvasTableScrollArea" style="flex: 1; overflow: auto; padding: 14px;">
+            <!-- Contenido generado dinámicamente por renderCanvasTableView() -->
+          </div>
         </div>
 
-        <div class="canvas-stage" id="canvasStage" style="width: 100%; height: 100%; min-height: 520px; position: relative;">
-          <!-- SVG Overlay y Nodos dinámicos -->
-          <div id="canvasStickyNotesLayer" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40;"></div>
-        </div>
       </div>
 
-      <!-- Right Panel: Node Inspector -->
-      <div class="canvas-panel">
+      <!-- Right Panel: Node Inspector (Hidden when in table mode) -->
+      <div class="canvas-panel inspector-panel" id="panelNodeInspector">
         <div class="panel-header">
           <span data-i18n="canvas.inspector_title">Inspector de Proceso</span>
           <span class="badge-pill badge-slate" id="inspCategoryBadge" data-i18n="canvas.inspector_none">Ningún proceso seleccionado</span>
@@ -1158,9 +1226,20 @@
       </div>
 
       <div class="modal-body">
-        <div style="padding: 10px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 11px;">
+        <div id="connectNodesStaticBox" style="padding: 10px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 11px;">
           <div>Source: <strong id="connectSourceLabel">Process A</strong></div>
           <div style="margin-top: 4px;">Destination: <strong id="connectTargetLabel">Process B</strong></div>
+        </div>
+
+        <div id="connectNodesSelectBox" style="display: none; padding: 10px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 12px; font-size: 11px;">
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label class="form-label" data-i18n="canvas.conn_source">Proceso Origen (Salida)</label>
+            <select class="form-input" id="selectConnectSourceNode" style="font-size: 11px;"></select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" data-i18n="canvas.conn_target">Proceso Destino (Entrada)</label>
+            <select class="form-input" id="selectConnectTargetNode" style="font-size: 11px;"></select>
+          </div>
         </div>
 
         <form id="formConnectNodes" onsubmit="return false;">
@@ -1777,7 +1856,7 @@
   </div>
 
   <!-- Scripts con Anti-Caché -->
-  <script src="js/i18n.js?v=20261012_i18n_canvas_buttons_v42"></script>
-  <script src="js/app.js?v=20261012_i18n_canvas_buttons_v42"></script>
+  <script src="js/i18n.js?v=20261014_excel_table_view"></script>
+  <script src="js/app.js?v=20261014_excel_table_view"></script>
 </body>
 </html>

@@ -619,6 +619,171 @@ body {
   grid-template-columns: 280px 1fr 320px;
   gap: 16px;
   height: calc(100vh - 100px);
+  transition: grid-template-columns 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.canvas-wrapper.table-mode {
+  grid-template-columns: 280px 1fr 0px;
+}
+
+.canvas-wrapper.table-mode .inspector-panel {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.canvas-subview-container {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.canvas-slide-pill {
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 7px 18px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  background: var(--text-primary);
+  color: #FFFFFF;
+}
+
+.canvas-slide-pill:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+  background: #1E293B;
+}
+
+.canvas-slide-pill:active {
+  transform: translateY(0) scale(0.97);
+}
+
+.canvas-slide-pill .slide-down-arrow {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.canvas-slide-pill:hover .slide-down-arrow {
+  transform: translateY(2px);
+}
+
+/* -------------------------------------------------------------
+   LCI SPREADSHEET TABLE (Excel / Numbers Ergonomics)
+------------------------------------------------------------- */
+.lci-table-scroll-wrapper {
+  background: var(--bg-card);
+}
+
+.lci-spreadsheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  font-feature-settings: "tnum";
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.lci-spreadsheet-table th {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: 700;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  text-align: left;
+}
+
+.lci-spreadsheet-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.lci-spreadsheet-table tr:hover td {
+  background: var(--bg-muted);
+}
+
+.lci-process-group-header td {
+  background: var(--bg-subtle) !important;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-top: 2px solid var(--border-strong);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.lci-cell-input {
+  width: 100%;
+  max-width: 110px;
+  padding: 4px 6px;
+  font-size: 11.5px;
+  font-family: inherit;
+  font-feature-settings: "tnum";
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  text-align: right;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.lci-cell-input:focus {
+  outline: none;
+  border-color: var(--accent-emerald);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.lci-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lci-tag-ref {
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+
+.lci-tag-techno {
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #BFDBFE;
+}
+
+.lci-tag-connected {
+  background: #F5F3FF;
+  color: #5B21B6;
+  border: 1px solid #DDD6FE;
+}
+
+.lci-tag-waste {
+  background: #FEF2F2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.lci-tag-elem {
+  background: #FFFBEB;
+  color: #92400E;
+  border: 1px solid #FDE68A;
 }
 
 .canvas-panel {

@@ -34,7 +34,11 @@
     catalogFilter: "ALL",
     sankeyMode: "none", // "none" | "mass" | "energy"
     connectingFromNode: null, // ID del nodo origen al conectar flujos
-    showCanvasStickyNotes: true // Visualización de sticky notes en lienzo
+    connectingToNode: null, // ID del nodo destino al conectar flujos
+    showCanvasStickyNotes: true, // Visualización de sticky notes en lienzo
+    canvasViewMode: "visual", // "visual" (diagrama) | "table" (hoja de cálculo)
+    tableFilterText: "",
+    tableFlowFilter: "ALL" // "ALL" | "INPUTS" | "OUTPUTS" | "CONNECTIONS"
   };
 
   // =========================================================================
@@ -267,7 +271,9 @@
 
     // Inicializaciones específicas por vista
     if (viewName === "dashboard") loadDashboard();
-    if (viewName === "canvas") renderCanvasStage();
+    if (viewName === "canvas") {
+      switchCanvasViewMode(state.canvasViewMode || "visual");
+    }
     if (viewName === "catalog") loadCatalog();
     if (viewName === "report") loadReport();
     if (viewName === "audit") loadAuditChecklist();
@@ -1686,6 +1692,11 @@
 
     // Abrir Modal de Conexión
     const modal = document.getElementById("modalConnectNodes");
+    const staticBox = document.getElementById("connectNodesStaticBox");
+    const selectBox = document.getElementById("connectNodesSelectBox");
+    if (staticBox) staticBox.style.display = "block";
+    if (selectBox) selectBox.style.display = "none";
+
     const srcLbl = document.getElementById("connectSourceLabel");
     const tgtLbl = document.getElementById("connectTargetLabel");
     const flowInput = document.getElementById("inputConnectFlowName");
@@ -3266,6 +3277,735 @@
   }
 
   // =========================================================================
+  // 6.5. VISTA HOJA DE CÁLCULO / MATRIZ LCI (SPREADSHEET VIEW & CONNECTION MATRIX)
+  // =========================================================================
+
+  function escapeHtml(str) {
+    if (str === null || str === undefined) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function switchCanvasViewMode(mode) {
+    state.canvasViewMode = mode;
+    const canvasWrapper = document.getElementById("canvasWrapper");
+    const visualContainer = document.getElementById("canvasVisualStageContainer");
+    const tableContainer = document.getElementById("canvasTableStageContainer");
+    const btnVisual = document.getElementById("btnCanvasViewVisual");
+    const btnTable = document.getElementById("btnCanvasViewTable");
+
+    if (canvasWrapper) {
+      canvasWrapper.classList.toggle("table-mode", mode === "table");
+    }
+
+    if (btnVisual) btnVisual.classList.toggle("active", mode === "visual");
+    if (btnTable) btnTable.classList.toggle("active", mode === "table");
+
+    if (mode === "table") {
+      if (visualContainer) {
+        visualContainer.style.display = "none";
+        visualContainer.classList.remove("active");
+      }
+      if (tableContainer) {
+        tableContainer.style.display = "flex";
+        tableContainer.classList.add("active");
+      }
+      renderCanvasTableView();
+    } else {
+      if (tableContainer) {
+        tableContainer.style.display = "none";
+        tableContainer.classList.remove("active");
+      }
+      if (visualContainer) {
+        visualContainer.style.display = "flex";
+        visualContainer.classList.add("active");
+      }
+      renderCanvasStage();
+    }
+  }
+
+  function renderCanvasTableView() {
+    const container = document.getElementById("canvasTableScrollArea");
+    if (!container) return;
+
+    const t = (k, fallback) => (window.I18n && window.I18n.t ? window.I18n.t(k, fallback) : fallback);
+
+    const filterText = (state.tableFilterText || "").toLowerCase().trim();
+    const flowFilter = state.tableFlowFilter || "ALL"; // ALL | INPUTS | OUTPUTS | CONNECTIONS
+
+    // Sincronizar campo de búsqueda y selector si existen
+    const inputSearch = document.getElementById("inputTableFilter");
+    if (inputSearch && inputSearch.value !== state.tableFilterText) {
+      inputSearch.value = state.tableFilterText;
+    }
+    const selectFilter = document.getElementById("selectTableFlowFilter");
+    if (selectFilter && selectFilter.value !== state.tableFlowFilter) {
+      selectFilter.value = state.tableFlowFilter;
+    }
+
+    if (!state.canvasNodes || state.canvasNodes.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 48px 16px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 40px; margin-bottom: 12px;">📊</div>
+          <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
+            ${t("canvas.table_title", "Hoja de Cálculo LCI: Balance e Intercambios")}
+          </h3>
+          <p style="font-size: 12px; max-width: 440px; margin: 0 auto 16px; line-height: 1.5;">
+            No hay procesos en este sistema producto. Arrastra procesos desde el catálogo lateral izquierdo o crea uno nuevo para comenzar a estructurar la matriz LCI.
+          </p>
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.EconodeApp.openProcessEditor(null)">
+            + ${t("canvas.table_add_process", "Agregar Proceso")}
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    let html = "";
+
+    // 1. Desglose de Procesos e Intercambios Unitarios
+    if (flowFilter !== "CONNECTIONS") {
+      let visibleProcessesCount = 0;
+
+      state.canvasNodes.forEach((node) => {
+        const nodeNameLower = (node.name || "").toLowerCase();
+        const nodeCatLower = (node.category || "").toLowerCase();
+
+        // Filtrar entradas y salidas
+        const showInputs = flowFilter === "ALL" || flowFilter === "INPUTS";
+        const showOutputs = flowFilter === "ALL" || flowFilter === "OUTPUTS";
+
+        const filteredInputs = (node.inputs || []).map((inp, idx) => ({ ...inp, originalIdx: idx })).filter(inp => {
+          if (!filterText) return true;
+          return nodeNameLower.includes(filterText) ||
+                 nodeCatLower.includes(filterText) ||
+                 (inp.name && inp.name.toLowerCase().includes(filterText)) ||
+                 (inp.origin && inp.origin.toLowerCase().includes(filterText));
+        });
+
+        const filteredOutputs = (node.outputs || []).map((out, idx) => ({ ...out, originalIdx: idx })).filter(out => {
+          if (!filterText) return true;
+          return nodeNameLower.includes(filterText) ||
+                 nodeCatLower.includes(filterText) ||
+                 (out.name && out.name.toLowerCase().includes(filterText));
+        });
+
+        // Si hay filtro de texto activo y no coincide nada, omitir proceso
+        if (filterText && !nodeNameLower.includes(filterText) && !nodeCatLower.includes(filterText) && filteredInputs.length === 0 && filteredOutputs.length === 0) {
+          return;
+        }
+
+        visibleProcessesCount++;
+
+        html += `
+          <div class="lci-process-table-block" style="margin-bottom: 22px;">
+            <table class="lci-spreadsheet-table">
+              <thead>
+                <tr class="lci-process-group-header">
+                  <td colspan="6">
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="mono" style="font-size: 9.5px; font-weight: 700; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(5, 150, 105, 0.25);">
+                          ID: #${node.process_id || node.id}
+                        </span>
+                        <input type="text" class="lci-cell-input" style="font-size: 12.5px; font-weight: 700; max-width: 260px; text-align: left; background: transparent; border-color: transparent;" 
+                          value="${escapeHtml(node.name)}" 
+                          onfocus="this.style.background='var(--bg-card)'; this.style.borderColor='var(--border-color)';"
+                          onblur="this.style.background='transparent'; this.style.borderColor='transparent';"
+                          onchange="window.EconodeApp.tableUpdateProcessName('${node.id}', this.value)">
+                        <span class="badge-pill badge-slate" style="font-size: 9px;">${escapeHtml(node.category || "Process")}</span>
+                      </div>
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 8px;" onclick="window.EconodeApp.tableAddFlow('${node.id}', 'input')">
+                          + ${t("canvas.add_input_btn", "Entrada")}
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 8px;" onclick="window.EconodeApp.tableAddFlow('${node.id}', 'output')">
+                          + ${t("canvas.add_output_btn", "Salida")}
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 8px; color: #EF4444;" onclick="window.EconodeApp.removeNode('${node.id}')" title="Eliminar proceso del modelo">
+                          ✕ ${t("canvas.delete_row_btn", "Eliminar")}
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <th style="width: 140px;">${t("canvas.col_type", "Tipo de Flujo")}</th>
+                  <th>${t("canvas.col_flow", "Nombre del Flujo / Intercambio")}</th>
+                  <th style="width: 260px;">${t("canvas.col_provider", "Proveedor / Destino")}</th>
+                  <th style="width: 130px; text-align: right;">${t("canvas.col_value", "Cantidad")}</th>
+                  <th style="width: 80px; text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
+                  <th style="width: 65px; text-align: center;">${t("canvas.col_actions", "Acción")}</th>
+                </tr>
+              </thead>
+              <tbody>
+        `;
+
+        // Renderizar Entradas (Inputs)
+        if (showInputs) {
+          if (filteredInputs.length === 0) {
+            html += `<tr><td colspan="6" style="font-size: 10.5px; color: var(--text-muted); font-style: italic; padding: 6px 12px;">Sin entradas registradas.</td></tr>`;
+          } else {
+            filteredInputs.forEach((inp) => {
+              // Comprobar si está conectado a través de canvasEdges
+              const connectedEdge = (state.canvasEdges || []).find(e => 
+                (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id) || String(e.to) === String(node.process_id)) &&
+                (e.flow === inp.name || (inp.name && inp.name.includes(e.flow)))
+              );
+
+              let badgeHtml = '';
+              let providerText = '';
+
+              if (connectedEdge) {
+                const srcNode = state.canvasNodes.find(n => String(n.id) === String(connectedEdge.from) || String(n.process_id) === String(connectedEdge.source_process_id));
+                const srcName = srcNode ? srcNode.name : (connectedEdge.from || "Upstream");
+                badgeHtml = `<span class="lci-tag-badge lci-tag-connected">🔗 ${t("canvas.tag_connected", "Flujo Conectado")}</span>`;
+                providerText = `<span style="color: var(--accent-purple); font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
+              } else if (inp.is_unit) {
+                badgeHtml = `<span class="lci-tag-badge lci-tag-techno">⚙️ ${t("canvas.tag_technosphere", "Insumo Tecnosfera")}</span>`;
+                providerText = `<span style="color: var(--text-secondary);">${escapeHtml(inp.origin || "Mercado ecoinvent 3.12")}</span>`;
+              } else {
+                badgeHtml = `<span class="lci-tag-badge lci-tag-elem">⚡ Insumo Auxiliar</span>`;
+                providerText = `<span style="color: var(--text-muted);">${escapeHtml(inp.origin || "Red eléctrica / Suministro")}</span>`;
+              }
+
+              html += `
+                <tr>
+                  <td>${badgeHtml}</td>
+                  <td>
+                    <input type="text" class="lci-cell-input" style="max-width: 100%; text-align: left;" 
+                      value="${escapeHtml(inp.name || '')}" 
+                      onchange="window.EconodeApp.tableUpdateFlowName('${node.id}', 'input', ${inp.originalIdx}, this.value)">
+                  </td>
+                  <td>${providerText}</td>
+                  <td style="text-align: right;">
+                    <input type="number" step="any" class="lci-cell-input" 
+                      value="${inp.amount !== undefined ? inp.amount : 1.0}" 
+                      onchange="window.EconodeApp.tableUpdateAmount('${node.id}', 'input', ${inp.originalIdx}, this.value)"
+                      oninput="window.EconodeApp.tableUpdateAmount('${node.id}', 'input', ${inp.originalIdx}, this.value, true)">
+                  </td>
+                  <td style="text-align: center;">
+                    <input type="text" class="lci-cell-input" style="max-width: 55px; text-align: center;" 
+                      value="${escapeHtml(inp.unit || 'kg')}" 
+                      onchange="window.EconodeApp.tableUpdateUnit('${node.id}', 'input', ${inp.originalIdx}, this.value)">
+                  </td>
+                  <td style="text-align: center;">
+                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 10px; color: #EF4444;" 
+                      onclick="window.EconodeApp.tableDeleteFlow('${node.id}', 'input', ${inp.originalIdx})" title="Eliminar entrada">
+                      ✕
+                    </button>
+                  </td>
+                </tr>
+              `;
+            });
+          }
+        }
+
+        // Renderizar Salidas (Outputs)
+        if (showOutputs) {
+          if (filteredOutputs.length === 0) {
+            html += `<tr><td colspan="6" style="font-size: 10.5px; color: var(--text-muted); font-style: italic; padding: 6px 12px;">Sin salidas registradas.</td></tr>`;
+          } else {
+            filteredOutputs.forEach((out) => {
+              // Comprobar si alimenta otros procesos
+              const outgoingEdges = (state.canvasEdges || []).filter(e => 
+                (String(e.from) === String(node.id) || String(e.source_process_id) === String(node.process_id) || String(e.from) === String(node.process_id)) &&
+                (e.flow === out.name || (out.name && out.name.includes(e.flow)))
+              );
+
+              let badgeHtml = '';
+              let destText = '';
+
+              if (out.is_reference) {
+                badgeHtml = `<span class="lci-tag-badge lci-tag-ref">⭐ ${t("canvas.tag_reference", "Prod. Referencia")}</span>`;
+              } else if (out.is_waste) {
+                badgeHtml = `<span class="lci-tag-badge lci-tag-waste">♻️ ${t("canvas.tag_waste", "Residuo / Salida")}</span>`;
+              } else if (out.is_elementary) {
+                badgeHtml = `<span class="lci-tag-badge lci-tag-elem">🌿 ${t("canvas.tag_elementary", "Emisión Biosférica")}</span>`;
+              } else {
+                badgeHtml = `<span class="lci-tag-badge lci-tag-techno">📦 Coproducto</span>`;
+              }
+
+              if (outgoingEdges.length > 0) {
+                const targetNames = outgoingEdges.map(e => {
+                  const tgtNode = state.canvasNodes.find(n => String(n.id) === String(e.to) || String(n.process_id) === String(e.target_process_id));
+                  return tgtNode ? tgtNode.name : (e.to || "Proceso");
+                }).join(", ");
+                destText = `<span style="color: var(--accent-emerald); font-weight: 600;">➔ Alimenta: ${escapeHtml(targetNames)}</span>`;
+              } else if (out.is_waste) {
+                destText = `<span style="color: var(--text-muted);">Tratamiento / Relleno Sanitario</span>`;
+              } else if (out.is_elementary) {
+                destText = `<span style="color: var(--text-muted);">Compartimento Ambiental (Aire / Agua)</span>`;
+              } else {
+                destText = `<span style="color: var(--text-secondary);">Salida final de sistema producto</span>`;
+              }
+
+              html += `
+                <tr>
+                  <td>${badgeHtml}</td>
+                  <td>
+                    <input type="text" class="lci-cell-input" style="max-width: 100%; text-align: left;" 
+                      value="${escapeHtml(out.name || '')}" 
+                      onchange="window.EconodeApp.tableUpdateFlowName('${node.id}', 'output', ${out.originalIdx}, this.value)">
+                  </td>
+                  <td>${destText}</td>
+                  <td style="text-align: right;">
+                    <input type="number" step="any" class="lci-cell-input" 
+                      value="${out.amount !== undefined ? out.amount : 1.0}" 
+                      onchange="window.EconodeApp.tableUpdateAmount('${node.id}', 'output', ${out.originalIdx}, this.value)"
+                      oninput="window.EconodeApp.tableUpdateAmount('${node.id}', 'output', ${out.originalIdx}, this.value, true)">
+                  </td>
+                  <td style="text-align: center;">
+                    <input type="text" class="lci-cell-input" style="max-width: 55px; text-align: center;" 
+                      value="${escapeHtml(out.unit || 'kg')}" 
+                      onchange="window.EconodeApp.tableUpdateUnit('${node.id}', 'output', ${out.originalIdx}, this.value)">
+                  </td>
+                  <td style="text-align: center;">
+                    ${out.is_reference ? '<span title="El producto de referencia no puede ser eliminado" style="color: var(--text-muted); font-size: 10px;">—</span>' : `
+                      <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 10px; color: #EF4444;" 
+                        onclick="window.EconodeApp.tableDeleteFlow('${node.id}', 'output', ${out.originalIdx})" title="Eliminar salida">
+                        ✕
+                      </button>
+                    `}
+                  </td>
+                </tr>
+              `;
+            });
+          }
+        }
+
+        html += `
+              </tbody>
+            </table>
+          </div>
+        `;
+      });
+
+      if (visibleProcessesCount === 0) {
+        html += `
+          <div style="padding: 24px; text-align: center; color: var(--text-muted); font-size: 11.5px;">
+            ${t("canvas.no_processes_found", "No se encontraron procesos que coincidan con la búsqueda.")}
+          </div>
+        `;
+      }
+    }
+
+    // 2. Matriz de Conexiones Directas del Sistema Producto (Canvas Edges)
+    if (flowFilter === "ALL" || flowFilter === "CONNECTIONS") {
+      const edges = state.canvasEdges || [];
+
+      let edgesRows = "";
+      if (edges.length === 0) {
+        edgesRows = `
+          <tr>
+            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px; font-size: 11px;">
+              ${t("canvas.no_connections", "No hay conexiones internas definidas en este sistema producto.")}
+            </td>
+          </tr>
+        `;
+      } else {
+        edges.forEach((edge) => {
+          const srcNode = state.canvasNodes.find(n => String(n.id) === String(edge.from) || String(n.process_id) === String(edge.source_process_id));
+          const tgtNode = state.canvasNodes.find(n => String(n.id) === String(edge.to) || String(n.process_id) === String(edge.target_process_id));
+
+          const srcLabel = srcNode ? `${srcNode.name} (#${srcNode.process_id || srcNode.id})` : (edge.from || "Origen");
+          const tgtLabel = tgtNode ? `${tgtNode.name} (#${tgtNode.process_id || tgtNode.id})` : (edge.to || "Destino");
+
+          edgesRows += `
+            <tr>
+              <td style="font-weight: 600; color: var(--accent-emerald);">
+                ➔ ${escapeHtml(srcLabel)}
+              </td>
+              <td>
+                <span class="mono" style="font-weight: 600; font-size: 11px; background: rgba(59, 130, 246, 0.08); padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(59, 130, 246, 0.2);">
+                  ${escapeHtml(edge.flow || "Flujo Conectado")}
+                </span>
+              </td>
+              <td style="font-weight: 600; color: var(--accent-purple);">
+                🡇 ${escapeHtml(tgtLabel)}
+              </td>
+              <td style="text-align: right;">
+                <input type="number" step="any" class="lci-cell-input" 
+                  value="${edge.amount !== undefined ? edge.amount : 1.0}" 
+                  onchange="window.EconodeApp.tableUpdateEdgeAmount('${edge.id}', this.value)">
+              </td>
+              <td style="text-align: center;" class="mono">${escapeHtml(edge.unit || 'kg')}</td>
+              <td style="text-align: center;">
+                <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 10px; color: #EF4444;" 
+                  onclick="window.EconodeApp.tableDeleteEdge('${edge.id}')" title="Desconectar flujo">
+                  ✕ ${t("canvas.conn_disconnect", "Desconectar")}
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+      }
+
+      html += `
+        <div class="table-card" style="margin-top: 24px; padding: 14px; border: 1px solid var(--border-color); border-radius: var(--radius-md); background: var(--bg-card);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
+            <div>
+              <h3 style="font-size: 13px; font-weight: 700; color: var(--text-primary); margin: 0 0 2px;">
+                🔗 ${t("canvas.table_connections_title", "Sistema Producto: Matriz de Conexiones entre Procesos")}
+              </h3>
+              <p style="font-size: 10.5px; color: var(--text-muted); margin: 0;">
+                ${t("canvas.table_connections_desc", "Vínculos de intercambio directo donde un proceso provee insumos intermedios a otro:")}
+              </p>
+            </div>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 11px;" onclick="window.EconodeApp.openConnectModal()">
+              + ${t("canvas.table_add_connection", "Conectar Procesos")}
+            </button>
+          </div>
+          <table class="lci-spreadsheet-table" style="margin-bottom: 0;">
+            <thead>
+              <tr>
+                <th>${t("canvas.conn_source", "Proceso Origen (Salida)")}</th>
+                <th>${t("canvas.conn_flow", "Flujo Transferido")}</th>
+                <th>${t("canvas.conn_target", "Proceso Destino (Entrada)")}</th>
+                <th style="width: 130px; text-align: right;">${t("canvas.col_value", "Cantidad")}</th>
+                <th style="width: 80px; text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
+                <th style="width: 95px; text-align: center;">${t("canvas.col_actions", "Acción")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${edgesRows}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }
+
+  function exportLciTableToCsv() {
+    const sys = state.activeSystem;
+    const sysName = (sys && sys.name) ? sys.name : "Sistema_Producto";
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `LCI_${sysName.replace(/[^a-zA-Z0-9_\-]/g, "_")}_${dateStr}.csv`;
+
+    let csv = "\uFEFF"; // BOM UTF-8 for Excel compatibility
+    csv += "========================================================================\n";
+    csv += `ECONODE STUDIO - MATRIZ DE INVENTARIO DE CICLO DE VIDA (LCI)\n`;
+    csv += `Sistema Producto: ${sysName}\n`;
+    csv += `Código: ${(sys && sys.code) ? sys.code : "N/A"}\n`;
+    csv += `Fecha: ${new Date().toLocaleString()}\n`;
+    csv += "========================================================================\n\n";
+
+    // 1. Procesos y Flujos
+    csv += "ID Proceso,Nombre Proceso,Categoría,Tipo de Flujo,Nombre del Flujo,Proveedor / Destino en Cadena,Cantidad,Unidad\n";
+
+    (state.canvasNodes || []).forEach(node => {
+      const pid = node.process_id || node.id;
+      const pName = `"${(node.name || "").replace(/"/g, '""')}"`;
+      const pCat = `"${(node.category || "Process").replace(/"/g, '""')}"`;
+
+      // Inputs
+      (node.inputs || []).forEach(inp => {
+        const connectedEdge = (state.canvasEdges || []).find(e => 
+          (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id) || String(e.to) === String(node.process_id)) &&
+          (e.flow === inp.name || (inp.name && inp.name.includes(e.flow)))
+        );
+        let flowType = connectedEdge ? "Flujo Conectado" : (inp.is_unit ? "Insumo Tecnosfera" : "Insumo Auxiliar");
+        let provider = connectedEdge ? `Proceso upstream (#${connectedEdge.from})` : (inp.origin || "Mercado global");
+        csv += `${pid},${pName},${pCat},"${flowType}","${(inp.name || "").replace(/"/g, '""')}","${provider.replace(/"/g, '""')}",${inp.amount !== undefined ? inp.amount : 1.0},"${(inp.unit || "kg").replace(/"/g, '""')}"\n`;
+      });
+
+      // Outputs
+      (node.outputs || []).forEach(out => {
+        let flowType = out.is_reference ? "Producto de Referencia" : (out.is_waste ? "Residuo / Salida" : (out.is_elementary ? "Emisión Biosférica" : "Salida Técnica"));
+        let dest = out.is_reference ? "Producto principal" : (out.is_waste ? "Tratamiento de residuos" : "Medio ambiente");
+        csv += `${pid},${pName},${pCat},"${flowType}","${(out.name || "").replace(/"/g, '""')}","${dest.replace(/"/g, '""')}",${out.amount !== undefined ? out.amount : 1.0},"${(out.unit || "kg").replace(/"/g, '""')}"\n`;
+      });
+    });
+
+    csv += "\n";
+    csv += "========================================================================\n";
+    csv += "SISTEMA PRODUCTO: MATRIZ DE CONEXIONES DIRECTAS (CADENA DE SUMINISTRO)\n";
+    csv += "========================================================================\n";
+    csv += "ID Vínculo,Proceso Origen (Salida),Flujo Transferido,Proceso Destino (Entrada),Cantidad,Unidad\n";
+
+    (state.canvasEdges || []).forEach(edge => {
+      const srcNode = state.canvasNodes.find(n => String(n.id) === String(edge.from) || String(n.process_id) === String(edge.source_process_id));
+      const tgtNode = state.canvasNodes.find(n => String(n.id) === String(edge.to) || String(n.process_id) === String(edge.target_process_id));
+      const srcName = srcNode ? srcNode.name : edge.from;
+      const tgtName = tgtNode ? tgtNode.name : edge.to;
+      csv += `"${edge.id}","${srcName.replace(/"/g, '""')}","${(edge.flow || "").replace(/"/g, '""')}","${tgtName.replace(/"/g, '""')}",${edge.amount !== undefined ? edge.amount : 1.0},"${(edge.unit || "kg").replace(/"/g, '""')}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showNotification(window.I18n ? window.I18n.t("canvas.csv_exported_ok", "Hoja de cálculo exportada en CSV compatible con Excel.") : "Hoja de cálculo exportada en CSV.");
+  }
+
+  function openTableConnectModal() {
+    if (!state.canvasNodes || state.canvasNodes.length < 2) {
+      alert("Debes tener al menos 2 procesos en el sistema para conectar flujos.");
+      return;
+    }
+
+    const modal = document.getElementById("modalConnectNodes");
+    const staticBox = document.getElementById("connectNodesStaticBox");
+    const selectBox = document.getElementById("connectNodesSelectBox");
+    const selectSrc = document.getElementById("selectConnectSourceNode");
+    const selectTgt = document.getElementById("selectConnectTargetNode");
+    const selectFlow = document.getElementById("selectConnectSourceFlow");
+    const flowInput = document.getElementById("inputConnectFlowName");
+    const amtInput = document.getElementById("inputConnectAmount");
+    const unitInput = document.getElementById("inputConnectUnit");
+
+    if (staticBox) staticBox.style.display = "none";
+    if (selectBox) selectBox.style.display = "block";
+
+    if (selectSrc && selectTgt) {
+      let srcOpts = "";
+      let tgtOpts = "";
+      state.canvasNodes.forEach((node, i) => {
+        srcOpts += `<option value="${node.id}" ${i === 0 ? 'selected' : ''}>${escapeHtml(node.name)} (#${node.process_id || node.id})</option>`;
+        tgtOpts += `<option value="${node.id}" ${i === 1 ? 'selected' : ''}>${escapeHtml(node.name)} (#${node.process_id || node.id})</option>`;
+      });
+      selectSrc.innerHTML = srcOpts;
+      selectTgt.innerHTML = tgtOpts;
+
+      const updateFlowsFromChosenSource = () => {
+        const srcId = selectSrc.value;
+        const srcNode = state.canvasNodes.find(n => String(n.id) === String(srcId) || String(n.process_id) === String(srcId));
+        if (!srcNode) return;
+
+        state.connectingFromNode = srcNode;
+
+        const refFlow = srcNode.reference_flow || {};
+        const defaultFlowName = refFlow.name || srcNode.name || "Flujo Conectado";
+        const defaultAmt = refFlow.amount !== undefined ? refFlow.amount : (srcNode.amount || 1.0);
+        const defaultUnit = refFlow.unit || srcNode.unit || "kg";
+
+        if (flowInput) flowInput.value = defaultFlowName;
+        if (amtInput) amtInput.value = Number(defaultAmt).toFixed(3);
+        if (unitInput) unitInput.value = defaultUnit;
+
+        if (selectFlow) {
+          let opts = `<option value="">-- Flujo principal: ${escapeHtml(defaultFlowName)} (${defaultAmt} ${defaultUnit}) --</option>`;
+          if (srcNode.outputs && Array.isArray(srcNode.outputs) && srcNode.outputs.length > 0) {
+            srcNode.outputs.forEach((out, oIdx) => {
+              const typeBadge = out.is_reference ? '⭐ [Referencia]' : out.is_waste ? '♻️ [Residuo]' : '📦 [Coproducto]';
+              opts += `<option value="${oIdx}">${typeBadge} ${escapeHtml(out.name)} (${Number(out.amount || 1.0).toFixed(3)} ${out.unit || 'kg'})</option>`;
+            });
+          }
+          selectFlow.innerHTML = opts;
+          selectFlow.onchange = () => {
+            const selVal = selectFlow.value;
+            if (selVal !== "" && srcNode.outputs && srcNode.outputs[selVal]) {
+              const chosen = srcNode.outputs[selVal];
+              flowInput.value = chosen.name;
+              amtInput.value = Number(chosen.amount || 1.0).toFixed(3);
+              unitInput.value = chosen.unit || "kg";
+            } else {
+              flowInput.value = defaultFlowName;
+              amtInput.value = Number(defaultAmt).toFixed(3);
+              unitInput.value = defaultUnit;
+            }
+          };
+        }
+      };
+
+      selectSrc.onchange = updateFlowsFromChosenSource;
+      selectTgt.onchange = () => {
+        const tgtId = selectTgt.value;
+        state.connectingToNode = state.canvasNodes.find(n => String(n.id) === String(tgtId) || String(n.process_id) === String(tgtId));
+      };
+
+      updateFlowsFromChosenSource();
+      const firstTgt = state.canvasNodes.find(n => String(n.id) === String(selectTgt.value) || String(n.process_id) === String(selectTgt.value));
+      state.connectingToNode = firstTgt || state.canvasNodes[1] || null;
+    }
+
+    if (modal) {
+      modal.style.display = "flex";
+      modal.classList.add("active");
+    }
+  }
+
+  // Modificaciones directas desde la tabla
+  function tableUpdateAmount(nodeId, type, idx, value, isInputEvent = false) {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const num = parseFloat(value) || 0;
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      node.inputs[idx].amount = num;
+      // Actualizar también arista conectada si existe
+      const edge = (state.canvasEdges || []).find(e => 
+        (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id) || String(e.to) === String(node.process_id)) &&
+        (e.flow === node.inputs[idx].name || (node.inputs[idx].name && node.inputs[idx].name.includes(e.flow)))
+      );
+      if (edge) edge.amount = num;
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      node.outputs[idx].amount = num;
+      if (node.outputs[idx].is_reference) {
+        if (!node.reference_flow) node.reference_flow = {};
+        node.reference_flow.amount = num;
+        node.amount = num;
+      }
+      // Actualizar aristas salientes
+      (state.canvasEdges || []).filter(e => 
+        (String(e.from) === String(node.id) || String(e.source_process_id) === String(node.process_id) || String(e.from) === String(node.process_id)) &&
+        (e.flow === node.outputs[idx].name || (node.outputs[idx].name && node.outputs[idx].name.includes(e.flow)))
+      ).forEach(e => e.amount = num);
+    }
+
+    scheduleAutoSaveCanvas();
+    if (!isInputEvent) {
+      if (state.selectedNode && String(state.selectedNode.id) === String(node.id)) {
+        inspectNode(node);
+      }
+    }
+  }
+
+  function tableUpdateFlowName(nodeId, type, idx, newName) {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const trimmed = (newName || "").trim();
+    if (!trimmed) return;
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      const oldName = node.inputs[idx].name;
+      node.inputs[idx].name = trimmed;
+      (state.canvasEdges || []).filter(e => 
+        (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id)) &&
+        (e.flow === oldName || (oldName && oldName.includes(e.flow)))
+      ).forEach(e => e.flow = trimmed);
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      const oldName = node.outputs[idx].name;
+      node.outputs[idx].name = trimmed;
+      if (node.outputs[idx].is_reference) {
+        if (!node.reference_flow) node.reference_flow = {};
+        node.reference_flow.name = trimmed;
+      }
+      (state.canvasEdges || []).filter(e => 
+        (String(e.from) === String(node.id) || String(e.source_process_id) === String(node.process_id)) &&
+        (e.flow === oldName || (oldName && oldName.includes(e.flow)))
+      ).forEach(e => e.flow = trimmed);
+    }
+
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
+  }
+
+  function tableUpdateUnit(nodeId, type, idx, newUnit) {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const trimmed = (newUnit || "kg").trim();
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      node.inputs[idx].unit = trimmed;
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      node.outputs[idx].unit = trimmed;
+      if (node.outputs[idx].is_reference) {
+        if (!node.reference_flow) node.reference_flow = {};
+        node.reference_flow.unit = trimmed;
+        node.unit = trimmed;
+      }
+    }
+
+    scheduleAutoSaveCanvas();
+  }
+
+  function tableUpdateProcessName(nodeId, newName) {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const trimmed = (newName || "").trim();
+    if (!trimmed) return;
+    node.name = trimmed;
+    scheduleAutoSaveCanvas();
+  }
+
+  function tableDeleteFlow(nodeId, type, idx) {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      const flowName = node.inputs[idx].name;
+      node.inputs.splice(idx, 1);
+      state.canvasEdges = (state.canvasEdges || []).filter(e => 
+        !(String(e.to) === String(node.id) && (e.flow === flowName || flowName.includes(e.flow)))
+      );
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      if (node.outputs[idx].is_reference) {
+        alert("El flujo de referencia del proceso no puede ser eliminado.");
+        return;
+      }
+      const flowName = node.outputs[idx].name;
+      node.outputs.splice(idx, 1);
+      state.canvasEdges = (state.canvasEdges || []).filter(e => 
+        !(String(e.from) === String(node.id) && (e.flow === flowName || flowName.includes(e.flow)))
+      );
+    }
+
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
+  }
+
+  function tableAddFlow(nodeId, type) {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+
+    const defaultTitle = type === "input" ? "Nuevo Insumo Técnico" : "Nuevo Subproducto / Residuo";
+    const name = prompt(type === "input" ? "Nombre del insumo técnico o energía (Entrada):" : "Nombre del producto, subproducto o emisión (Salida):", defaultTitle);
+    if (!name || !name.trim()) return;
+
+    if (type === "input") {
+      if (!node.inputs) node.inputs = [];
+      node.inputs.push({
+        name: name.trim(),
+        amount: 1.000,
+        unit: "kg",
+        is_unit: true,
+        origin: "Catálogo / Suministro"
+      });
+    } else {
+      if (!node.outputs) node.outputs = [];
+      node.outputs.push({
+        name: name.trim(),
+        amount: 1.000,
+        unit: "kg",
+        is_waste: false,
+        is_reference: false,
+        is_elementary: false
+      });
+    }
+
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
+  }
+
+  function tableUpdateEdgeAmount(edgeId, value) {
+    const edge = (state.canvasEdges || []).find(e => String(e.id) === String(edgeId));
+    if (!edge) return;
+    const num = parseFloat(value) || 0;
+    edge.amount = num;
+    scheduleAutoSaveCanvas();
+  }
+
+  function tableDeleteEdge(edgeId) {
+    state.canvasEdges = (state.canvasEdges || []).filter(e => String(e.id) !== String(edgeId));
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
+    showNotification("Conexión eliminada.");
+  }
+
+  // =========================================================================
   // 7. EXPLORADOR & CATÁLOGO LCI (ecoinvent 3.12)
   // =========================================================================
   async function loadCatalogCategories() {
@@ -4356,13 +5096,28 @@
     if (form) {
       form.addEventListener("submit", (e) => {
         e.preventDefault();
-        if (!state.connectingFromNode || !state.connectingToNode) {
+
+        let source = state.connectingFromNode;
+        let target = state.connectingToNode;
+
+        const selectSrc = document.getElementById("selectConnectSourceNode");
+        const selectTgt = document.getElementById("selectConnectTargetNode");
+        if ((!source || !target) && selectSrc && selectTgt) {
+          const sId = selectSrc.value;
+          const tId = selectTgt.value;
+          source = state.canvasNodes.find(n => String(n.id) === String(sId) || String(n.process_id) === String(sId));
+          target = state.canvasNodes.find(n => String(n.id) === String(tId) || String(n.process_id) === String(tId));
+        }
+
+        if (!source || !target) {
           close();
           return;
         }
 
-        const source = state.connectingFromNode;
-        const target = state.connectingToNode;
+        if (source.id === target.id || String(source.process_id) === String(target.process_id)) {
+          alert("No se puede conectar un proceso consigo mismo.");
+          return;
+        }
 
         const flowName = (document.getElementById("inputConnectFlowName")?.value || source.reference_flow?.name || "Connected Flow").trim();
         const amount = parseFloat(document.getElementById("inputConnectAmount")?.value || "1.0");
@@ -4410,6 +5165,9 @@
         }
 
         renderCanvasEdges();
+        if (state.canvasViewMode === "table") {
+          renderCanvasTableView();
+        }
         close();
         scheduleAutoSaveCanvas();
         showNotification(`Connection created: "${source.name}" ➔ "${target.name}" (${amount} ${unit}).`);
@@ -5297,6 +6055,49 @@
     const btnSaveCanvas = document.getElementById("btnSaveCanvas");
     if (btnSaveCanvas) btnSaveCanvas.addEventListener("click", saveCanvas);
 
+    // Sub-vistas del Lienzo: Diagrama vs Hoja de Cálculo
+    const btnViewVisual = document.getElementById("btnCanvasViewVisual");
+    const btnViewTable = document.getElementById("btnCanvasViewTable");
+    const btnSlideToTable = document.getElementById("btnSlideToTableView");
+    const btnSlideToVisual = document.getElementById("btnSlideToVisualView");
+
+    if (btnViewVisual) btnViewVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
+    if (btnViewTable) btnViewTable.addEventListener("click", () => switchCanvasViewMode("table"));
+    if (btnSlideToTable) btnSlideToTable.addEventListener("click", () => switchCanvasViewMode("table"));
+    if (btnSlideToVisual) btnSlideToVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
+
+    // Filtros de la Hoja de Cálculo LCI
+    const inputTableSearch = document.getElementById("inputTableFilter");
+    if (inputTableSearch) {
+      inputTableSearch.addEventListener("input", (e) => {
+        state.tableFilterText = e.target.value;
+        renderCanvasTableView();
+      });
+    }
+
+    const selectFlowFilter = document.getElementById("selectTableFlowFilter");
+    if (selectFlowFilter) {
+      selectFlowFilter.addEventListener("change", (e) => {
+        state.tableFlowFilter = e.target.value;
+        renderCanvasTableView();
+      });
+    }
+
+    const btnTableAddProc = document.getElementById("btnTableAddProcess");
+    if (btnTableAddProc) {
+      btnTableAddProc.addEventListener("click", () => openProcessEditor(null));
+    }
+
+    const btnTableAddConn = document.getElementById("btnTableAddConnection");
+    if (btnTableAddConn) {
+      btnTableAddConn.addEventListener("click", openTableConnectModal);
+    }
+
+    const btnTableCsv = document.getElementById("btnTableExportCsv");
+    if (btnTableCsv) {
+      btnTableCsv.addEventListener("click", exportLciTableToCsv);
+    }
+
     // Sankey Toggle Buttons
     const btnSankeyNone = document.getElementById("btnSankeyModeNone");
     const btnSankeyMass = document.getElementById("btnSankeyModeMass");
@@ -5765,6 +6566,9 @@
         inspectNode(null);
       }
       renderCanvasStage();
+      if (state.canvasViewMode === "table") {
+        renderCanvasTableView();
+      }
       scheduleAutoSaveCanvas();
       showNotification(removedNode ? `Process "${removedNode.name}" returned to process catalog.` : "Node removed from canvas.");
     },
@@ -5785,10 +6589,26 @@
         );
         state.paletteProcesses.splice(foundIdx, 1);
         renderPaletteProcesses();
+        if (state.canvasViewMode === "table") {
+          renderCanvasTableView();
+        }
       } else {
         addNodeToCanvas(param1, cat || "Polymers", unit || "kg");
       }
     },
+    switchCanvasViewMode: (mode) => switchCanvasViewMode(mode),
+    renderCanvasTableView: () => renderCanvasTableView(),
+    exportLciTableToCsv: () => exportLciTableToCsv(),
+    openConnectModal: () => openTableConnectModal(),
+    openProcessEditor: (targetId) => openProcessEditor(targetId),
+    tableUpdateAmount: (nodeId, type, idx, val, isInput) => tableUpdateAmount(nodeId, type, idx, val, isInput),
+    tableUpdateFlowName: (nodeId, type, idx, val) => tableUpdateFlowName(nodeId, type, idx, val),
+    tableUpdateUnit: (nodeId, type, idx, val) => tableUpdateUnit(nodeId, type, idx, val),
+    tableUpdateProcessName: (nodeId, val) => tableUpdateProcessName(nodeId, val),
+    tableDeleteFlow: (nodeId, type, idx) => tableDeleteFlow(nodeId, type, idx),
+    tableAddFlow: (nodeId, type) => tableAddFlow(nodeId, type),
+    tableUpdateEdgeAmount: (edgeId, val) => tableUpdateEdgeAmount(edgeId, val),
+    tableDeleteEdge: (edgeId) => tableDeleteEdge(edgeId),
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();
@@ -5797,6 +6617,9 @@
       renderReportProcessesTable();
       renderPaletteProcesses();
       renderCanvasStage();
+      if (state.canvasViewMode === "table") {
+        renderCanvasTableView();
+      }
       updateCanvasHeaderToolbar();
       if (state.selectedNode) {
         inspectNode(state.selectedNode);
