@@ -614,17 +614,25 @@ body {
 /* -------------------------------------------------------------
    CANVAS VIEW (Product System Modeling)
 ------------------------------------------------------------- */
+#viewCanvas {
+  max-width: 100% !important;
+  width: 100% !important;
+  padding: 16px 20px !important;
+}
+
 .canvas-wrapper {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
   gap: 16px;
+  width: 100%;
+  min-width: 0;
   height: calc(100vh - 100px);
-  transition: grid-template-columns 0.32s cubic-bezier(0.16, 1, 0.3, 1), gap 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  min-height: 580px;
 }
 
-/* Ocultar panel izquierdo (Catálogo) en cualquier vista */
+/* Ocultar panel izquierdo (Catálogo) en cualquier vista: el lienzo toma el espacio izquierdo */
 .canvas-wrapper.hide-left {
-  grid-template-columns: 0px 1fr 320px;
+  grid-template-columns: 1fr 320px !important;
 }
 .canvas-wrapper.hide-left > .catalog-panel {
   display: none !important;
@@ -632,9 +640,9 @@ body {
   pointer-events: none;
 }
 
-/* Ocultar panel derecho (Inspector) en cualquier vista */
+/* Ocultar panel derecho (Inspector) en cualquier vista: el lienzo toma el espacio derecho */
 .canvas-wrapper.hide-right {
-  grid-template-columns: 280px 1fr 0px;
+  grid-template-columns: 280px 1fr !important;
 }
 .canvas-wrapper.hide-right > .inspector-panel {
   display: none !important;
@@ -642,15 +650,21 @@ body {
   pointer-events: none;
 }
 
-/* Maximizar Lienzo (Zen Mode: ambos paneles laterales ocultos) */
+/* Maximizar Lienzo (Zen Mode: ambos paneles laterales ocultos -> Lienzo al 100% sin márgenes) */
 .canvas-wrapper.hide-left.hide-right {
-  grid-template-columns: 0px 1fr 0px;
-  gap: 0px;
+  grid-template-columns: 1fr !important;
+  gap: 0px !important;
+}
+.canvas-wrapper.hide-left.hide-right > .catalog-panel,
+.canvas-wrapper.hide-left.hide-right > .inspector-panel {
+  display: none !important;
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* Modo Hoja de Cálculo (Table Mode) */
+/* Modo Hoja de Cálculo (Table Mode): inspector cerrado por defecto */
 .canvas-wrapper.table-mode {
-  grid-template-columns: 280px 1fr 0px;
+  grid-template-columns: 280px 1fr !important;
 }
 .canvas-wrapper.table-mode > .inspector-panel {
   display: none !important;
@@ -658,13 +672,15 @@ body {
   pointer-events: none;
 }
 
+/* Modo Hoja de Cálculo con catálogo oculto (Lienzo / Tabla al 100%) */
 .canvas-wrapper.table-mode.hide-left {
-  grid-template-columns: 0px 1fr 0px;
-  gap: 0px;
+  grid-template-columns: 1fr !important;
+  gap: 0px !important;
 }
 
+/* Modo Hoja de Cálculo con inspector abierto */
 .canvas-wrapper.table-mode.show-right {
-  grid-template-columns: 280px 1fr 320px;
+  grid-template-columns: 280px 1fr 320px !important;
 }
 .canvas-wrapper.table-mode.show-right > .inspector-panel {
   display: flex !important;
@@ -672,7 +688,7 @@ body {
   pointer-events: auto;
 }
 .canvas-wrapper.table-mode.show-right.hide-left {
-  grid-template-columns: 0px 1fr 320px;
+  grid-template-columns: 1fr 320px !important;
 }
 
 /* Estilo para botones de colapso rápido dentro de los paneles */
@@ -860,6 +876,14 @@ body {
   flex-direction: column;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  min-width: 0;
+  width: 100%;
+}
+
+.canvas-panel.center-panel {
+  min-width: 0;
+  width: 100%;
+  flex: 1;
 }
 
 .panel-header {
@@ -880,6 +904,9 @@ body {
   background-image: radial-gradient(rgba(0, 0, 0, 0.08) 1px, transparent 1px);
   background-size: 20px 20px;
   overflow: auto;
+  min-width: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .process-node-card {

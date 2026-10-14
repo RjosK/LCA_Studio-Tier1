@@ -3324,6 +3324,12 @@
       btnFull.classList.toggle("active", isBothHidden);
       btnFull.setAttribute("aria-pressed", isBothHidden ? "true" : "false");
     }
+
+    // Notificar redimensionamiento y refrescar conexiones SVG
+    setTimeout(() => {
+      renderCanvasEdges();
+      window.dispatchEvent(new Event("resize"));
+    }, 60);
   }
 
   function toggleLeftPanel(forceState) {
@@ -6427,6 +6433,13 @@
           e.preventDefault();
           window.EconodeApp.removeNode(state.selectedNode.id);
         }
+      }
+    });
+
+    // Auto-ajustar conexiones SVG del lienzo cuando la ventana del navegador cambia de tamaño
+    window.addEventListener("resize", () => {
+      if (state.currentView === "canvas" && state.canvasViewMode === "visual") {
+        renderCanvasEdges();
       }
     });
 
