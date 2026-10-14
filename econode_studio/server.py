@@ -79,15 +79,23 @@ from application import (
 )
 from infrastructure import get_active_db_connection, get_configured_client_id
 
-WEB_DIR = os.path.join(STUDIO_DIR, "web")
+WEB_DIR = os.path.join(os.path.dirname(STUDIO_DIR), "public")
 if not os.path.exists(WEB_DIR):
-    public_alt = os.path.join(os.path.dirname(STUDIO_DIR), "public")
-    if os.path.exists(public_alt):
-        WEB_DIR = public_alt
+    web_alt = os.path.join(STUDIO_DIR, "web")
+    if os.path.exists(web_alt):
+        WEB_DIR = web_alt
     else:
         WEB_DIR = os.path.abspath(os.curdir)
 
 TEMPLATE_CSV_PATH = os.path.join(os.path.dirname(STUDIO_DIR), "plantilla_sistemas_parametrizados.csv")
+DEFAULT_TEMPLATE_CSV = (
+    "nombre,capacidad_ml,peso_envase_g,tasa_reciclaje_pct,distancia_transporte_km,contenido_reciclado_pct\n"
+    "Botellin PET 330 ml (Consumo Rapido),330,16.0,25.0,80,0.0\n"
+    "Botella PET 500 ml Estandar,500,24.0,40.0,120,0.0\n"
+    "Botella PET 1 Litro Familiar,1000,34.0,55.0,180,15.0\n"
+    "Garrafa PET 1.5 L Alta Circularidad,1500,42.0,75.0,250,50.0\n"
+    "Bidon PET 5 Litros Agua Purificada,5000,98.0,60.0,350,20.0\n"
+)
 
 def _json_serializer(obj: Any) -> Any:
     """Serializador universal de tipos PostgreSQL / SQLite para JSON REST API."""
@@ -154,8 +162,8 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
     def _send_json(self, data: Any, status=200):
         body_bytes = json.dumps(data, ensure_ascii=False, indent=2, default=_json_serializer).encode("utf-8")
         self._set_headers(status, "application/json", extra_headers={"Content-Length": str(len(body_bytes))})
-        self.wfile.write(body_bytes)
         try:
+            self.wfile.write(body_bytes)
             self.wfile.flush()
         except Exception:
             pass
@@ -254,15 +262,20 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 # Download Template CSV
                 elif path == "/api/systems/template-csv":
+                    csv_data = DEFAULT_TEMPLATE_CSV
                     if os.path.exists(TEMPLATE_CSV_PATH):
-                        with open(TEMPLATE_CSV_PATH, "r", encoding="utf-8") as f:
-                            csv_data = f.read()
-                        self._set_headers(200, "text/csv", {"Content-Disposition": 'attachment; filename="plantilla_sistemas_parametrizados.csv"'})
+                        try:
+                            with open(TEMPLATE_CSV_PATH, "r", encoding="utf-8") as f:
+                                csv_data = f.read()
+                        except Exception:
+                            pass
+                    self._set_headers(200, "text/csv", {"Content-Disposition": 'attachment; filename="plantilla_sistemas_parametrizados.csv"'})
+                    try:
                         self.wfile.write(csv_data.encode("utf-8"))
-                        return
-                    else:
-                        self._send_error_json("Plantilla no encontrada", 404)
-                        return
+                        self.wfile.flush()
+                    except Exception:
+                        pass
+                    return
 
                 # LCI Catalog Search
                 elif path == "/api/processes":
@@ -527,9 +540,15 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
             # Import CSV
             elif path == "/api/systems/import-csv":
                 csv_str = body.get("csv", "")
-                if not csv_str and os.path.exists(TEMPLATE_CSV_PATH):
-                    with open(TEMPLATE_CSV_PATH, "r", encoding="utf-8") as f:
-                        csv_str = f.read()
+                if not csv_str:
+                    if os.path.exists(TEMPLATE_CSV_PATH):
+                        try:
+                            with open(TEMPLATE_CSV_PATH, "r", encoding="utf-8") as f:
+                                csv_str = f.read()
+                        except Exception:
+                            csv_str = DEFAULT_TEMPLATE_CSV
+                    else:
+                        csv_str = DEFAULT_TEMPLATE_CSV
                 try:
                     user = self._get_request_user()
                     res = import_systems_csv_use_case(conn, csv_str, user=user)
