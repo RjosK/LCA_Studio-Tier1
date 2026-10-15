@@ -832,11 +832,9 @@
             <!-- Acciones y Filtros de la Hoja de Cálculo -->
             <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
               <input type="text" class="form-input spreadsheet-search-box" placeholder="Buscar en celdas..." id="inputTableFilter" data-i18n-placeholder="canvas.table_search_ph">
-              <select id="selectTableFlowFilter" class="form-input" style="height: 27px; font-size: 11px; padding: 2px 6px;">
-                <option value="ALL" data-i18n="canvas.filter_all">Todos los Flujos</option>
-                <option value="INPUTS" data-i18n="canvas.filter_inputs">Solo Entradas (Insumos)</option>
-                <option value="OUTPUTS" data-i18n="canvas.filter_outputs">Solo Salidas (Productos/Residuos)</option>
-                <option value="CONNECTIONS" data-i18n="canvas.filter_connections">Solo Conexiones Internas</option>
+              <select id="selectTableFlowFilter" class="form-input" style="height: 27px; font-size: 11px; padding: 2px 8px; min-width: 200px;">
+                <option value="lci" data-i18n="canvas.filter_processes">Procesos (Entradas y Salidas)</option>
+                <option value="connections" data-i18n="canvas.filter_connections">Conexiones Internas</option>
               </select>
               <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddProcess" style="font-size: 11px; padding: 3px 8px;">
                 + <span data-i18n="canvas.table_add_process">Agregar Proceso</span>

@@ -3627,6 +3627,7 @@
       tabLci.setAttribute("aria-selected", activeTab === "lci" ? "true" : "false");
       tabLci.onclick = () => {
         state.activeSheetTab = "lci";
+        state.selectedSpreadsheetCell = null;
         renderCanvasTableView();
       };
     }
@@ -3635,6 +3636,7 @@
       tabConn.setAttribute("aria-selected", activeTab === "connections" ? "true" : "false");
       tabConn.onclick = () => {
         state.activeSheetTab = "connections";
+        state.selectedSpreadsheetCell = null;
         renderCanvasTableView();
       };
     }
@@ -3662,8 +3664,8 @@
       inputSearch.value = state.tableFilterText;
     }
     const selectFilter = document.getElementById("selectTableFlowFilter");
-    if (selectFilter && selectFilter.value !== state.tableFlowFilter) {
-      selectFilter.value = state.tableFlowFilter;
+    if (selectFilter) {
+      selectFilter.value = (activeTab === "connections") ? "connections" : "lci";
     }
 
     if (!state.canvasNodes || state.canvasNodes.length === 0) {
@@ -3706,8 +3708,8 @@
             <tr>
               <th class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</th>
               <th class="excel-col-label-th">${t("canvas.col_process", "Proceso")}</th>
-              <th class="excel-col-label-th">Material / Flujo</th>
-              <th class="excel-col-label-th">${t("canvas.col_provider", "Proveedor / Destino")}</th>
+              <th class="excel-col-label-th">${t("canvas.col_material", "Material")}</th>
+              <th class="excel-col-label-th">${t("canvas.col_provider", "Proveedor")}</th>
               <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acciones")}</th>
@@ -3915,7 +3917,16 @@
 
     if (activeTab === "connections") {
       let currentRowNum = 1;
-      const edges = state.canvasEdges || [];
+      const rawEdges = state.canvasEdges || [];
+      const edges = rawEdges.filter(edge => {
+        if (!filterText) return true;
+        const srcNode = state.canvasNodes.find(n => String(n.id) === String(edge.from) || String(n.process_id) === String(edge.source_process_id));
+        const tgtNode = state.canvasNodes.find(n => String(n.id) === String(edge.to) || String(n.process_id) === String(edge.target_process_id));
+        const srcLabel = (srcNode ? srcNode.name : (edge.from || "")).toLowerCase();
+        const tgtLabel = (tgtNode ? tgtNode.name : (edge.to || "")).toLowerCase();
+        const flow = (edge.flow || "").toLowerCase();
+        return srcLabel.includes(filterText) || tgtLabel.includes(filterText) || flow.includes(filterText);
+      });
 
       html += `
         <table class="lci-excel-grid">
@@ -3932,9 +3943,9 @@
             <tr>
               <th class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</th>
               <th class="excel-col-label-th">${t("canvas.conn_source", "Proceso Origen (Salida)")}</th>
-              <th class="excel-col-label-th">${t("canvas.conn_flow", "Flujo Transferido")}</th>
+              <th class="excel-col-label-th">${t("canvas.col_material", "Material / Flujo")}</th>
               <th class="excel-col-label-th">${t("canvas.conn_target", "Proceso Destino (Entrada)")}</th>
-              <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Cantidad")}</th>
+              <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acción")}</th>
             </tr>
@@ -6446,7 +6457,9 @@
     const selectFlowFilter = document.getElementById("selectTableFlowFilter");
     if (selectFlowFilter) {
       selectFlowFilter.addEventListener("change", (e) => {
-        state.tableFlowFilter = e.target.value;
+        const val = e.target.value;
+        state.activeSheetTab = (val === "connections") ? "connections" : "lci";
+        state.selectedSpreadsheetCell = null;
         renderCanvasTableView();
       });
     }
