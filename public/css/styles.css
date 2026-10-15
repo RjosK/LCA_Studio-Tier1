@@ -1050,6 +1050,21 @@ body {
   pointer-events: none;
 }
 
+/* Merged Product System Cell (Excel-style merged block across rows) */
+.excel-merged-system-cell {
+  vertical-align: middle !important;
+  text-align: center !important;
+  background: var(--bg-card) !important;
+  font-weight: 700;
+  color: var(--text-primary);
+  padding: 14px 12px !important;
+  border: 1px solid var(--border-color) !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+  line-height: 1.4 !important;
+  user-select: text;
+}
+
 /* Inline Edit Input */
 .excel-inline-input {
   width: 100%;

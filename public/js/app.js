@@ -3928,26 +3928,32 @@
         return srcLabel.includes(filterText) || tgtLabel.includes(filterText) || flow.includes(filterText);
       });
 
+      const sys = state.activeSystem;
+      const sysName = (sys && sys.name) ? sys.name : "Sistema Producto";
+      const sysCode = (sys && sys.code) ? sys.code : "#SYS-01";
+
       html += `
         <table class="lci-excel-grid">
           <thead>
             <tr class="excel-header-row-letters">
               <th class="excel-corner-cell"></th>
-              <th class="excel-col-letter" data-col="A" style="width: 250px;">A</th>
-              <th class="excel-col-letter" data-col="B" style="width: 200px;">B</th>
-              <th class="excel-col-letter" data-col="C" style="width: 250px;">C</th>
-              <th class="excel-col-letter" data-col="D" style="width: 110px; text-align: right;">D</th>
-              <th class="excel-col-letter" data-col="E" style="width: 80px; text-align: center;">E</th>
-              <th class="excel-col-letter" data-col="F" style="width: 90px; text-align: center;">F</th>
+              <th class="excel-col-letter" data-col="A" style="width: 220px;">A</th>
+              <th class="excel-col-letter" data-col="B" style="width: 240px;">B</th>
+              <th class="excel-col-letter" data-col="C" style="min-width: 200px;">C</th>
+              <th class="excel-col-letter" data-col="D" style="width: 240px;">D</th>
+              <th class="excel-col-letter" data-col="E" style="width: 105px; text-align: right;">E</th>
+              <th class="excel-col-letter" data-col="F" style="width: 75px; text-align: center;">F</th>
+              <th class="excel-col-letter" data-col="G" style="width: 95px; text-align: center;">G</th>
             </tr>
             <tr>
               <th class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</th>
+              <th class="excel-col-label-th">${t("canvas.col_system", "Sistema Producto")}</th>
               <th class="excel-col-label-th">${t("canvas.conn_source", "Proceso Origen (Salida)")}</th>
               <th class="excel-col-label-th">${t("canvas.col_material", "Material / Flujo")}</th>
               <th class="excel-col-label-th">${t("canvas.conn_target", "Proceso Destino (Entrada)")}</th>
               <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
-              <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acción")}</th>
+              <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acciones")}</th>
             </tr>
           </thead>
           <tbody>
@@ -3958,13 +3964,17 @@
         html += `
           <tr>
             <td class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</td>
+            <td class="excel-cell excel-merged-system-cell" data-col="A" data-row="${currentRowNum}">
+              <div style="font-weight: 700; color: var(--text-primary); font-size: 11px;">${escapeHtml(sysName)}</div>
+              <div class="mono" style="font-size: 9px; color: #0284C7; margin-top: 3px;">${escapeHtml(sysCode)}</div>
+            </td>
             <td class="excel-cell" colspan="6" style="text-align: center; color: var(--text-muted); padding: 18px; font-style: italic;">
               ${t("canvas.no_connections", "No hay conexiones internas definidas en este sistema producto.")}
             </td>
           </tr>
         `;
       } else {
-        edges.forEach((edge) => {
+        edges.forEach((edge, rIdx) => {
           currentRowNum++;
           totalRows++;
 
@@ -3974,27 +3984,38 @@
           const srcLabel = srcNode ? `${srcNode.name} (#${srcNode.process_id || srcNode.id})` : (edge.from || "Origen");
           const tgtLabel = tgtNode ? `${tgtNode.name} (#${tgtNode.process_id || tgtNode.id})` : (edge.to || "Destino");
 
+          const mergedSystemCell = (rIdx === 0) ? `
+              <td class="excel-cell excel-merged-system-cell" rowspan="${edges.length}" data-col="A" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'A', '${escapeHtml(sysName)}')">
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+                  <span style="font-size: 11px; font-weight: 700; color: var(--text-primary); text-align: center;">${escapeHtml(sysName)}</span>
+                  <span class="mono" style="font-size: 8.5px; font-weight: 600; color: #0284C7; background: rgba(14, 165, 233, 0.08); padding: 2px 6px; border-radius: 4px;">${escapeHtml(sysCode)}</span>
+                  <span style="font-size: 9px; color: var(--text-muted); font-weight: 500;">(${edges.length} intercambios)</span>
+                </div>
+              </td>
+          ` : '';
+
           html += `
             <tr>
               <td class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</td>
-              <td class="excel-cell" data-col="A" data-row="${currentRowNum}" style="font-weight: 600; color: #059669;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'A', '${escapeHtml(srcLabel)}')">
+              ${mergedSystemCell}
+              <td class="excel-cell" data-col="B" data-row="${currentRowNum}" style="font-weight: 600; color: #059669;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'B', '${escapeHtml(srcLabel)}')">
                 ➔ ${escapeHtml(srcLabel)}
               </td>
-              <td class="excel-cell" data-col="B" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'B', '${escapeHtml(edge.flow)}')">
+              <td class="excel-cell" data-col="C" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(edge.flow)}')">
                 <span class="excel-badge-connected">${escapeHtml(edge.flow || "Flujo Conectado")}</span>
               </td>
-              <td class="excel-cell" data-col="C" data-row="${currentRowNum}" style="font-weight: 600; color: #7C3AED;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(tgtLabel)}')">
+              <td class="excel-cell" data-col="D" data-row="${currentRowNum}" style="font-weight: 600; color: #7C3AED;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'D', '${escapeHtml(tgtLabel)}')">
                 🡇 ${escapeHtml(tgtLabel)}
               </td>
-              <td class="excel-cell mono" data-col="D" data-row="${currentRowNum}" style="text-align: right;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'D', '${edge.amount || 1.0}', { type: 'edgeAmount', edgeId: '${edge.id}' })">
+              <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: right;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'E', '${edge.amount || 1.0}', { type: 'edgeAmount', edgeId: '${edge.id}' })">
                 <input type="number" step="any" class="excel-inline-input" style="text-align: right;" 
                   value="${edge.amount !== undefined ? edge.amount : 1.0}" 
                   onchange="window.EconodeApp.tableUpdateEdgeAmount('${edge.id}', this.value)">
               </td>
-              <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: center;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'E', '${escapeHtml(edge.unit || 'kg')}')">
+              <td class="excel-cell mono" data-col="F" data-row="${currentRowNum}" style="text-align: center;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'F', '${escapeHtml(edge.unit || 'kg')}')">
                 ${escapeHtml(edge.unit || 'kg')}
               </td>
-              <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center;">
+              <td class="excel-cell" data-col="G" data-row="${currentRowNum}" style="text-align: center;">
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9.5px; color: #EF4444;" 
                   onclick="window.EconodeApp.tableDeleteEdge('${edge.id}')" title="Desconectar vínculo">
                   ✕ ${t("canvas.conn_disconnect", "Desconectar")}
