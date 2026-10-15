@@ -3696,18 +3696,16 @@
           <thead>
             <tr class="excel-header-row-letters">
               <th class="excel-corner-cell"></th>
-              <th class="excel-col-letter" data-col="A" style="width: 230px;">A</th>
-              <th class="excel-col-letter" data-col="B" style="width: 135px;">B</th>
-              <th class="excel-col-letter" data-col="C" style="min-width: 220px;">C</th>
-              <th class="excel-col-letter" data-col="D" style="width: 260px;">D</th>
-              <th class="excel-col-letter" data-col="E" style="width: 105px; text-align: right;">E</th>
-              <th class="excel-col-letter" data-col="F" style="width: 70px; text-align: center;">F</th>
-              <th class="excel-col-letter" data-col="G" style="width: 85px; text-align: center;">G</th>
+              <th class="excel-col-letter" data-col="A" style="width: 250px;">A</th>
+              <th class="excel-col-letter" data-col="B" style="min-width: 250px;">B</th>
+              <th class="excel-col-letter" data-col="C" style="width: 320px;">C</th>
+              <th class="excel-col-letter" data-col="D" style="width: 110px; text-align: right;">D</th>
+              <th class="excel-col-letter" data-col="E" style="width: 75px; text-align: center;">E</th>
+              <th class="excel-col-letter" data-col="F" style="width: 85px; text-align: center;">F</th>
             </tr>
             <tr>
               <th class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</th>
               <th class="excel-col-label-th">${t("canvas.col_process", "Proceso")}</th>
-              <th class="excel-col-label-th">${t("canvas.col_type", "Tipo")}</th>
               <th class="excel-col-label-th">Material / Flujo</th>
               <th class="excel-col-label-th">${t("canvas.col_provider", "Proveedor / Destino")}</th>
               <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
@@ -3862,6 +3860,7 @@
               <td class="excel-row-num" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(null, ${currentRowNum}, 'A', '${escapeHtml(node.name)}')">
                 ${currentRowNum}
               </td>
+              <!-- Col A: Proceso -->
               <td class="excel-cell" data-col="A" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'A', '${escapeHtml(node.name)}', { type: 'processName', nodeId: '${node.id}' })">
                 ${isFirstRowOfProcess ? `
                   <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
@@ -3872,26 +3871,28 @@
                   <span style="color: var(--text-muted); opacity: 0.35;">↳</span>
                 `}
               </td>
-              <td class="excel-cell" data-col="B" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'B', '${rowItem.flowKind}')">
-                ${rowItem.typeBadge}
-              </td>
-              <td class="excel-cell" data-col="C" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(rowItem.flowName)}', { type: 'name', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
+              <!-- Col B: Material / Flujo -->
+              <td class="excel-cell" data-col="B" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'B', '${escapeHtml(rowItem.flowName)}', { type: 'name', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
                 <input type="text" class="excel-inline-input" value="${escapeHtml(rowItem.flowName)}" 
                   onchange="window.EconodeApp.tableUpdateFlowName('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)">
               </td>
-              <td class="excel-cell" data-col="D" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'D', '${escapeHtml(rowItem.provider)}')">
+              <!-- Col C: Proveedor / Destino -->
+              <td class="excel-cell" data-col="C" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(rowItem.provider)}')">
                 ${rowItem.provider}
               </td>
-              <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: right;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'E', '${rowItem.amount}', { type: 'amount', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
+              <!-- Col D: Valor (Cantidad numérica) -->
+              <td class="excel-cell mono" data-col="D" data-row="${currentRowNum}" style="text-align: right;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'D', '${rowItem.amount}', { type: 'amount', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
                 <input type="number" step="any" class="excel-inline-input" style="text-align: right;" value="${rowItem.amount}" 
                   onchange="window.EconodeApp.tableUpdateAmount('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)"
                   oninput="window.EconodeApp.tableUpdateAmount('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value, true)">
               </td>
-              <td class="excel-cell mono" data-col="F" data-row="${currentRowNum}" style="text-align: center;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'F', '${escapeHtml(rowItem.unit)}', { type: 'unit', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
+              <!-- Col E: Unidad -->
+              <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: center;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'E', '${escapeHtml(rowItem.unit)}', { type: 'unit', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
                 <input type="text" class="excel-inline-input" style="text-align: center;" value="${escapeHtml(rowItem.unit)}" 
                   onchange="window.EconodeApp.tableUpdateUnit('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)">
               </td>
-              <td class="excel-cell" data-col="G" data-row="${currentRowNum}" style="text-align: center;">
+              <!-- Col F: Acciones rápidas -->
+              <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center;">
                 ${rowItem.canDelete ? `
                   <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9.5px; color: #EF4444;" 
                     onclick="window.EconodeApp.tableDeleteFlow('${node.id}', '${rowItem.flowKind}', ${rowItem.idx})" title="Eliminar fila">✕</button>
@@ -4010,7 +4011,7 @@
     if (statInputs) statInputs.textContent = `Total Insumos: ${totalInputsKg.toFixed(3)} kg`;
 
     setTimeout(() => {
-      const firstDataCell = container.querySelector('.excel-cell[data-col="C"][data-row="2"]');
+      const firstDataCell = container.querySelector('.excel-cell[data-col="B"][data-row="2"]');
       if (firstDataCell && !state.selectedSpreadsheetCell) {
         firstDataCell.click();
       }
@@ -4032,7 +4033,7 @@
     csv += "========================================================================\n\n";
 
     // 1. Procesos y Flujos
-    csv += "ID Proceso,Nombre Proceso,Categoría,Tipo de Flujo,Nombre del Flujo,Proveedor / Destino en Cadena,Cantidad,Unidad\n";
+    csv += "Proceso,Material,Proveedor,Valor,Unidad\n";
 
     (state.canvasNodes || []).forEach(node => {
       const pid = node.process_id || node.id;
@@ -4047,14 +4048,14 @@
         );
         let flowType = connectedEdge ? "Flujo Conectado" : (inp.is_unit ? "Insumo Tecnosfera" : "Insumo Auxiliar");
         let provider = connectedEdge ? `Proceso upstream (#${connectedEdge.from})` : (inp.origin || "Mercado global");
-        csv += `${pid},${pName},${pCat},"${flowType}","${(inp.name || "").replace(/"/g, '""')}","${provider.replace(/"/g, '""')}",${inp.amount !== undefined ? inp.amount : 1.0},"${(inp.unit || "kg").replace(/"/g, '""')}"\n`;
+        csv += `${pName},"${(inp.name || "").replace(/"/g, '""')}","${provider.replace(/"/g, '""')}",${inp.amount !== undefined ? inp.amount : 1.0},"${(inp.unit || "kg").replace(/"/g, '""')}"\n`;
       });
 
       // Outputs
       (node.outputs || []).forEach(out => {
         let flowType = out.is_reference ? "Producto de Referencia" : (out.is_waste ? "Residuo / Salida" : (out.is_elementary ? "Emisión Biosférica" : "Salida Técnica"));
         let dest = out.is_reference ? "Producto principal" : (out.is_waste ? "Tratamiento de residuos" : "Medio ambiente");
-        csv += `${pid},${pName},${pCat},"${flowType}","${(out.name || "").replace(/"/g, '""')}","${dest.replace(/"/g, '""')}",${out.amount !== undefined ? out.amount : 1.0},"${(out.unit || "kg").replace(/"/g, '""')}"\n`;
+        csv += `${pName},"${(out.name || "").replace(/"/g, '""')}","${dest.replace(/"/g, '""')}",${out.amount !== undefined ? out.amount : 1.0},"${(out.unit || "kg").replace(/"/g, '""')}"\n`;
       });
     });
 
