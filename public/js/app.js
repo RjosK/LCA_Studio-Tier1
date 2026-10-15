@@ -3381,8 +3381,13 @@
     const btnFull = document.getElementById("btnToggleFullCanvas");
 
     if (btnLeft) {
-      btnLeft.classList.toggle("active", !hideLeft);
-      btnLeft.setAttribute("aria-pressed", !hideLeft ? "true" : "false");
+      if (isTable) {
+        btnLeft.style.display = "none";
+      } else {
+        btnLeft.style.display = "";
+        btnLeft.classList.toggle("active", !hideLeft);
+        btnLeft.setAttribute("aria-pressed", !hideLeft ? "true" : "false");
+      }
     }
     if (btnRight) {
       if (isTable) {
@@ -3394,9 +3399,14 @@
       }
     }
     if (btnFull) {
-      const isFull = isTable ? hideLeft : (hideLeft && hideRight);
-      btnFull.classList.toggle("active", isFull);
-      btnFull.setAttribute("aria-pressed", isFull ? "true" : "false");
+      if (isTable) {
+        btnFull.style.display = "none";
+      } else {
+        btnFull.style.display = "";
+        const isFull = hideLeft && hideRight;
+        btnFull.classList.toggle("active", isFull);
+        btnFull.setAttribute("aria-pressed", isFull ? "true" : "false");
+      }
     }
 
     // Notificar redimensionamiento y refrescar conexiones SVG
@@ -3409,6 +3419,7 @@
   }
 
   function toggleLeftPanel(forceState) {
+    if (state.canvasViewMode === "table") return;
     if (forceState !== undefined) {
       state.leftPanelVisible = forceState;
     } else {
@@ -3440,17 +3451,7 @@
   }
 
   function toggleFullCanvas() {
-    const isTable = state.canvasViewMode === "table";
-    if (isTable) {
-      // En modo tabla, maximizar oculta o muestra el catálogo izquierdo (100% de amplitud para la hoja)
-      state.leftPanelVisible = !state.leftPanelVisible;
-      updateCanvasPanelLayout();
-      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
-      showNotification(state.leftPanelVisible ? 
-        (isEn ? "Process catalog shown." : "Catálogo de procesos visible.") : 
-        (isEn ? "Spreadsheet maximized (100% width)." : "Hoja de cálculo maximizada al 100% de amplitud."));
-      return;
-    }
+    if (state.canvasViewMode === "table") return;
 
     const hideLeft = state.leftPanelVisible === false;
     const hideRight = state.rightPanelVisible === false;
@@ -3669,21 +3670,68 @@
     }
 
     if (!state.canvasNodes || state.canvasNodes.length === 0) {
-      container.innerHTML = `
-        <div style="padding: 48px 16px; text-align: center; color: var(--text-muted);">
-          <div style="font-size: 40px; margin-bottom: 12px;">📊</div>
-          <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
-            ${t("canvas.table_title", "Hoja de Cálculo LCI: Balance e Intercambios")}
-          </h3>
-          <p style="font-size: 12px; max-width: 440px; margin: 0 auto 16px; line-height: 1.5;">
-            No hay procesos en este sistema producto. Agrega procesos desde el catálogo lateral o crea uno nuevo para comenzar a estructurar la matriz LCI.
-          </p>
-          <button type="button" class="btn btn-primary btn-sm" onclick="window.EconodeApp.openProcessEditor(null)">
-            + ${t("canvas.table_add_process", "Agregar Proceso")}
-          </button>
-        </div>
-      `;
-      return;
+      if (activeTab === "lci") {
+        container.innerHTML = `
+          <table class="lci-excel-grid">
+            <thead>
+              <tr class="excel-header-row-letters">
+                <th class="excel-corner-cell"></th>
+                <th class="excel-col-letter" data-col="A" style="width: 250px;">A</th>
+                <th class="excel-col-letter" data-col="B" style="min-width: 250px;">B</th>
+                <th class="excel-col-letter" data-col="C" style="width: 320px;">C</th>
+                <th class="excel-col-letter" data-col="D" style="width: 110px; text-align: right;">D</th>
+                <th class="excel-col-letter" data-col="E" style="width: 75px; text-align: center;">E</th>
+                <th class="excel-col-letter" data-col="F" style="width: 85px; text-align: center;">F</th>
+              </tr>
+              <tr>
+                <th class="excel-row-num" data-row="1">1</th>
+                <th class="excel-col-label-th">${t("canvas.col_process", "Proceso")}</th>
+                <th class="excel-col-label-th">${t("canvas.col_material", "Material")}</th>
+                <th class="excel-col-label-th">${t("canvas.col_provider", "Proveedor")}</th>
+                <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
+                <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
+                <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acciones")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="excel-row-new-process">
+                <td class="excel-row-num" data-row="2">2</td>
+                <td class="excel-cell" data-col="A" data-row="2">
+                  <input type="text" class="excel-inline-input excel-input-new-proc-name" style="font-weight: 700; color: #059669;"
+                    placeholder="${t("canvas.placeholder_new_process", "+ Escribir nuevo proceso (Enter)...")}"
+                    onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'A', '', { type: 'newProcess' })">
+                </td>
+                <td class="excel-cell" data-col="B" data-row="2">
+                  <input type="text" class="excel-inline-input excel-input-new-mat"
+                    placeholder="${t("canvas.placeholder_new_material", "Material / Insumo principal...")}"
+                    onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'B', '', { type: 'newProcessMat' })">
+                </td>
+                <td class="excel-cell" data-col="C" data-row="2" style="color: var(--text-muted); font-size: 10px; font-style: italic;">
+                  Mercado ecoinvent 3.12
+                </td>
+                <td class="excel-cell mono" data-col="D" data-row="2" style="text-align: right;">
+                  <input type="number" step="any" class="excel-inline-input excel-input-new-amt" style="text-align: right;" value="1.0"
+                    onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'D', '1.0')">
+                </td>
+                <td class="excel-cell mono" data-col="E" data-row="2" style="text-align: center;">
+                  <input type="text" class="excel-inline-input excel-input-new-unit" style="text-align: center;" value="kg"
+                    onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'E', 'kg')">
+                </td>
+                <td class="excel-cell" data-col="F" data-row="2" style="text-align: center;">
+                  <button type="button" class="btn btn-primary btn-sm" style="padding: 1px 7px; font-size: 9.5px;"
+                    onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value); }"
+                    title="${t("canvas.enter_to_create", "↵ Enter")}">+ Crear</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        `;
+        return;
+      }
     }
 
     let html = "";
@@ -3862,12 +3910,15 @@
               <td class="excel-row-num" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(null, ${currentRowNum}, 'A', '${escapeHtml(node.name)}')">
                 ${currentRowNum}
               </td>
-              <!-- Col A: Proceso -->
+              <!-- Col A: Proceso (Editable directamente estilo Excel) -->
               <td class="excel-cell" data-col="A" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'A', '${escapeHtml(node.name)}', { type: 'processName', nodeId: '${node.id}' })">
                 ${isFirstRowOfProcess ? `
                   <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px;">
-                    <span style="font-weight: 700; color: var(--text-primary);">${escapeHtml(node.name)}</span>
-                    <span class="mono" style="font-size: 8.5px; font-weight: 700; color: #059669; background: rgba(5, 150, 105, 0.08); padding: 1px 4px; border-radius: 3px;">#${node.process_id || node.id}</span>
+                    <input type="text" class="excel-inline-input" style="font-weight: 700; color: var(--text-primary); width: calc(100% - 48px);" 
+                      value="${escapeHtml(node.name)}" 
+                      onchange="window.EconodeApp.tableUpdateProcessName('${node.id}', this.value)"
+                      onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', this.value, { type: 'processName', nodeId: '${node.id}' })">
+                    <span class="mono" style="font-size: 8.5px; font-weight: 700; color: #059669; background: rgba(5, 150, 105, 0.08); padding: 1px 4px; border-radius: 3px; flex-shrink: 0;">#${node.process_id || node.id}</span>
                   </div>
                 ` : `
                   <span style="color: var(--text-muted); opacity: 0.35;">↳</span>
@@ -3898,16 +3949,88 @@
                 ${rowItem.canDelete ? `
                   <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9.5px; color: #EF4444;" 
                     onclick="window.EconodeApp.tableDeleteFlow('${node.id}', '${rowItem.flowKind}', ${rowItem.idx})" title="Eliminar fila">✕</button>
-                ` : (isFirstRowOfProcess ? `
-                  <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 9px;" onclick="window.EconodeApp.tableAddFlow('${node.id}', 'input')" title="Agregar insumo">+</button>
                 ` : `
                   <span style="color: var(--text-muted); font-size: 9px;">—</span>
-                `)}
+                `}
               </td>
             </tr>
           `;
         });
+
+        // Fila inline interactiva estilo Excel para agregar insumo al proceso directamente
+        currentRowNum++;
+        totalRows++;
+        html += `
+          <tr class="excel-row-add-flow">
+            <td class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</td>
+            <td class="excel-cell" data-col="A" data-row="${currentRowNum}" style="color: var(--text-muted); opacity: 0.5; padding-left: 14px;">
+              ↳
+            </td>
+            <td class="excel-cell" data-col="B" data-row="${currentRowNum}">
+              <input type="text" class="excel-inline-input excel-input-new-flow-name" 
+                placeholder="${t("canvas.placeholder_new_flow", "+ Agregar insumo (Enter)...")}"
+                onkeydown="window.EconodeApp.handleNewFlowKeyDown(event, '${node.id}', this)"
+                onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newFlow', nodeId: '${node.id}' })">
+            </td>
+            <td class="excel-cell" data-col="C" data-row="${currentRowNum}" style="color: var(--text-muted); font-size: 10px; font-style: italic;">
+              Mercado ecoinvent 3.12
+            </td>
+            <td class="excel-cell mono" data-col="D" data-row="${currentRowNum}" style="text-align: right;">
+              <input type="number" step="any" class="excel-inline-input excel-input-new-flow-amt" style="text-align: right;" value="1.0"
+                onkeydown="window.EconodeApp.handleNewFlowKeyDown(event, '${node.id}', this)"
+                onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'D', '1.0')">
+            </td>
+            <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: center;">
+              <input type="text" class="excel-inline-input excel-input-new-flow-unit" style="text-align: center;" value="kg"
+                onkeydown="window.EconodeApp.handleNewFlowKeyDown(event, '${node.id}', this)"
+                onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'E', 'kg')">
+            </td>
+            <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center; color: var(--text-muted); font-size: 9px;">
+              <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; opacity: 0.7;"
+                onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-flow-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateFlowInline('${node.id}', n.value.trim(), tr.querySelector('.excel-input-new-flow-amt')?.value, tr.querySelector('.excel-input-new-flow-unit')?.value); }" title="${t("canvas.enter_to_create", "↵ Enter")}">↵</button>
+            </td>
+          </tr>
+        `;
       });
+
+      // Fila inline interactiva estilo Excel para crear un nuevo proceso en la última fila
+      currentRowNum++;
+      totalRows++;
+      html += `
+        <tr class="excel-row-new-process">
+          <td class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</td>
+          <td class="excel-cell" data-col="A" data-row="${currentRowNum}">
+            <input type="text" class="excel-inline-input excel-input-new-proc-name" style="font-weight: 700; color: #059669;"
+              placeholder="${t("canvas.placeholder_new_process", "+ Escribir nuevo proceso (Enter)...")}"
+              onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', '', { type: 'newProcess' })">
+          </td>
+          <td class="excel-cell" data-col="B" data-row="${currentRowNum}">
+            <input type="text" class="excel-inline-input excel-input-new-mat"
+              placeholder="${t("canvas.placeholder_new_material", "Material / Insumo principal...")}"
+              onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newProcessMat' })">
+          </td>
+          <td class="excel-cell" data-col="C" data-row="${currentRowNum}" style="color: var(--text-muted); font-size: 10px; font-style: italic;">
+            Mercado ecoinvent 3.12
+          </td>
+          <td class="excel-cell mono" data-col="D" data-row="${currentRowNum}" style="text-align: right;">
+            <input type="number" step="any" class="excel-inline-input excel-input-new-amt" style="text-align: right;" value="1.0"
+              onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'D', '1.0')">
+          </td>
+          <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: center;">
+            <input type="text" class="excel-inline-input excel-input-new-unit" style="text-align: center;" value="kg"
+              onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
+              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'E', 'kg')">
+          </td>
+          <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center;">
+            <button type="button" class="btn btn-primary btn-sm" style="padding: 1px 7px; font-size: 9.5px;"
+              onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value); }"
+              title="${t("canvas.enter_to_create", "↵ Enter")}">+ Crear</button>
+          </td>
+        </tr>
+      `;
 
       html += `
           </tbody>
@@ -4296,7 +4419,130 @@
     const trimmed = (newName || "").trim();
     if (!trimmed) return;
     node.name = trimmed;
+    if (node.reference_flow && (!node.reference_flow.name || node.reference_flow.name.includes("(Producto)"))) {
+      node.reference_flow.name = `${trimmed} (Producto)`;
+    }
     scheduleAutoSaveCanvas();
+    if (state.canvasViewMode === "table") {
+      renderCanvasTableView();
+    }
+  }
+
+  function tableCreateProcessInline(name, initialMaterial, initialAmount = 1.0, initialUnit = "kg") {
+    const trimmedName = (name || "").trim();
+    if (!trimmedName) return null;
+
+    let nextNum = 100000 + (state.canvasNodes || []).length + 1;
+    while ((state.canvasNodes || []).some(n => Number(n.process_id) === nextNum || String(n.id) === `node_${nextNum}`)) {
+      nextNum++;
+    }
+
+    const matName = (initialMaterial || "").trim() || (window.I18n && window.I18n.getCurrentLanguage() === "en" ? "Raw Material" : "Materia Prima");
+    const numAmt = parseFloat(initialAmount) || 1.0;
+    const uStr = (initialUnit || "kg").trim() || "kg";
+
+    const newNode = {
+      id: `node_${nextNum}`,
+      process_id: nextNum,
+      name: trimmedName,
+      category: "Custom processes & flows",
+      unit: uStr,
+      x: 60 + ((state.canvasNodes || []).length % 5) * 260,
+      y: 160 + Math.floor(((state.canvasNodes || []).length) / 5) * 180,
+      reference_flow: {
+        name: `${trimmedName} (Producto)`,
+        amount: 1.0,
+        unit: uStr
+      },
+      inputs: [
+        {
+          name: matName,
+          amount: numAmt,
+          unit: uStr,
+          is_unit: true,
+          origin: "Mercado ecoinvent 3.12"
+        }
+      ],
+      outputs: [
+        {
+          name: `${trimmedName} (Producto)`,
+          amount: 1.0,
+          unit: uStr,
+          is_reference: true
+        }
+      ]
+    };
+
+    if (!state.canvasNodes) state.canvasNodes = [];
+    state.canvasNodes.push(newNode);
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
+
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+    const msg = isEn ? `Process "${trimmedName}" added to inventory.` : `Proceso "${trimmedName}" agregado al inventario.`;
+    showNotification(msg);
+    return newNode;
+  }
+
+  function tableCreateFlowInline(nodeId, flowName, amount = 1.0, unit = "kg", origin = "Mercado ecoinvent 3.12") {
+    const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return null;
+
+    const trimmedFlow = (flowName || "").trim();
+    if (!trimmedFlow) return null;
+
+    if (!node.inputs) node.inputs = [];
+    const newFlow = {
+      name: trimmedFlow,
+      amount: parseFloat(amount) || 1.0,
+      unit: (unit || "kg").trim() || "kg",
+      is_unit: true,
+      origin: origin || "Mercado ecoinvent 3.12"
+    };
+
+    node.inputs.push(newFlow);
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
+
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+    showNotification(isEn ? `Flow "${trimmedFlow}" added to process.` : `Insumo "${trimmedFlow}" agregado a ${node.name}.`);
+    return newFlow;
+  }
+
+  function handleNewProcessKeyDown(e, inputEl) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const val = (inputEl.value || "").trim();
+      if (!val) return;
+
+      const tr = inputEl.closest("tr");
+      const matInput = tr ? tr.querySelector(".excel-input-new-mat") : null;
+      const amtInput = tr ? tr.querySelector(".excel-input-new-amt") : null;
+      const unitInput = tr ? tr.querySelector(".excel-input-new-unit") : null;
+
+      const matName = matInput ? matInput.value.trim() : "";
+      const amt = amtInput ? amtInput.value : 1.0;
+      const unit = unitInput ? unitInput.value : "kg";
+
+      tableCreateProcessInline(val, matName, amt, unit);
+    }
+  }
+
+  function handleNewFlowKeyDown(e, nodeId, inputEl) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const val = (inputEl.value || "").trim();
+      if (!val) return;
+
+      const tr = inputEl.closest("tr");
+      const amtInput = tr ? tr.querySelector(".excel-input-new-flow-amt") : null;
+      const unitInput = tr ? tr.querySelector(".excel-input-new-flow-unit") : null;
+
+      const amt = amtInput ? amtInput.value : 1.0;
+      const unit = unitInput ? unitInput.value : "kg";
+
+      tableCreateFlowInline(nodeId, val, amt, unit);
+    }
   }
 
   function tableDeleteFlow(nodeId, type, idx) {
@@ -7027,6 +7273,10 @@
     tableUpdateFlowName: (nodeId, type, idx, val) => tableUpdateFlowName(nodeId, type, idx, val),
     tableUpdateUnit: (nodeId, type, idx, val) => tableUpdateUnit(nodeId, type, idx, val),
     tableUpdateProcessName: (nodeId, val) => tableUpdateProcessName(nodeId, val),
+    tableCreateProcessInline: (name, mat, amt, unit) => tableCreateProcessInline(name, mat, amt, unit),
+    tableCreateFlowInline: (nodeId, name, amt, unit, origin) => tableCreateFlowInline(nodeId, name, amt, unit, origin),
+    handleNewProcessKeyDown: (e, el) => handleNewProcessKeyDown(e, el),
+    handleNewFlowKeyDown: (e, id, el) => handleNewFlowKeyDown(e, id, el),
     tableDeleteFlow: (nodeId, type, idx) => tableDeleteFlow(nodeId, type, idx),
     tableAddFlow: (nodeId, type) => tableAddFlow(nodeId, type),
     tableUpdateEdgeAmount: (edgeId, val) => tableUpdateEdgeAmount(edgeId, val),

@@ -745,7 +745,7 @@
 
     <div class="canvas-wrapper" id="canvasWrapper">
       <!-- Left Panel: Process Palette (Draggable) -->
-      <div class="canvas-panel catalog-panel" role="region" aria-label="Catálogo de Procesos Arrastrables">
+      <div class="canvas-panel catalog-panel" id="panelProcessCatalog" role="region" aria-label="Catálogo de Procesos Arrastrables">
         <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 6px;">
             <span data-i18n="canvas.palette_title">Catálogo de Procesos (Arrastrar)</span>
@@ -836,9 +836,6 @@
                 <option value="lci" data-i18n="canvas.filter_processes">Procesos (Entradas y Salidas)</option>
                 <option value="connections" data-i18n="canvas.filter_connections">Conexiones Internas</option>
               </select>
-              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddProcess" style="font-size: 11px; padding: 3px 8px;">
-                + <span data-i18n="canvas.table_add_process">Agregar Proceso</span>
-              </button>
               <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddConnection" style="font-size: 11px; padding: 3px 8px;">
                 🔗 <span data-i18n="canvas.table_add_connection">Conectar</span>
               </button>
