@@ -815,43 +815,71 @@
         <!-- ============================================== -->
         <!-- SUB-VISTA 2: HOJA DE CÁLCULO / MATRIZ LCI      -->
         <!-- ============================================== -->
-        <div id="canvasTableStageContainer" class="canvas-subview-container" style="width: 100%; height: 100%; display: none; flex-direction: column; background: var(--bg-card);">
-          <!-- Encabezado de la Hoja de Cálculo -->
-          <div class="panel-header" style="border-bottom: 1px solid var(--border-color); background: var(--bg-subtle); display: flex; justify-content: space-between; align-items: center; padding: 10px 16px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <button class="btn btn-secondary btn-sm" id="btnSlideToVisualView" title="Volver al diagrama visual" data-i18n-title="canvas.slide_to_visual_tip" style="padding: 4px 10px;">
+        <div id="canvasTableStageContainer" class="canvas-subview-container spreadsheet-app-container" style="width: 100%; height: 100%; display: none; flex-direction: column; background: var(--bg-card);">
+          <!-- Barra de Herramientas Estilo Hoja de Cálculo / Excel Ribbon -->
+          <div class="spreadsheet-ribbon-bar">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-secondary btn-sm" id="btnSlideToVisualView" title="Volver al diagrama visual" data-i18n-title="canvas.slide_to_visual_tip" style="padding: 3px 9px; font-size: 11px;">
                 ▲ <span data-i18n="canvas.slide_to_visual">Volver al Diagrama</span>
               </button>
-              <div style="display: flex; flex-direction: column;">
-                <span style="font-size: 12px; font-weight: 700; color: var(--text-primary);" data-i18n="canvas.table_title">Hoja de Cálculo LCI: Balance e Intercambios</span>
-                <span style="font-size: 10px; color: var(--text-muted);" data-i18n="canvas.table_subtitle">Desglose de procesos, insumos, salidas y conexiones directas de la cadena</span>
+              <div class="spreadsheet-file-pill">
+                <span class="spreadsheet-excel-icon">📗</span>
+                <span style="font-weight: 700; font-size: 11px; color: var(--text-primary);" id="spreadsheetFileName">LCI_Inventario_Cadena.xlsx</span>
+                <span class="badge-pill badge-emerald" style="font-size: 8.5px; padding: 1px 5px;" data-i18n="canvas.table_synced">Auto-Sync 100%</span>
               </div>
             </div>
 
-            <!-- Acciones y Filtros de la Tabla -->
-            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <input type="text" class="form-input" placeholder="Filtrar por proceso o material..." id="inputTableFilter" style="height: 28px; font-size: 11px; width: 200px; padding: 2px 8px;" data-i18n-placeholder="canvas.table_search_ph">
-              <select id="selectTableFlowFilter" class="form-input" style="height: 28px; font-size: 11px; padding: 2px 6px;">
+            <!-- Acciones y Filtros de la Hoja de Cálculo -->
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <input type="text" class="form-input spreadsheet-search-box" placeholder="Buscar en celdas..." id="inputTableFilter" data-i18n-placeholder="canvas.table_search_ph">
+              <select id="selectTableFlowFilter" class="form-input" style="height: 27px; font-size: 11px; padding: 2px 6px;">
                 <option value="ALL" data-i18n="canvas.filter_all">Todos los Flujos</option>
-                <option value="INPUTS" data-i18n="canvas.filter_inputs">Solo Entradas (Insumos/Energía)</option>
+                <option value="INPUTS" data-i18n="canvas.filter_inputs">Solo Entradas (Insumos)</option>
                 <option value="OUTPUTS" data-i18n="canvas.filter_outputs">Solo Salidas (Productos/Residuos)</option>
                 <option value="CONNECTIONS" data-i18n="canvas.filter_connections">Solo Conexiones Internas</option>
               </select>
-              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddProcess" style="font-size: 11px; padding: 4px 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddProcess" style="font-size: 11px; padding: 3px 8px;">
                 + <span data-i18n="canvas.table_add_process">Agregar Proceso</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddConnection" style="font-size: 11px; padding: 4px 8px;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnTableAddConnection" style="font-size: 11px; padding: 3px 8px;">
                 🔗 <span data-i18n="canvas.table_add_connection">Conectar</span>
               </button>
-              <button type="button" class="btn btn-secondary btn-sm" id="btnTableExportCsv" style="font-size: 11px; padding: 4px 8px;" title="Descargar como CSV compatible con Excel">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnTableExportCsv" style="font-size: 11px; padding: 3px 8px;" title="Descargar como CSV compatible con Excel">
                 📥 <span data-i18n="canvas.table_export_csv">Exportar CSV</span>
               </button>
             </div>
           </div>
 
-          <!-- Área de Tabla con Scroll -->
-          <div class="lci-table-scroll-wrapper" id="canvasTableScrollArea" style="flex: 1; overflow: auto; padding: 14px;">
-            <!-- Contenido generado dinámicamente por renderCanvasTableView() -->
+          <!-- Barra de Fórmulas de Excel (fx Bar) -->
+          <div class="spreadsheet-formula-bar-container">
+            <div class="spreadsheet-name-box mono" id="spreadsheetActiveCellName" title="Celda Activa">C2</div>
+            <div class="spreadsheet-fx-label" title="Barra de Fórmulas">fx</div>
+            <div class="spreadsheet-formula-input-wrapper">
+              <input type="text" class="spreadsheet-formula-input mono" id="spreadsheetFormulaInput" placeholder="Selecciona una celda o escribe un valor o fórmula..." autocomplete="off" spellcheck="false">
+            </div>
+          </div>
+
+          <!-- Área de Tabla con Scroll / Cuadrícula Excel -->
+          <div class="spreadsheet-grid-scroll-area" id="canvasTableScrollArea">
+            <!-- Contenido de cuadrícula continua generado dinámicamente por renderCanvasTableView() -->
+          </div>
+
+          <!-- Pestañas de Hojas y Barra de Estado (Excel Bottom Bar) -->
+          <div class="spreadsheet-bottom-bar">
+            <div class="spreadsheet-sheet-tabs" role="tablist">
+              <button type="button" class="spreadsheet-tab-btn active" id="tabSheetLci" data-sheet="lci" role="tab" aria-selected="true">
+                <span class="sheet-tab-icon">⊞</span> <span data-i18n="canvas.sheet_tab_lci">LCI_Inventario_Procesos</span>
+              </button>
+              <button type="button" class="spreadsheet-tab-btn" id="tabSheetConnections" data-sheet="connections" role="tab" aria-selected="false">
+                <span class="sheet-tab-icon">🔗</span> <span data-i18n="canvas.sheet_tab_conn">Matriz_Conexiones</span>
+              </button>
+            </div>
+            <div class="spreadsheet-status-bar mono" id="spreadsheetStatusBar">
+              <span class="status-indicator">● LISTO</span>
+              <span id="statRowCount">Filas: 0</span>
+              <span id="statProcessCount">Procesos: 0</span>
+              <span id="statTotalInputs">Total Insumos: 0 kg</span>
+            </div>
           </div>
         </div>
 
