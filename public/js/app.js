@@ -3699,14 +3699,18 @@
                 <td class="excel-cell" data-col="A" data-row="2">
                   <input type="text" class="excel-inline-input excel-input-new-proc-name" style="font-weight: 700; color: #059669;"
                     placeholder="${t("canvas.placeholder_new_process", "+ Escribir nuevo proceso (Enter)...")}"
-                    onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
-                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'A', '', { type: 'newProcess' })">
+                    onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'A', '', { type: 'newProcess' }); window.EconodeApp.excelAutocompleteOpen(this, 'process');"
+                    oninput="window.EconodeApp.excelAutocompleteQuery(this, 'process')"
+                    onkeydown="if (!window.EconodeApp.excelAutocompleteKeyDown(event)) window.EconodeApp.handleNewProcessKeyDown(event, this);"
+                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'A', '', { type: 'newProcess' }); window.EconodeApp.excelAutocompleteOpen(this, 'process');">
                 </td>
                 <td class="excel-cell" data-col="B" data-row="2">
                   <input type="text" class="excel-inline-input excel-input-new-mat"
                     placeholder="${t("canvas.placeholder_new_material", "Material / Insumo principal...")}"
-                    onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
-                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'B', '', { type: 'newProcessMat' })">
+                    onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'B', '', { type: 'newProcessMat' }); window.EconodeApp.excelAutocompleteOpen(this, 'flow');"
+                    oninput="window.EconodeApp.excelAutocompleteQuery(this, 'flow')"
+                    onkeydown="if (!window.EconodeApp.excelAutocompleteKeyDown(event)) window.EconodeApp.handleNewProcessKeyDown(event, this);"
+                    onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'B', '', { type: 'newProcessMat' }); window.EconodeApp.excelAutocompleteOpen(this, 'flow');">
                 </td>
                 <td class="excel-cell" data-col="C" data-row="2" style="color: var(--text-muted); font-size: 10px; font-style: italic;">
                   Mercado ecoinvent 3.12
@@ -3917,7 +3921,9 @@
                     <input type="text" class="excel-inline-input" style="font-weight: 700; color: var(--text-primary); width: calc(100% - 48px);" 
                       value="${escapeHtml(node.name)}" 
                       onchange="window.EconodeApp.tableUpdateProcessName('${node.id}', this.value)"
-                      onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', this.value, { type: 'processName', nodeId: '${node.id}' })">
+                      onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', this.value, { type: 'processName', nodeId: '${node.id}' }); window.EconodeApp.excelAutocompleteOpen(this, 'process', { nodeId: '${node.id}' });"
+                      oninput="window.EconodeApp.excelAutocompleteQuery(this, 'process')"
+                      onkeydown="window.EconodeApp.excelAutocompleteKeyDown(event);">
                     <span class="mono" style="font-size: 8.5px; font-weight: 700; color: #059669; background: rgba(5, 150, 105, 0.08); padding: 1px 4px; border-radius: 3px; flex-shrink: 0;">#${node.process_id || node.id}</span>
                   </div>
                 ` : `
@@ -3927,7 +3933,10 @@
               <!-- Col B: Material / Flujo -->
               <td class="excel-cell" data-col="B" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'B', '${escapeHtml(rowItem.flowName)}', { type: 'name', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
                 <input type="text" class="excel-inline-input" value="${escapeHtml(rowItem.flowName)}" 
-                  onchange="window.EconodeApp.tableUpdateFlowName('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)">
+                  onchange="window.EconodeApp.tableUpdateFlowName('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)"
+                  onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', this.value, { type: 'name', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} }); window.EconodeApp.excelAutocompleteOpen(this, 'flow', { nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} });"
+                  oninput="window.EconodeApp.excelAutocompleteQuery(this, 'flow')"
+                  onkeydown="window.EconodeApp.excelAutocompleteKeyDown(event);">
               </td>
               <!-- Col C: Proveedor / Destino -->
               <td class="excel-cell" data-col="C" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(rowItem.provider)}')">
@@ -3969,8 +3978,10 @@
             <td class="excel-cell" data-col="B" data-row="${currentRowNum}">
               <input type="text" class="excel-inline-input excel-input-new-flow-name" 
                 placeholder="${t("canvas.placeholder_new_flow", "+ Agregar insumo (Enter)...")}"
-                onkeydown="window.EconodeApp.handleNewFlowKeyDown(event, '${node.id}', this)"
-                onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newFlow', nodeId: '${node.id}' })">
+                onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newFlow', nodeId: '${node.id}' }); window.EconodeApp.excelAutocompleteOpen(this, 'flow', { nodeId: '${node.id}', flowKind: 'input' });"
+                oninput="window.EconodeApp.excelAutocompleteQuery(this, 'flow')"
+                onkeydown="if (!window.EconodeApp.excelAutocompleteKeyDown(event)) window.EconodeApp.handleNewFlowKeyDown(event, '${node.id}', this)"
+                onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newFlow', nodeId: '${node.id}' }); window.EconodeApp.excelAutocompleteOpen(this, 'flow', { nodeId: '${node.id}', flowKind: 'input' });">
             </td>
             <td class="excel-cell" data-col="C" data-row="${currentRowNum}" style="color: var(--text-muted); font-size: 10px; font-style: italic;">
               Mercado ecoinvent 3.12
@@ -4002,14 +4013,18 @@
           <td class="excel-cell" data-col="A" data-row="${currentRowNum}">
             <input type="text" class="excel-inline-input excel-input-new-proc-name" style="font-weight: 700; color: #059669;"
               placeholder="${t("canvas.placeholder_new_process", "+ Escribir nuevo proceso (Enter)...")}"
-              onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
-              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', '', { type: 'newProcess' })">
+              onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', '', { type: 'newProcess' }); window.EconodeApp.excelAutocompleteOpen(this, 'process');"
+              oninput="window.EconodeApp.excelAutocompleteQuery(this, 'process')"
+              onkeydown="if (!window.EconodeApp.excelAutocompleteKeyDown(event)) window.EconodeApp.handleNewProcessKeyDown(event, this)"
+              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'A', '', { type: 'newProcess' }); window.EconodeApp.excelAutocompleteOpen(this, 'process');">
           </td>
           <td class="excel-cell" data-col="B" data-row="${currentRowNum}">
             <input type="text" class="excel-inline-input excel-input-new-mat"
               placeholder="${t("canvas.placeholder_new_material", "Material / Insumo principal...")}"
-              onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
-              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newProcessMat' })">
+              onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newProcessMat' }); window.EconodeApp.excelAutocompleteOpen(this, 'flow');"
+              oninput="window.EconodeApp.excelAutocompleteQuery(this, 'flow')"
+              onkeydown="if (!window.EconodeApp.excelAutocompleteKeyDown(event)) window.EconodeApp.handleNewProcessKeyDown(event, this)"
+              onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'B', '', { type: 'newProcessMat' }); window.EconodeApp.excelAutocompleteOpen(this, 'flow');">
           </td>
           <td class="excel-cell" data-col="C" data-row="${currentRowNum}" style="color: var(--text-muted); font-size: 10px; font-style: italic;">
             Mercado ecoinvent 3.12
@@ -4428,6 +4443,399 @@
     }
   }
 
+  // =========================================================================
+  // EXCEL SPREADSHEET AUTOCOMPLETE CONTROLLER (PROCESSES & FLOWS)
+  // =========================================================================
+  const excelAutocomplete = {
+    dropdownEl: null,
+    activeInput: null,
+    currentType: null, // "process" | "flow"
+    nodeId: null,
+    flowKind: null,
+    flowIdx: null,
+    debounceTimer: null,
+    cache: new Map(),
+    selectedIndex: -1,
+    currentResults: [],
+    
+    init() {
+      if (this.dropdownEl) return;
+      let el = document.getElementById("excelAutocompleteDropdown");
+      if (!el) {
+        el = document.createElement("div");
+        el.id = "excelAutocompleteDropdown";
+        el.className = "excel-autocomplete-dropdown";
+        el.style.display = "none";
+        document.body.appendChild(el);
+      }
+      this.dropdownEl = el;
+
+      // Cerrar si se da clic fuera
+      document.addEventListener("mousedown", (e) => {
+        if (!this.dropdownEl || this.dropdownEl.style.display === "none") return;
+        if (!this.dropdownEl.contains(e.target) && e.target !== this.activeInput) {
+          this.close();
+        }
+      });
+
+      // Reposicionar al hacer scroll en la tabla o ventana
+      window.addEventListener("scroll", () => {
+        if (this.dropdownEl && this.dropdownEl.style.display !== "none") {
+          this.updatePosition();
+        }
+      }, { passive: true, capture: true });
+    },
+
+    open(inputEl, type, options = {}) {
+      this.init();
+      this.activeInput = inputEl;
+      this.currentType = type; // "process" o "flow"
+      this.nodeId = options.nodeId || null;
+      this.flowKind = options.flowKind || "input";
+      this.flowIdx = options.idx !== undefined ? options.idx : -1;
+      this.selectedIndex = -1;
+
+      this.updatePosition();
+      this.dropdownEl.style.display = "flex";
+      this.query(inputEl.value);
+    },
+
+    updatePosition() {
+      if (!this.activeInput || !this.dropdownEl) return;
+      const rect = this.activeInput.getBoundingClientRect();
+      if (rect.width === 0 && rect.height === 0) {
+        this.close();
+        return;
+      }
+      const viewportHeight = window.innerHeight;
+      const dropdownHeight = 270;
+      
+      let top = rect.bottom + 3;
+      if (top + dropdownHeight > viewportHeight && rect.top > dropdownHeight) {
+        top = Math.max(8, rect.top - dropdownHeight - 3);
+      }
+      
+      const left = Math.max(8, Math.min(rect.left, window.innerWidth - 360));
+      this.dropdownEl.style.top = `${Math.round(top)}px`;
+      this.dropdownEl.style.left = `${Math.round(left)}px`;
+      this.dropdownEl.style.minWidth = `${Math.max(Math.round(rect.width), 340)}px`;
+    },
+
+    close() {
+      if (this.dropdownEl) {
+        this.dropdownEl.style.display = "none";
+        this.dropdownEl.innerHTML = "";
+      }
+      this.activeInput = null;
+      this.currentResults = [];
+      this.selectedIndex = -1;
+    },
+
+    query(text) {
+      if (this.debounceTimer) clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(() => {
+        this.fetchResults((text || "").trim());
+      }, 100);
+    },
+
+    async fetchResults(searchTerm) {
+      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+      const t = (k, f) => (window.I18n && window.I18n.t ? window.I18n.t(k, f) : f);
+
+      const cacheKey = `${this.currentType}:${searchTerm.toLowerCase()}`;
+      if (this.cache.has(cacheKey)) {
+        this.renderResults(this.cache.get(cacheKey), searchTerm);
+        return;
+      }
+
+      this.dropdownEl.innerHTML = `
+        <div class="excel-ac-header">
+          <span>${this.currentType === "process" ? t("canvas.autocomplete_proc_title", "Procesos del Inventario (ecoinvent 3.12)") : t("canvas.autocomplete_flow_title", "Flujos e Insumos (ecoinvent 3.12)")}</span>
+        </div>
+        <div class="excel-ac-loading">${t("canvas.autocomplete_searching", "Buscando en ecoinvent 3.12...")}</div>
+      `;
+
+      try {
+        let items = [];
+        if (this.currentType === "process") {
+          // 1. Procesos locales en paleta / lienzo
+          const localProcs = (state.paletteProcesses || []).concat(state.canvasNodes || []).map(p => ({
+            id: p.process_id || p.id,
+            name: p.name,
+            location: p.location || "GLO",
+            category_name: p.category || (isEn ? "Catalog Process" : "Proceso del Catálogo"),
+            reference_unit: p.unit || "kg",
+            is_local: true
+          }));
+
+          const matchedLocal = searchTerm ? 
+            localProcs.filter(p => (p.name || "").toLowerCase().includes(searchTerm.toLowerCase())) : 
+            localProcs.slice(0, 5);
+
+          // 2. Procesos de la base de datos ecoinvent
+          const res = await api.searchCatalog(searchTerm, "ALL", 18);
+          const dbProcs = res.items || [];
+
+          // Mezclar y deduplicar por nombre
+          const seenNames = new Set();
+          items = [];
+          matchedLocal.forEach(p => {
+            const k = (p.name || "").toLowerCase();
+            if (k && !seenNames.has(k)) {
+              seenNames.add(k);
+              items.push(p);
+            }
+          });
+          dbProcs.forEach(p => {
+            const k = (p.name || "").toLowerCase();
+            if (k && !seenNames.has(k)) {
+              seenNames.add(k);
+              items.push(p);
+            }
+          });
+        } else {
+          // FLUJOS
+          // 1. Flujos de salida de otros procesos en el lienzo (como opción de conexión directa upstream)
+          const upstreamOutputs = [];
+          (state.canvasNodes || []).forEach(n => {
+            if (this.nodeId && String(n.id) === String(this.nodeId)) return;
+            (n.outputs || []).forEach(o => {
+              if (o.name) {
+                upstreamOutputs.push({
+                  id: `up_${n.id}_${o.name}`,
+                  name: o.name,
+                  unit_symbol: o.unit || "kg",
+                  category_name: `${isEn ? "Output of:" : "Salida de:"} ${n.name} (#${n.process_id || n.id})`,
+                  flow_type: "CONNECTED_FLOW",
+                  source_node_id: n.id,
+                  source_process_id: n.process_id,
+                  source_node_name: n.name,
+                  is_upstream: true
+                });
+              }
+            });
+          });
+
+          const matchedUpstream = searchTerm ? 
+            upstreamOutputs.filter(f => f.name.toLowerCase().includes(searchTerm.toLowerCase())) : 
+            upstreamOutputs;
+
+          // 2. Flujos en base de datos ecoinvent
+          const res = await api.getDbFlows(searchTerm, "ALL", 25);
+          const dbFlows = res.items || [];
+
+          // Combinar
+          const seenFlows = new Set();
+          items = [];
+          matchedUpstream.forEach(f => {
+            const k = (f.name || "").toLowerCase();
+            if (k && !seenFlows.has(k)) {
+              seenFlows.add(k);
+              items.push(f);
+            }
+          });
+          dbFlows.forEach(f => {
+            const k = (f.name || "").toLowerCase();
+            if (k && !seenFlows.has(k)) {
+              seenFlows.add(k);
+              items.push(f);
+            }
+          });
+        }
+
+        this.cache.set(cacheKey, items);
+        this.renderResults(items, searchTerm);
+      } catch (err) {
+        console.error("Error al obtener sugerencias de ecoinvent:", err);
+        this.renderResults([], searchTerm);
+      }
+    },
+
+    renderResults(items, searchTerm) {
+      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+      const t = (k, f) => (window.I18n && window.I18n.t ? window.I18n.t(k, f) : f);
+
+      this.currentResults = items;
+      this.selectedIndex = -1;
+
+      const title = this.currentType === "process" ? 
+        t("canvas.autocomplete_proc_title", "Procesos del Inventario (ecoinvent 3.12)") : 
+        t("canvas.autocomplete_flow_title", "Flujos e Insumos (ecoinvent 3.12)");
+
+      if (!items || items.length === 0) {
+        this.dropdownEl.innerHTML = `
+          <div class="excel-ac-header">
+            <span>${title}</span>
+            <span style="font-size: 8.5px; opacity: 0.7;">0 ${isEn ? "results" : "resultados"}</span>
+          </div>
+          <div class="excel-ac-empty">
+            ${t("canvas.autocomplete_no_results", "Sin coincidencias directas en ecoinvent. Presiona Enter para usar personalizado.")}
+          </div>
+        `;
+        return;
+      }
+
+      let listHtml = '';
+      items.forEach((item, idx) => {
+        const name = item.name || "Item";
+        const unit = item.unit_symbol || item.reference_unit || item.unit || "kg";
+        const cat = item.category_name || item.location || (item.is_local ? (isEn ? "Catalog" : "Catálogo") : "ecoinvent 3.12");
+        const isUpstream = item.is_upstream === true;
+
+        let badgeTag = '';
+        if (isUpstream) {
+          badgeTag = `<span class="excel-ac-badge-tag excel-ac-badge-connected">🔗 ${t("canvas.autocomplete_upstream_badge", "Conexión")}</span>`;
+        } else if (item.flow_type === "ELEMENTARY_FLOW") {
+          badgeTag = `<span class="excel-ac-badge-tag" style="background:#FEF3C7; color:#92400E;">🌿 Biosfera</span>`;
+        } else if (item.flow_type === "WASTE_FLOW") {
+          badgeTag = `<span class="excel-ac-badge-tag" style="background:#FEE2E2; color:#991B1B;">♻️ Residuo</span>`;
+        } else if (item.location) {
+          badgeTag = `<span class="excel-ac-badge-tag">📍 ${item.location}</span>`;
+        }
+
+        listHtml += `
+          <div class="excel-ac-item" data-index="${idx}" onmousedown="window.EconodeApp.excelAutocompleteSelect(${idx})">
+            <div class="excel-ac-item-main">
+              <span class="excel-ac-item-name" title="${escapeHtml(name)}">${escapeHtml(name)}</span>
+              <span class="excel-ac-item-sub">${escapeHtml(cat)}</span>
+            </div>
+            <div class="excel-ac-item-meta">
+              ${badgeTag}
+              <span class="excel-ac-badge-unit">${escapeHtml(unit)}</span>
+            </div>
+          </div>
+        `;
+      });
+
+      this.dropdownEl.innerHTML = `
+        <div class="excel-ac-header">
+          <span>${title}</span>
+          <span style="font-size: 8.5px; opacity: 0.7;">${items.length} ${isEn ? "suggestions" : "sugerencias"}</span>
+        </div>
+        <div class="excel-ac-list">
+          ${listHtml}
+        </div>
+      `;
+    },
+
+    selectItem(idx) {
+      const item = this.currentResults[idx];
+      if (!item || !this.activeInput) return;
+
+      if (this.currentType === "process") {
+        this.activeInput.value = item.name;
+        const tr = this.activeInput.closest("tr");
+        if (tr) {
+          const unitInput = tr.querySelector(".excel-input-new-unit");
+          if (unitInput && (item.reference_unit || item.unit)) {
+            unitInput.value = item.reference_unit || item.unit;
+          }
+          const matInput = tr.querySelector(".excel-input-new-mat");
+          if (matInput && !matInput.value.trim() && item.reference_flow_name) {
+            matInput.value = item.reference_flow_name;
+          }
+        }
+
+        if (this.nodeId) {
+          tableUpdateProcessName(this.nodeId, item.name);
+          if (item.reference_unit || item.unit) {
+            tableUpdateUnit(this.nodeId, "output", 0, item.reference_unit || item.unit);
+          }
+        }
+      } else if (this.currentType === "flow") {
+        this.activeInput.value = item.name;
+        const tr = this.activeInput.closest("tr");
+        if (tr) {
+          const unitInput = tr.querySelector(".excel-input-new-flow-unit") || tr.querySelector(".excel-input-new-unit") || tr.querySelector('td[data-col="E"] input');
+          if (unitInput && (item.unit_symbol || item.unit)) {
+            unitInput.value = item.unit_symbol || item.unit;
+          }
+
+          if (item.is_upstream && item.source_node_id) {
+            this.activeInput.dataset.upstreamSourceId = item.source_node_id;
+            this.activeInput.dataset.upstreamProcessId = item.source_process_id || "";
+            const providerCell = tr.querySelector('td[data-col="C"]');
+            if (providerCell) {
+              const srcNode = (state.canvasNodes || []).find(n => String(n.id) === String(item.source_node_id));
+              const srcName = srcNode ? srcNode.name : (item.source_node_name || "Proceso Upstream");
+              providerCell.innerHTML = `<span style="color: #6D28D9; font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
+            }
+          }
+        }
+
+        if (this.nodeId && this.flowIdx >= 0) {
+          tableUpdateFlowName(this.nodeId, this.flowKind, this.flowIdx, item.name);
+          if (item.unit_symbol || item.unit) {
+            tableUpdateUnit(this.nodeId, this.flowKind, this.flowIdx, item.unit_symbol || item.unit);
+          }
+          if (item.is_upstream && item.source_node_id) {
+            if (!state.canvasEdges) state.canvasEdges = [];
+            const exists = state.canvasEdges.some(e => 
+              String(e.from) === String(item.source_node_id) && 
+              String(e.to) === String(this.nodeId) && 
+              e.flow === item.name
+            );
+            if (!exists) {
+              state.canvasEdges.push({
+                id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                from: item.source_node_id,
+                to: this.nodeId,
+                source_process_id: item.source_process_id,
+                target_process_id: (state.canvasNodes.find(n => String(n.id) === String(this.nodeId)) || {}).process_id,
+                flow: item.name,
+                amount: 1.0,
+                unit: item.unit_symbol || "kg"
+              });
+              scheduleAutoSaveCanvas();
+              renderCanvasTableView();
+            }
+          }
+        }
+      }
+      const targetInput = this.activeInput;
+      this.close();
+      if (targetInput) targetInput.focus();
+    },
+
+    handleKeyDown(e) {
+      if (!this.dropdownEl || this.dropdownEl.style.display === "none") return false;
+      const items = this.dropdownEl.querySelectorAll(".excel-ac-item");
+      if (items.length === 0) return false;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        this.selectedIndex = (this.selectedIndex + 1) % items.length;
+        this.highlightSelected(items);
+        return true;
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        this.selectedIndex = (this.selectedIndex - 1 + items.length) % items.length;
+        this.highlightSelected(items);
+        return true;
+      } else if (e.key === "Enter" && this.selectedIndex >= 0) {
+        e.preventDefault();
+        this.selectItem(this.selectedIndex);
+        return true;
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.close();
+        return true;
+      }
+      return false;
+    },
+
+    highlightSelected(items) {
+      items.forEach((item, i) => {
+        if (i === this.selectedIndex) {
+          item.classList.add("active");
+          item.scrollIntoView({ block: "nearest" });
+        } else {
+          item.classList.remove("active");
+        }
+      });
+    }
+  };
+
   function tableCreateProcessInline(name, initialMaterial, initialAmount = 1.0, initialUnit = "kg") {
     const trimmedName = (name || "").trim();
     if (!trimmedName) return null;
@@ -4484,7 +4892,7 @@
     return newNode;
   }
 
-  function tableCreateFlowInline(nodeId, flowName, amount = 1.0, unit = "kg", origin = "Mercado ecoinvent 3.12") {
+  function tableCreateFlowInline(nodeId, flowName, amount = 1.0, unit = "kg", origin = "Mercado ecoinvent 3.12", upstreamSourceId = null, upstreamProcessId = null) {
     const node = state.canvasNodes.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
     if (!node) return null;
 
@@ -4497,10 +4905,32 @@
       amount: parseFloat(amount) || 1.0,
       unit: (unit || "kg").trim() || "kg",
       is_unit: true,
-      origin: origin || "Mercado ecoinvent 3.12"
+      origin: origin || (upstreamSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12")
     };
 
     node.inputs.push(newFlow);
+
+    if (upstreamSourceId) {
+      if (!state.canvasEdges) state.canvasEdges = [];
+      const exists = state.canvasEdges.some(e => 
+        String(e.from) === String(upstreamSourceId) && 
+        String(e.to) === String(node.id) && 
+        e.flow === trimmedFlow
+      );
+      if (!exists) {
+        state.canvasEdges.push({
+          id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          from: upstreamSourceId,
+          to: node.id,
+          source_process_id: upstreamProcessId,
+          target_process_id: node.process_id,
+          flow: trimmedFlow,
+          amount: parseFloat(amount) || 1.0,
+          unit: (unit || "kg").trim() || "kg"
+        });
+      }
+    }
+
     scheduleAutoSaveCanvas();
     renderCanvasTableView();
 
@@ -4540,8 +4970,10 @@
 
       const amt = amtInput ? amtInput.value : 1.0;
       const unit = unitInput ? unitInput.value : "kg";
+      const upstreamSourceId = inputEl.dataset ? inputEl.dataset.upstreamSourceId : null;
+      const upstreamProcessId = inputEl.dataset ? inputEl.dataset.upstreamProcessId : null;
 
-      tableCreateFlowInline(nodeId, val, amt, unit);
+      tableCreateFlowInline(nodeId, val, amt, unit, upstreamSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12", upstreamSourceId, upstreamProcessId);
     }
   }
 
@@ -7277,6 +7709,11 @@
     tableCreateFlowInline: (nodeId, name, amt, unit, origin) => tableCreateFlowInline(nodeId, name, amt, unit, origin),
     handleNewProcessKeyDown: (e, el) => handleNewProcessKeyDown(e, el),
     handleNewFlowKeyDown: (e, id, el) => handleNewFlowKeyDown(e, id, el),
+    excelAutocompleteOpen: (inputEl, type, options) => excelAutocomplete.open(inputEl, type, options),
+    excelAutocompleteQuery: (inputEl, type) => excelAutocomplete.query(inputEl ? inputEl.value : ""),
+    excelAutocompleteKeyDown: (e) => excelAutocomplete.handleKeyDown(e),
+    excelAutocompleteSelect: (idx) => excelAutocomplete.selectItem(idx),
+    excelAutocompleteClose: () => excelAutocomplete.close(),
     tableDeleteFlow: (nodeId, type, idx) => tableDeleteFlow(nodeId, type, idx),
     tableAddFlow: (nodeId, type) => tableAddFlow(nodeId, type),
     tableUpdateEdgeAmount: (edgeId, val) => tableUpdateEdgeAmount(edgeId, val),

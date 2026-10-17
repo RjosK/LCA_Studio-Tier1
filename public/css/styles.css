@@ -706,6 +706,146 @@ body {
   border-radius: 2px;
 }
 
+/* Autocomplete Floating Dropdown para Hoja de Cálculo (Selector de Procesos y Flujos) */
+.excel-autocomplete-dropdown {
+  position: fixed;
+  z-index: 99999;
+  background: var(--bg-card, #FFFFFF);
+  border: 1px solid var(--border-color, #CBD5E1);
+  border-radius: 6px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.14), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  max-height: 270px;
+  min-width: 340px;
+  max-width: 540px;
+  overflow-y: auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 11.5px;
+  display: flex;
+  flex-direction: column;
+  animation: excelDropdownFadeIn 0.12s ease-out;
+}
+
+@keyframes excelDropdownFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.excel-ac-header {
+  padding: 6px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted, #64748B);
+  background: rgba(0, 0, 0, 0.02);
+  border-bottom: 1px solid var(--border-color, #E2E8F0);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.excel-ac-list {
+  list-style: none;
+  margin: 0;
+  padding: 3px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.excel-ac-item {
+  padding: 6px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: background 0.1s ease, color 0.1s ease;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.excel-ac-item:last-child {
+  border-bottom: none;
+}
+
+.excel-ac-item:hover,
+.excel-ac-item.active {
+  background: rgba(16, 185, 129, 0.09);
+}
+
+.excel-ac-item.active {
+  outline: none;
+}
+
+.excel-ac-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  margin-right: 8px;
+}
+
+.excel-ac-item-name {
+  font-weight: 600;
+  color: var(--text-primary, #0F172A);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.excel-ac-item:hover .excel-ac-item-name,
+.excel-ac-item.active .excel-ac-item-name {
+  color: #047857;
+}
+
+.excel-ac-item-sub {
+  font-size: 9.5px;
+  color: var(--text-muted, #64748B);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.excel-ac-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.excel-ac-badge-unit {
+  font-family: var(--font-mono, monospace);
+  font-size: 9px;
+  font-weight: 700;
+  color: #047857;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.excel-ac-badge-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 600;
+  background: #F1F5F9;
+  color: #475569;
+}
+
+.excel-ac-badge-connected {
+  background: rgba(109, 40, 217, 0.1);
+  color: #6D28D9;
+  font-weight: 700;
+}
+
+.excel-ac-loading,
+.excel-ac-empty {
+  padding: 12px 10px;
+  text-align: center;
+  color: var(--text-muted, #64748B);
+  font-size: 11px;
+  font-style: italic;
+}
+
 /* Estilo para botones de colapso rápido dentro de los paneles */
 .panel-collapse-btn {
   background: transparent;
