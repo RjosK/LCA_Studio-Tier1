@@ -678,10 +678,79 @@ def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dic
                 pass
 
 # -----------------------------------------------------------------------------
-# 2. CATÁLOGO LCI (ECOINVENT 3.12)
+# 2. CATÁLOGO LCI (ECOINVENT 3.12) & BILINGUAL SEARCH
 # -----------------------------------------------------------------------------
+SPANISH_TO_ECOINVENT_MAPPINGS = [
+    ("inyecc", ["injection moulding", "injection molding", "injection"]),
+    ("soplado", ["blow moulding", "stretch blow moulding", "blow"]),
+    ("moldeo", ["moulding", "molding"]),
+    ("termoformado", ["thermoforming"]),
+    ("extrusion", ["extrusion"]),
+    ("extrusión", ["extrusion"]),
+    ("secado", ["drying"]),
+    ("tratamiento termico", ["heat", "treatment", "steam"]),
+    ("tratamiento térmico", ["heat", "treatment", "steam"]),
+    ("transporte", ["transport", "freight"]),
+    ("flete", ["freight", "transport"]),
+    ("logistica", ["transport", "logistics"]),
+    ("logística", ["transport", "logistics"]),
+    ("distribucion", ["transport", "distribution"]),
+    ("distribución", ["transport", "distribution"]),
+    ("camion", ["lorry", "truck"]),
+    ("camión", ["lorry", "truck"]),
+    ("electricidad", ["electricity"]),
+    ("electrico", ["electricity"]),
+    ("eléctrico", ["electricity"]),
+    ("energia", ["electricity", "energy"]),
+    ("energía", ["electricity", "energy"]),
+    ("gas natural", ["natural gas"]),
+    ("gasolina", ["petrol"]),
+    ("combustible", ["diesel", "fuel", "petrol"]),
+    ("agua", ["water"]),
+    ("enfriamiento", ["cooling water", "cooling"]),
+    ("vapor", ["steam"]),
+    ("calor", ["heat"]),
+    ("acero", ["steel"]),
+    ("aluminio", ["aluminium", "aluminum"]),
+    ("cobre", ["copper"]),
+    ("vidrio", ["glass"]),
+    ("papel", ["paper"]),
+    ("carton", ["cardboard", "corrugated board"]),
+    ("cartón", ["cardboard", "corrugated board"]),
+    ("plastico", ["plastic", "polymer"]),
+    ("plástico", ["plastic", "polymer"]),
+    ("polimero", ["polymer"]),
+    ("polímero", ["polymer"]),
+    ("resina", ["resin", "granulate"]),
+    ("granulado", ["granulate"]),
+    ("preforma", ["preform", "injection moulding"]),
+    ("botella", ["bottle", "blow moulding"]),
+    ("empaque", ["packaging"]),
+    ("envase", ["packaging", "bottle"]),
+    ("reciclaje", ["recycling"]),
+    ("reciclado", ["recycling"]),
+    ("residuo", ["waste"]),
+    ("desecho", ["waste"]),
+    ("chatarra", ["scrap"]),
+    ("cogeneracion", ["heat and power co-generation", "cogeneration"]),
+    ("cogeneración", ["heat and power co-generation", "cogeneration"]),
+]
+
+def _expand_search_terms(query: str) -> List[str]:
+    q_clean = query.strip()
+    if not q_clean:
+        return []
+    terms = [q_clean]
+    q_lower = q_clean.lower()
+    for es_term, en_synonyms in SPANISH_TO_ECOINVENT_MAPPINGS:
+        if es_term in q_lower:
+            for syn in en_synonyms:
+                if syn not in terms:
+                    terms.append(syn)
+    return terms
+
 def search_lci_processes(conn: sqlite3.Connection, query: str = "", category_id: Optional[Any] = None, limit: int = 50) -> List[Dict[str, Any]]:
-    """Búsqueda en catálogo de procesos con metadatos técnicos y soporte para sectores industriales."""
+    """Búsqueda en catálogo de procesos con metadatos técnicos, sinónimos bilingües y soporte para sectores industriales."""
     sql = """
         SELECT p.id, p.code, p.name, p.location, p.reference_amount,
                c.name as category_name,
@@ -710,8 +779,13 @@ def search_lci_processes(conn: sqlite3.Connection, query: str = "", category_id:
                 params.append(f"%{cat_str}%")
 
     if query:
-        sql += " AND (p.name LIKE ? OR p.code LIKE ?)"
-        params.extend([f"%{query}%", f"%{query}%"])
+        terms = _expand_search_terms(query)
+        clauses = []
+        for t in terms:
+            clauses.append("(p.name LIKE ? OR p.code LIKE ?)")
+            params.extend([f"%{t}%", f"%{t}%"])
+        if clauses:
+            sql += f" AND ({' OR '.join(clauses)})"
 
     sql += " ORDER BY p.name LIMIT ?;"
     params.append(limit)
@@ -722,7 +796,9 @@ def search_lci_processes(conn: sqlite3.Connection, query: str = "", category_id:
 def get_process_technical_sheet(conn: sqlite3.Connection, process_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene la ficha técnica con todos sus intercambios tecnosféricos y elementales."""
     proc = conn.execute("""
-        SELECT p.*, c.name as category_name, f.name as ref_flow_name, f.unit_symbol as ref_unit
+        SELECT p.*, c.name as category_name, 
+               COALESCE(f.name, (SELECT description FROM exchanges WHERE process_id = p.id AND is_input = 0 AND exchange_type = 'production' LIMIT 1), p.name) as ref_flow_name, 
+               COALESCE(f.unit_symbol, 'kg') as ref_unit
         FROM processes p
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN flows f ON p.reference_flow_id = f.id
@@ -733,11 +809,12 @@ def get_process_technical_sheet(conn: sqlite3.Connection, process_id: int) -> Op
 
     exchanges = conn.execute("""
         SELECT e.id, e.flow_id, e.is_input, e.exchange_type, e.amount, e.unit_symbol,
-               fl.name as flow_name, fl.flow_type
+               COALESCE(fl.name, e.description, 'Insumo') as flow_name, 
+               COALESCE(fl.flow_type, 'PRODUCT_FLOW') as flow_type
         FROM exchanges e
         LEFT JOIN flows fl ON e.flow_id = fl.id
         WHERE e.process_id = ?
-        ORDER BY e.is_input DESC, e.exchange_type, fl.name;
+        ORDER BY e.is_input DESC, e.exchange_type, flow_name;
     """, (process_id,)).fetchall()
 
     inputs = [dict(x) for x in exchanges if x["is_input"] == 1]
@@ -779,7 +856,7 @@ def get_top_lci_categories(conn: sqlite3.Connection, limit: int = 50) -> List[Di
     return [{"id": r[0], "name": r[1], "process_count": r[2]} for r in rows]
 
 def search_flows(conn: sqlite3.Connection, query: str = "", flow_type: Optional[str] = None, category: Optional[Any] = None, limit: int = 40) -> List[Dict[str, Any]]:
-    """Busca flujos oficiales existentes en la base de datos ecoinvent 3.12 y propios."""
+    """Busca flujos oficiales existentes en la base de datos ecoinvent 3.12 y propios con soporte bilingüe."""
     sql = "SELECT id, name, flow_type, unit_symbol, category_name FROM flows WHERE 1=1"
     params = []
     if category is not None and str(category).strip() != "" and str(category).strip().upper() != "ALL":
@@ -790,8 +867,13 @@ def search_flows(conn: sqlite3.Connection, query: str = "", flow_type: Optional[
             sql += " AND category_name LIKE ?"
             params.append(f"%{cat_str}%")
     if query:
-        sql += " AND (name LIKE ? OR code LIKE ?)"
-        params.extend([f"%{query.strip()}%", f"%{query.strip()}%"])
+        terms = _expand_search_terms(query)
+        clauses = []
+        for t in terms:
+            clauses.append("(name LIKE ? OR code LIKE ?)")
+            params.extend([f"%{t}%", f"%{t}%"])
+        if clauses:
+            sql += f" AND ({' OR '.join(clauses)})"
     if flow_type and flow_type != "ALL":
         sql += " AND flow_type = ?"
         params.append(flow_type)

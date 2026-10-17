@@ -3606,11 +3606,26 @@
     }
   }
 
+  function areFlowsMatching(flow1, flow2) {
+    if (!flow1 || !flow2) return false;
+    const clean = s => String(s).toLowerCase()
+      .replace(/\s*\(connected flow\)/gi, "")
+      .replace(/\s*\(producto\)/gi, "")
+      .replace(/\s*\[.*?\]/g, "")
+      .replace(/[^a-z0-9]/g, "")
+      .trim();
+    const c1 = clean(flow1);
+    const c2 = clean(flow2);
+    if (!c1 || !c2) return false;
+    return c1 === c2 || c1.includes(c2) || c2.includes(c1);
+  }
+
   function renderCanvasTableView() {
     const container = document.getElementById("canvasTableScrollArea");
     if (!container) return;
 
     const t = (k, fallback) => (window.I18n && window.I18n.t ? window.I18n.t(k, fallback) : fallback);
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
 
     const fileNameEl = document.getElementById("spreadsheetFileName");
     if (fileNameEl) {
@@ -3727,7 +3742,7 @@
                 </td>
                 <td class="excel-cell" data-col="F" data-row="2" style="text-align: center;">
                   <button type="button" class="btn btn-primary btn-sm" style="padding: 1px 7px; font-size: 9.5px;"
-                    onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value); }"
+                    onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value, n.dataset?.processId); }"
                     title="${t("canvas.enter_to_create", "↵ Enter")}">+ Crear</button>
                 </td>
               </tr>
@@ -3802,22 +3817,57 @@
           filteredInputs.forEach((inp) => {
             const connectedEdge = (state.canvasEdges || []).find(e => 
               (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id) || String(e.to) === String(node.process_id)) &&
-              (e.flow === inp.name || (inp.name && inp.name.includes(e.flow)))
+              areFlowsMatching(e.flow, inp.name)
             );
 
             let typeBadge = '';
             let providerText = '';
+            let providerPlain = '';
+            const otherNodes = (state.canvasNodes || []).filter(n => String(n.id) !== String(node.id) && String(n.process_id) !== String(node.process_id));
+
             if (connectedEdge) {
-              const srcNode = state.canvasNodes.find(n => String(n.id) === String(connectedEdge.from) || String(n.process_id) === String(connectedEdge.source_process_id));
+              const srcNode = state.canvasNodes.find(n => String(n.id) === String(connectedEdge.from) || String(n.process_id) === String(connectedEdge.source_process_id) || String(n.id) === String(connectedEdge.source_process_id));
               const srcName = srcNode ? srcNode.name : (connectedEdge.from || "Upstream");
+              providerPlain = srcName;
               typeBadge = `<span class="excel-badge-connected">🔗 ${t("canvas.tag_connected", "Conectado")}</span>`;
-              providerText = `<span style="color: #6D28D9; font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
-            } else if (inp.is_unit) {
-              typeBadge = `<span class="excel-badge-techno">⚙️ Tecnosfera</span>`;
-              providerText = escapeHtml(inp.origin || "Mercado ecoinvent 3.12");
+              if (otherNodes.length > 0) {
+                providerText = `
+                  <select class="excel-provider-select is-connected" 
+                    onchange="window.EconodeApp.tableChangeProvider('${node.id}', ${inp.originalIdx}, this.value)"
+                    title="${isEn ? 'Change provider or link upstream' : 'Cambiar proveedor o vincular a proceso origen'}">
+                    <option value="ecoinvent">Mercado ecoinvent 3.12</option>
+                    <option value="cfe">Suministro Industrial / CFE</option>
+                    <optgroup label="${isEn ? 'Upstream Processes (Internal Links)' : 'Procesos Origen (Conexión Interna)'}">
+                      ${otherNodes.map(on => {
+                        const isSel = (String(connectedEdge.from) === String(on.id) || String(connectedEdge.source_process_id) === String(on.process_id) || String(connectedEdge.from) === String(on.process_id));
+                        return `<option value="${on.id}" ${isSel ? 'selected' : ''}>🔗 ${escapeHtml(on.name)} (#${on.process_id || on.id})</option>`;
+                      }).join('')}
+                    </optgroup>
+                  </select>
+                `;
+              } else {
+                providerText = `<span style="color: #6D28D9; font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
+              }
             } else {
-              typeBadge = `<span class="excel-badge-techno">⚡ Auxiliar</span>`;
-              providerText = escapeHtml(inp.origin || "Suministro Industrial / CFE");
+              typeBadge = inp.is_unit ? `<span class="excel-badge-techno">⚙️ Tecnosfera</span>` : `<span class="excel-badge-techno">⚡ Auxiliar</span>`;
+              providerPlain = inp.origin || "Mercado ecoinvent 3.12";
+              if (otherNodes.length > 0) {
+                providerText = `
+                  <select class="excel-provider-select" 
+                    onchange="window.EconodeApp.tableChangeProvider('${node.id}', ${inp.originalIdx}, this.value)"
+                    title="${isEn ? 'Change provider or link upstream' : 'Cambiar proveedor o vincular a proceso origen'}">
+                    <option value="ecoinvent" ${(!inp.origin || inp.origin.includes('ecoinvent')) ? 'selected' : ''}>Mercado ecoinvent 3.12</option>
+                    <option value="cfe" ${(inp.origin && inp.origin.includes('CFE')) ? 'selected' : ''}>Suministro Industrial / CFE</option>
+                    <optgroup label="${isEn ? 'Upstream Processes (Internal Links)' : 'Procesos Origen (Conexión Interna)'}">
+                      ${otherNodes.map(on => {
+                        return `<option value="${on.id}">🔗 ${escapeHtml(on.name)} (#${on.process_id || on.id})</option>`;
+                      }).join('')}
+                    </optgroup>
+                  </select>
+                `;
+              } else {
+                providerText = escapeHtml(inp.origin || "Mercado ecoinvent 3.12");
+              }
             }
 
             const amt = inp.amount !== undefined ? Number(inp.amount) : 1.0;
@@ -3829,6 +3879,7 @@
               typeBadge,
               flowName: inp.name || "Insumo",
               provider: providerText,
+              providerPlain: providerPlain,
               amount: amt,
               unit: inp.unit || "kg",
               isReference: false,
@@ -3843,7 +3894,7 @@
           filteredOutputs.forEach((out) => {
             const outgoingEdges = (state.canvasEdges || []).filter(e => 
               (String(e.from) === String(node.id) || String(e.source_process_id) === String(node.process_id) || String(e.from) === String(node.process_id)) &&
-              (e.flow === out.name || (out.name && out.name.includes(e.flow)))
+              areFlowsMatching(e.flow, out.name)
             );
 
             let typeBadge = '';
@@ -3877,6 +3928,7 @@
               typeBadge,
               flowName: out.name || "Producto / Salida",
               provider: destText,
+              providerPlain: destText,
               amount: out.amount !== undefined ? Number(out.amount) : 1.0,
               unit: out.unit || "kg",
               isReference: out.is_reference === true,
@@ -3894,6 +3946,7 @@
             typeBadge: '<span style="color:var(--text-muted); font-style:italic;">—</span>',
             flowName: "Sin flujos registrados",
             provider: "—",
+            providerPlain: "—",
             amount: 0,
             unit: "—",
             isReference: false,
@@ -3939,7 +3992,7 @@
                   onkeydown="window.EconodeApp.excelAutocompleteKeyDown(event);">
               </td>
               <!-- Col C: Proveedor / Destino -->
-              <td class="excel-cell" data-col="C" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(rowItem.provider)}')">
+              <td class="excel-cell" data-col="C" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'C', '${escapeHtml(rowItem.providerPlain || '')}')">
                 ${rowItem.provider}
               </td>
               <!-- Col D: Valor (Cantidad numérica) -->
@@ -3998,7 +4051,7 @@
             </td>
             <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center; color: var(--text-muted); font-size: 9px;">
               <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; opacity: 0.7;"
-                onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-flow-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateFlowInline('${node.id}', n.value.trim(), tr.querySelector('.excel-input-new-flow-amt')?.value, tr.querySelector('.excel-input-new-flow-unit')?.value); }" title="${t("canvas.enter_to_create", "↵ Enter")}">↵</button>
+                onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-flow-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateFlowInline('${node.id}', n.value.trim(), tr.querySelector('.excel-input-new-flow-amt')?.value, tr.querySelector('.excel-input-new-flow-unit')?.value, n.dataset?.upstreamSourceId ? 'Conexión Interna' : 'Mercado ecoinvent 3.12', n.dataset?.upstreamSourceId, n.dataset?.upstreamProcessId); }" title="${t("canvas.enter_to_create", "↵ Enter")}">↵</button>
             </td>
           </tr>
         `;
@@ -4041,7 +4094,7 @@
           </td>
           <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center;">
             <button type="button" class="btn btn-primary btn-sm" style="padding: 1px 7px; font-size: 9.5px;"
-              onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value); }"
+              onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value, n.dataset?.processId); }"
               title="${t("canvas.enter_to_create", "↵ Enter")}">+ Crear</button>
           </td>
         </tr>
@@ -4718,7 +4771,7 @@
       `;
     },
 
-    selectItem(idx) {
+    async selectItem(idx) {
       const item = this.currentResults[idx];
       if (!item || !this.activeInput) return;
 
@@ -4737,10 +4790,20 @@
         }
 
         if (this.nodeId) {
-          tableUpdateProcessName(this.nodeId, item.name);
-          if (item.reference_unit || item.unit) {
-            tableUpdateUnit(this.nodeId, "output", 0, item.reference_unit || item.unit);
+          if (item.id) {
+            await tableChangeNodeToCatalogProcess(this.nodeId, item.id);
+          } else {
+            tableUpdateProcessName(this.nodeId, item.name);
+            if (item.reference_unit || item.unit) {
+              tableUpdateUnit(this.nodeId, "output", 0, item.reference_unit || item.unit);
+            }
           }
+        } else if (tr && tr.classList.contains("excel-row-new-process")) {
+          this.activeInput.dataset.processId = item.id || "";
+          const matVal = tr.querySelector(".excel-input-new-mat")?.value;
+          const amtVal = tr.querySelector(".excel-input-new-amt")?.value;
+          const unitVal = tr.querySelector(".excel-input-new-unit")?.value;
+          await tableCreateProcessInline(item.name, matVal, amtVal, unitVal, item.id);
         }
       } else if (this.currentType === "flow") {
         this.activeInput.value = item.name;
@@ -4764,32 +4827,52 @@
         }
 
         if (this.nodeId && this.flowIdx >= 0) {
-          tableUpdateFlowName(this.nodeId, this.flowKind, this.flowIdx, item.name);
-          if (item.unit_symbol || item.unit) {
-            tableUpdateUnit(this.nodeId, this.flowKind, this.flowIdx, item.unit_symbol || item.unit);
-          }
-          if (item.is_upstream && item.source_node_id) {
-            if (!state.canvasEdges) state.canvasEdges = [];
-            const exists = state.canvasEdges.some(e => 
-              String(e.from) === String(item.source_node_id) && 
-              String(e.to) === String(this.nodeId) && 
-              e.flow === item.name
-            );
-            if (!exists) {
+          const node = (state.canvasNodes || []).find(n => String(n.id) === String(this.nodeId) || String(n.process_id) === String(this.nodeId));
+          if (node && node.inputs && node.inputs[this.flowIdx]) {
+            node.inputs[this.flowIdx].name = item.name;
+            if (item.unit_symbol || item.unit) {
+              node.inputs[this.flowIdx].unit = item.unit_symbol || item.unit;
+            }
+            if (item.is_upstream && item.source_node_id) {
+              const srcNode = (state.canvasNodes || []).find(n => String(n.id) === String(item.source_node_id));
+              node.inputs[this.flowIdx].origin = srcNode ? srcNode.name : item.source_node_name;
+              
+              if (!state.canvasEdges) state.canvasEdges = [];
+              state.canvasEdges = state.canvasEdges.filter(e => {
+                const isTarget = (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id));
+                if (!isTarget) return true;
+                return !areFlowsMatching(e.flow, item.name);
+              });
+
               state.canvasEdges.push({
                 id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
                 from: item.source_node_id,
-                to: this.nodeId,
+                to: node.id,
                 source_process_id: item.source_process_id,
-                target_process_id: (state.canvasNodes.find(n => String(n.id) === String(this.nodeId)) || {}).process_id,
+                target_process_id: node.process_id,
                 flow: item.name,
-                amount: 1.0,
-                unit: item.unit_symbol || "kg"
+                amount: parseFloat(node.inputs[this.flowIdx].amount) || 1.0,
+                unit: item.unit_symbol || item.unit || "kg"
               });
-              scheduleAutoSaveCanvas();
-              renderCanvasTableView();
+            } else {
+              node.inputs[this.flowIdx].origin = "Mercado ecoinvent 3.12";
+              if (!state.canvasEdges) state.canvasEdges = [];
+              state.canvasEdges = state.canvasEdges.filter(e => {
+                const isTarget = (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id));
+                if (!isTarget) return true;
+                return !areFlowsMatching(e.flow, item.name);
+              });
             }
+            scheduleAutoSaveCanvas();
+            renderCanvasEdges();
+            renderCanvasTableView();
           }
+        } else if (tr && tr.classList.contains("excel-row-add-flow") && this.nodeId) {
+          const amtVal = tr.querySelector(".excel-input-new-flow-amt")?.value || 1.0;
+          const unitVal = tr.querySelector(".excel-input-new-flow-unit")?.value || (item.unit_symbol || item.unit || "kg");
+          const srcNode = item.is_upstream ? (state.canvasNodes || []).find(n => String(n.id) === String(item.source_node_id)) : null;
+          const origin = srcNode ? srcNode.name : "Mercado ecoinvent 3.12";
+          tableCreateFlowInline(this.nodeId, item.name, amtVal, unitVal, origin, item.source_node_id, item.source_process_id);
         }
       }
       const targetInput = this.activeInput;
@@ -4836,7 +4919,7 @@
     }
   };
 
-  function tableCreateProcessInline(name, initialMaterial, initialAmount = 1.0, initialUnit = "kg") {
+  async function tableCreateProcessInline(name, initialMaterial, initialAmount = 1.0, initialUnit = "kg", catalogProcessId = null) {
     const trimmedName = (name || "").trim();
     if (!trimmedName) return null;
 
@@ -4845,51 +4928,372 @@
       nextNum++;
     }
 
-    const matName = (initialMaterial || "").trim() || (window.I18n && window.I18n.getCurrentLanguage() === "en" ? "Raw Material" : "Materia Prima");
-    const numAmt = parseFloat(initialAmount) || 1.0;
-    const uStr = (initialUnit || "kg").trim() || "kg";
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+    let targetProcId = catalogProcessId ? Number(catalogProcessId) : null;
+    let sheet = null;
 
-    const newNode = {
-      id: `node_${nextNum}`,
-      process_id: nextNum,
-      name: trimmedName,
-      category: "Custom processes & flows",
-      unit: uStr,
-      x: 60 + ((state.canvasNodes || []).length % 5) * 260,
-      y: 160 + Math.floor(((state.canvasNodes || []).length) / 5) * 180,
-      reference_flow: {
-        name: `${trimmedName} (Producto)`,
-        amount: 1.0,
-        unit: uStr
-      },
-      inputs: [
+    // Buscar en catálogo ecoinvent si no se especificó ID
+    try {
+      if (!targetProcId) {
+        const searchRes = await api.searchCatalog(trimmedName, "ALL", 5);
+        if (searchRes && searchRes.items && searchRes.items.length > 0) {
+          const exact = searchRes.items.find(p => (p.name || "").toLowerCase() === trimmedName.toLowerCase());
+          targetProcId = exact ? exact.id : searchRes.items[0].id;
+        }
+      }
+
+      if (targetProcId) {
+        const sheetRes = await api.getProcessSheet(targetProcId);
+        if (sheetRes && sheetRes.sheet) {
+          sheet = sheetRes.sheet;
+        }
+      }
+    } catch (e) {
+      console.warn("No se pudo cargar ficha técnica de ecoinvent:", e);
+    }
+
+    let category = "Custom processes & flows";
+    let location = "GLO";
+    let uStr = (initialUnit || "kg").trim() || "kg";
+    let refFlowName = `${trimmedName} (Producto)`;
+    let formattedInputs = [];
+    let formattedOutputs = [];
+
+    if (sheet) {
+      category = sheet.category_name || sheet.category || category;
+      location = sheet.location || location;
+      uStr = sheet.ref_unit || sheet.process?.ref_unit || uStr;
+      refFlowName = sheet.ref_flow_name || sheet.process?.ref_flow_name || sheet.name || refFlowName;
+
+      const rawInputs = (sheet.technosphere_inputs && sheet.technosphere_inputs.length > 0)
+        ? sheet.technosphere_inputs
+        : (sheet.inputs || []);
+
+      if (rawInputs.length > 0) {
+        formattedInputs = rawInputs.slice(0, 15).map(i => ({
+          name: i.flow_name || i.name || "Insumo",
+          amount: parseFloat(i.amount) || 1.0,
+          unit: i.unit_symbol || i.unit || uStr,
+          is_unit: i.exchange_type !== "biosphere",
+          origin: "Mercado ecoinvent 3.12"
+        }));
+      }
+
+      formattedOutputs = [
+        {
+          name: refFlowName,
+          amount: parseFloat(sheet.reference_amount || 1.0),
+          unit: uStr,
+          is_reference: true
+        }
+      ];
+
+      if (sheet.waste_outputs && Array.isArray(sheet.waste_outputs)) {
+        sheet.waste_outputs.slice(0, 2).forEach(w => {
+          formattedOutputs.push({
+            name: w.flow_name || w.name,
+            amount: parseFloat(w.amount) || 0.05,
+            unit: w.unit_symbol || w.unit || uStr,
+            is_waste: true
+          });
+        });
+      }
+
+      if (sheet.biosphere_emissions && Array.isArray(sheet.biosphere_emissions)) {
+        sheet.biosphere_emissions.slice(0, 2).forEach(em => {
+          formattedOutputs.push({
+            name: em.flow_name || em.name,
+            amount: parseFloat(em.amount) || 0.012,
+            unit: em.unit_symbol || em.unit || "kg",
+            is_elementary: true,
+            compartment: em.compartment || "Air"
+          });
+        });
+      }
+    } else {
+      // Si no se encontró en DB, buscar en procesos de paleta preconfigurados
+      const localMatch = (state.paletteProcesses || []).find(p => areFlowsMatching(p.name, trimmedName));
+      if (localMatch) {
+        if (localMatch.inputs && localMatch.inputs.length > 0) {
+          formattedInputs = JSON.parse(JSON.stringify(localMatch.inputs));
+        }
+        if (localMatch.outputs && localMatch.outputs.length > 0) {
+          formattedOutputs = JSON.parse(JSON.stringify(localMatch.outputs));
+        }
+        if (localMatch.reference_flow) {
+          refFlowName = localMatch.reference_flow.name || refFlowName;
+        }
+        category = localMatch.category || category;
+        targetProcId = localMatch.process_id || localMatch.id;
+      }
+    }
+
+    if (initialMaterial && initialMaterial.trim()) {
+      const matClean = initialMaterial.trim();
+      const hasMat = formattedInputs.some(i => areFlowsMatching(i.name, matClean));
+      if (!hasMat) {
+        formattedInputs.unshift({
+          name: matClean,
+          amount: parseFloat(initialAmount) || 1.0,
+          unit: (initialUnit || "kg").trim() || "kg",
+          is_unit: true,
+          origin: "Mercado ecoinvent 3.12"
+        });
+      }
+    }
+
+    if (formattedInputs.length === 0) {
+      const matName = (initialMaterial || "").trim() || (isEn ? "Raw Material" : "Materia Prima");
+      formattedInputs = [
         {
           name: matName,
-          amount: numAmt,
+          amount: parseFloat(initialAmount) || 1.0,
           unit: uStr,
           is_unit: true,
           origin: "Mercado ecoinvent 3.12"
         }
-      ],
-      outputs: [
+      ];
+    }
+
+    if (formattedOutputs.length === 0) {
+      formattedOutputs = [
         {
-          name: `${trimmedName} (Producto)`,
+          name: refFlowName,
           amount: 1.0,
           unit: uStr,
           is_reference: true
         }
-      ]
+      ];
+    }
+
+    const newNode = {
+      id: `node_${nextNum}`,
+      process_id: targetProcId || nextNum,
+      name: (sheet && sheet.name) ? sheet.name : trimmedName,
+      category: category,
+      location: location,
+      unit: uStr,
+      x: 60 + ((state.canvasNodes || []).length % 5) * 260,
+      y: 160 + Math.floor(((state.canvasNodes || []).length) / 5) * 180,
+      reference_flow: {
+        name: refFlowName,
+        amount: 1.0,
+        unit: uStr
+      },
+      inputs: formattedInputs,
+      outputs: formattedOutputs
     };
 
     if (!state.canvasNodes) state.canvasNodes = [];
+
+    // Auto-detección inteligente de conexiones con nodos existentes en el lienzo
+    if (!state.canvasEdges) state.canvasEdges = [];
+    newNode.inputs.forEach(inp => {
+      for (const exNode of state.canvasNodes) {
+        const matchingOut = (exNode.outputs || []).find(o => areFlowsMatching(o.name, inp.name));
+        if (matchingOut) {
+          inp.origin = exNode.name;
+          state.canvasEdges.push({
+            id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            from: exNode.id,
+            to: newNode.id,
+            source_process_id: exNode.process_id || exNode.id,
+            target_process_id: newNode.process_id,
+            flow: matchingOut.name,
+            amount: inp.amount || 1.0,
+            unit: inp.unit || matchingOut.unit || "kg"
+          });
+          break;
+        }
+      }
+    });
+
+    state.canvasNodes.forEach(exNode => {
+      (exNode.inputs || []).forEach(inp => {
+        if ((!inp.origin || inp.origin.includes("ecoinvent")) && areFlowsMatching(inp.name, refFlowName)) {
+          inp.origin = newNode.name;
+          state.canvasEdges.push({
+            id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+            from: newNode.id,
+            to: exNode.id,
+            source_process_id: newNode.process_id,
+            target_process_id: exNode.process_id || exNode.id,
+            flow: refFlowName,
+            amount: inp.amount || 1.0,
+            unit: inp.unit || uStr
+          });
+        }
+      });
+    });
+
     state.canvasNodes.push(newNode);
     scheduleAutoSaveCanvas();
+    renderCanvasEdges();
     renderCanvasTableView();
 
-    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
-    const msg = isEn ? `Process "${trimmedName}" added to inventory.` : `Proceso "${trimmedName}" agregado al inventario.`;
+    const msg = isEn ? `Process "${newNode.name}" added with ${newNode.inputs.length} inputs & ${newNode.outputs.length} outputs.` : `Proceso "${newNode.name}" agregado con ${newNode.inputs.length} entradas y ${newNode.outputs.length} salidas oficiales.`;
     showNotification(msg);
     return newNode;
+  }
+
+  async function tableChangeNodeToCatalogProcess(nodeId, catalogProcessId) {
+    const node = (state.canvasNodes || []).find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node || !catalogProcessId) return;
+
+    try {
+      const sheetRes = await api.getProcessSheet(catalogProcessId);
+      if (!sheetRes || !sheetRes.sheet) return;
+      const sheet = sheetRes.sheet;
+
+      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+      node.name = sheet.name || node.name;
+      node.category = sheet.category_name || node.category;
+      node.location = sheet.location || node.location;
+      node.process_id = sheet.id || node.process_id;
+      const uStr = sheet.ref_unit || sheet.process?.ref_unit || node.unit || "kg";
+      node.unit = uStr;
+      const refFlowName = sheet.ref_flow_name || sheet.process?.ref_flow_name || `${node.name} (Producto)`;
+
+      node.reference_flow = {
+        name: refFlowName,
+        amount: parseFloat(sheet.reference_amount || 1.0),
+        unit: uStr
+      };
+
+      const rawInputs = (sheet.technosphere_inputs && sheet.technosphere_inputs.length > 0)
+        ? sheet.technosphere_inputs
+        : (sheet.inputs || []);
+
+      if (rawInputs.length > 0) {
+        node.inputs = rawInputs.slice(0, 15).map(i => ({
+          name: i.flow_name || i.name || "Insumo",
+          amount: parseFloat(i.amount) || 1.0,
+          unit: i.unit_symbol || i.unit || uStr,
+          is_unit: i.exchange_type !== "biosphere",
+          origin: "Mercado ecoinvent 3.12"
+        }));
+      }
+
+      node.outputs = [
+        {
+          name: refFlowName,
+          amount: parseFloat(sheet.reference_amount || 1.0),
+          unit: uStr,
+          is_reference: true
+        }
+      ];
+
+      if (sheet.waste_outputs && Array.isArray(sheet.waste_outputs)) {
+        sheet.waste_outputs.slice(0, 2).forEach(w => {
+          node.outputs.push({
+            name: w.flow_name || w.name,
+            amount: parseFloat(w.amount) || 0.05,
+            unit: w.unit_symbol || w.unit || uStr,
+            is_waste: true
+          });
+        });
+      }
+
+      if (sheet.biosphere_emissions && Array.isArray(sheet.biosphere_emissions)) {
+        sheet.biosphere_emissions.slice(0, 2).forEach(em => {
+          node.outputs.push({
+            name: em.flow_name || em.name,
+            amount: parseFloat(em.amount) || 0.012,
+            unit: em.unit_symbol || em.unit || "kg",
+            is_elementary: true,
+            compartment: em.compartment || "Air"
+          });
+        });
+      }
+
+      // Re-verificar conexiones automáticas
+      if (!state.canvasEdges) state.canvasEdges = [];
+      node.inputs.forEach(inp => {
+        for (const exNode of state.canvasNodes) {
+          if (String(exNode.id) === String(node.id)) continue;
+          const matchingOut = (exNode.outputs || []).find(o => areFlowsMatching(o.name, inp.name));
+          if (matchingOut) {
+            inp.origin = exNode.name;
+            const exists = state.canvasEdges.some(e => 
+              (String(e.from) === String(exNode.id) || String(e.source_process_id) === String(exNode.process_id)) &&
+              (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id)) &&
+              areFlowsMatching(e.flow, matchingOut.name)
+            );
+            if (!exists) {
+              state.canvasEdges.push({
+                id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+                from: exNode.id,
+                to: node.id,
+                source_process_id: exNode.process_id || exNode.id,
+                target_process_id: node.process_id || node.id,
+                flow: matchingOut.name,
+                amount: inp.amount || 1.0,
+                unit: inp.unit || matchingOut.unit || "kg"
+              });
+            }
+            break;
+          }
+        }
+      });
+
+      scheduleAutoSaveCanvas();
+      renderCanvasEdges();
+      renderCanvasTableView();
+      showNotification(isEn ? `Process "${node.name}" updated with official inputs & outputs.` : `Proceso "${node.name}" actualizado con entradas y salidas oficiales.`);
+    } catch (e) {
+      console.error("Error al actualizar proceso desde catálogo:", e);
+    }
+  }
+
+  function tableChangeProvider(nodeId, flowIdx, newProviderValue) {
+    const node = (state.canvasNodes || []).find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node || !node.inputs || !node.inputs[flowIdx]) return;
+    const inp = node.inputs[flowIdx];
+
+    // Eliminar arista existente conectada a este input si la había
+    if (!state.canvasEdges) state.canvasEdges = [];
+    state.canvasEdges = state.canvasEdges.filter(e => {
+      const isTarget = (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id) || String(e.to) === String(node.process_id));
+      if (!isTarget) return true;
+      return !areFlowsMatching(e.flow, inp.name);
+    });
+
+    if (newProviderValue === "ecoinvent") {
+      inp.origin = "Mercado ecoinvent 3.12";
+      inp.is_unit = true;
+    } else if (newProviderValue === "cfe") {
+      inp.origin = "Suministro Industrial / CFE";
+      inp.is_unit = false;
+    } else {
+      // Es un nodo origen (upstream)
+      const srcNode = (state.canvasNodes || []).find(n => String(n.id) === String(newProviderValue) || String(n.process_id) === String(newProviderValue));
+      if (srcNode) {
+        inp.origin = srcNode.name;
+        const matchingOut = (srcNode.outputs || []).find(o => areFlowsMatching(o.name, inp.name)) || 
+                            (srcNode.outputs || []).find(o => o.is_reference) || 
+                            (srcNode.outputs && srcNode.outputs[0]);
+        const flowName = matchingOut ? matchingOut.name : inp.name;
+        inp.name = flowName;
+        if (matchingOut && matchingOut.unit) inp.unit = matchingOut.unit;
+
+        state.canvasEdges.push({
+          id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+          from: srcNode.id,
+          to: node.id,
+          source_process_id: srcNode.process_id || srcNode.id,
+          target_process_id: node.process_id || node.id,
+          flow: flowName,
+          amount: parseFloat(inp.amount) || 1.0,
+          unit: inp.unit || (matchingOut ? matchingOut.unit : "kg")
+        });
+      }
+    }
+
+    scheduleAutoSaveCanvas();
+    renderCanvasEdges();
+    renderCanvasTableView();
+    const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+    showNotification(isEn ? "Provider and connection updated." : "Proveedor y conexión actualizados.");
   }
 
   function tableCreateFlowInline(nodeId, flowName, amount = 1.0, unit = "kg", origin = "Mercado ecoinvent 3.12", upstreamSourceId = null, upstreamProcessId = null) {
@@ -4899,30 +5303,46 @@
     const trimmedFlow = (flowName || "").trim();
     if (!trimmedFlow) return null;
 
+    let finalSourceId = upstreamSourceId;
+    let finalSourceProcId = upstreamProcessId;
+    let finalOrigin = origin;
+
+    if (!finalSourceId) {
+      const matchNode = (state.canvasNodes || []).find(n => 
+        String(n.id) !== String(node.id) && 
+        (n.outputs || []).some(o => areFlowsMatching(o.name, trimmedFlow))
+      );
+      if (matchNode) {
+        finalSourceId = matchNode.id;
+        finalSourceProcId = matchNode.process_id;
+        finalOrigin = matchNode.name;
+      }
+    }
+
     if (!node.inputs) node.inputs = [];
     const newFlow = {
       name: trimmedFlow,
       amount: parseFloat(amount) || 1.0,
       unit: (unit || "kg").trim() || "kg",
       is_unit: true,
-      origin: origin || (upstreamSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12")
+      origin: finalOrigin || (finalSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12")
     };
 
     node.inputs.push(newFlow);
 
-    if (upstreamSourceId) {
+    if (finalSourceId) {
       if (!state.canvasEdges) state.canvasEdges = [];
       const exists = state.canvasEdges.some(e => 
-        String(e.from) === String(upstreamSourceId) && 
-        String(e.to) === String(node.id) && 
-        e.flow === trimmedFlow
+        (String(e.from) === String(finalSourceId) || String(e.source_process_id) === String(finalSourceProcId)) && 
+        (String(e.to) === String(node.id) || String(e.target_process_id) === String(node.process_id)) && 
+        areFlowsMatching(e.flow, trimmedFlow)
       );
       if (!exists) {
         state.canvasEdges.push({
           id: `edge_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
-          from: upstreamSourceId,
+          from: finalSourceId,
           to: node.id,
-          source_process_id: upstreamProcessId,
+          source_process_id: finalSourceProcId,
           target_process_id: node.process_id,
           flow: trimmedFlow,
           amount: parseFloat(amount) || 1.0,
@@ -4932,6 +5352,7 @@
     }
 
     scheduleAutoSaveCanvas();
+    renderCanvasEdges();
     renderCanvasTableView();
 
     const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
@@ -4953,27 +5374,30 @@
       const matName = matInput ? matInput.value.trim() : "";
       const amt = amtInput ? amtInput.value : 1.0;
       const unit = unitInput ? unitInput.value : "kg";
+      const procId = inputEl.dataset ? inputEl.dataset.processId : null;
 
-      tableCreateProcessInline(val, matName, amt, unit);
+      tableCreateProcessInline(val, matName, amt, unit, procId);
     }
   }
 
   function handleNewFlowKeyDown(e, nodeId, inputEl) {
     if (e.key === "Enter") {
       e.preventDefault();
-      const val = (inputEl.value || "").trim();
+      const tr = inputEl.closest("tr");
+      const nameInput = tr ? tr.querySelector(".excel-input-new-flow-name") : inputEl;
+      const val = (nameInput ? nameInput.value : "").trim();
       if (!val) return;
 
-      const tr = inputEl.closest("tr");
       const amtInput = tr ? tr.querySelector(".excel-input-new-flow-amt") : null;
       const unitInput = tr ? tr.querySelector(".excel-input-new-flow-unit") : null;
 
       const amt = amtInput ? amtInput.value : 1.0;
       const unit = unitInput ? unitInput.value : "kg";
-      const upstreamSourceId = inputEl.dataset ? inputEl.dataset.upstreamSourceId : null;
-      const upstreamProcessId = inputEl.dataset ? inputEl.dataset.upstreamProcessId : null;
+      const upstreamSourceId = nameInput?.dataset?.upstreamSourceId || null;
+      const upstreamProcessId = nameInput?.dataset?.upstreamProcessId || null;
+      const origin = upstreamSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12";
 
-      tableCreateFlowInline(nodeId, val, amt, unit, upstreamSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12", upstreamSourceId, upstreamProcessId);
+      tableCreateFlowInline(nodeId, val, amt, unit, origin, upstreamSourceId, upstreamProcessId);
     }
   }
 
@@ -5041,12 +5465,32 @@
     if (!edge) return;
     const num = parseFloat(value) || 0;
     edge.amount = num;
+
+    const tgtNode = (state.canvasNodes || []).find(n => String(n.id) === String(edge.to) || String(n.process_id) === String(edge.target_process_id));
+    if (tgtNode && tgtNode.inputs) {
+      const inp = tgtNode.inputs.find(i => areFlowsMatching(i.name, edge.flow));
+      if (inp) {
+        inp.amount = num;
+      }
+    }
+
     scheduleAutoSaveCanvas();
   }
 
   function tableDeleteEdge(edgeId) {
+    const edge = (state.canvasEdges || []).find(e => String(e.id) === String(edgeId));
+    if (edge) {
+      const tgtNode = (state.canvasNodes || []).find(n => String(n.id) === String(edge.to) || String(n.process_id) === String(edge.target_process_id));
+      if (tgtNode && tgtNode.inputs) {
+        const inp = tgtNode.inputs.find(i => areFlowsMatching(i.name, edge.flow));
+        if (inp) {
+          inp.origin = "Mercado ecoinvent 3.12";
+        }
+      }
+    }
     state.canvasEdges = (state.canvasEdges || []).filter(e => String(e.id) !== String(edgeId));
     scheduleAutoSaveCanvas();
+    renderCanvasEdges();
     renderCanvasTableView();
     showNotification("Conexión eliminada.");
   }
@@ -6171,12 +6615,13 @@
 
         if (!state.canvasEdges) state.canvasEdges = [];
         const existingIdx = state.canvasEdges.findIndex(ed => 
-          (ed.from === source.id || String(ed.source_process_id) === String(source.process_id)) &&
-          (ed.to === target.id || String(ed.target_process_id) === String(target.process_id)) &&
-          ed.flow === flowName
+          (String(ed.from) === String(source.id) || String(ed.source_process_id) === String(source.process_id)) &&
+          (String(ed.to) === String(target.id) || String(ed.target_process_id) === String(target.process_id)) &&
+          areFlowsMatching(ed.flow, flowName)
         );
 
         if (existingIdx >= 0) {
+          state.canvasEdges[existingIdx].flow = flowName;
           state.canvasEdges[existingIdx].amount = amount;
           state.canvasEdges[existingIdx].unit = unit;
         } else {
@@ -6193,21 +6638,24 @@
           state.canvasEdges.push(newEdge);
         }
 
-        // Registrar en entradas del destino si no existe
-        if (target.inputs && Array.isArray(target.inputs)) {
-          const hasInp = target.inputs.some(i => (i.name || "").toLowerCase().includes(flowName.toLowerCase()));
-          if (!hasInp) {
-            target.inputs.push({
-              name: `${flowName} (Connected Flow)`,
-              amount: amount,
-              unit: unit,
-              is_unit: true,
-              origin: source.name
-            });
-            if (state.selectedNode && state.selectedNode.id === target.id) {
-              inspectNode(target);
-            }
-          }
+        // Registrar o actualizar en entradas del destino
+        if (!target.inputs) target.inputs = [];
+        const matchingInp = target.inputs.find(i => areFlowsMatching(i.name, flowName));
+        if (matchingInp) {
+          matchingInp.origin = source.name;
+          matchingInp.amount = amount;
+          matchingInp.unit = unit;
+        } else {
+          target.inputs.push({
+            name: flowName,
+            amount: amount,
+            unit: unit,
+            is_unit: true,
+            origin: source.name
+          });
+        }
+        if (state.selectedNode && state.selectedNode.id === target.id) {
+          inspectNode(target);
         }
 
         renderCanvasEdges();
@@ -7705,8 +8153,10 @@
     tableUpdateFlowName: (nodeId, type, idx, val) => tableUpdateFlowName(nodeId, type, idx, val),
     tableUpdateUnit: (nodeId, type, idx, val) => tableUpdateUnit(nodeId, type, idx, val),
     tableUpdateProcessName: (nodeId, val) => tableUpdateProcessName(nodeId, val),
-    tableCreateProcessInline: (name, mat, amt, unit) => tableCreateProcessInline(name, mat, amt, unit),
-    tableCreateFlowInline: (nodeId, name, amt, unit, origin) => tableCreateFlowInline(nodeId, name, amt, unit, origin),
+    tableCreateProcessInline: (name, mat, amt, unit, procId) => tableCreateProcessInline(name, mat, amt, unit, procId),
+    tableCreateFlowInline: (nodeId, name, amt, unit, origin, srcId, srcProcId) => tableCreateFlowInline(nodeId, name, amt, unit, origin, srcId, srcProcId),
+    tableChangeProvider: (nodeId, flowIdx, val) => tableChangeProvider(nodeId, flowIdx, val),
+    tableChangeNodeToCatalogProcess: (nodeId, procId) => tableChangeNodeToCatalogProcess(nodeId, procId),
     handleNewProcessKeyDown: (e, el) => handleNewProcessKeyDown(e, el),
     handleNewFlowKeyDown: (e, id, el) => handleNewFlowKeyDown(e, id, el),
     excelAutocompleteOpen: (inputEl, type, options) => excelAutocomplete.open(inputEl, type, options),
@@ -7724,6 +8174,8 @@
     updateCanvasPanelLayout: () => updateCanvasPanelLayout(),
     applyCanvasZoom: (z, x, y) => applyCanvasZoom(z, x, y),
     getZoom: () => state.canvasZoom || 1.0,
+    getNodes: () => state.canvasNodes,
+    getEdges: () => state.canvasEdges,
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();
