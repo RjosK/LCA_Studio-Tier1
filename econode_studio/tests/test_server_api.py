@@ -53,7 +53,7 @@ def request_json(path, data=None, method="GET"):
     headers = {"Content-Type": "application/json"} if data else {}
     body = json.dumps(data).encode("utf-8") if data else None
     req = urllib.request.Request(url, data=body, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=5) as resp:
+    with urllib.request.urlopen(req, timeout=15) as resp:
         content = resp.read()
         content_type = resp.headers.get("Content-Type", "")
         if "application/json" in content_type:
