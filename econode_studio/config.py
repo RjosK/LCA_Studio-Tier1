@@ -53,7 +53,7 @@ class Settings:
     AUTH_DB_PATH: str = os.getenv("AUTH_DB_PATH", os.path.join(DATA_DIR, "econode_auth.db"))
 
     # Google Identity Services (GSI)
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com")
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "968718859059-81u6bj6l4op1e0dsnblqg73ego8ns59j.apps.googleusercontent.com")
     ADMIN_EMAILS: str = os.getenv("ADMIN_EMAILS", "")
 
 settings = Settings()

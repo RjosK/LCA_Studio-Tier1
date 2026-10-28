@@ -565,7 +565,7 @@
 
   // Inicializador y Renderizador de Botones Oficiales de Google GSI
   window.initGoogleAuthUI = function (targetView) {
-    const clientId = "744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com";
+    const clientId = "968718859059-81u6bj6l4op1e0dsnblqg73ego8ns59j.apps.googleusercontent.com";
     if (window.google && window.google.accounts && window.google.accounts.id) {
       try {
         window.google.accounts.id.initialize({
