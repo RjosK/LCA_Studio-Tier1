@@ -7294,6 +7294,18 @@
             reference_amount: amount,
             reference_unit: unit
           });
+          // Crear carpeta de proyecto en Google Drive del analista
+          if (window.EconodeDrive) {
+            try {
+              const driveFolder = await window.EconodeDrive.createProjectFolder(name, code);
+              if (driveFolder && driveFolder.folderId) {
+                showNotification(`Carpeta "${driveFolder.folderName}" creada en tu Google Drive 📁`);
+              }
+            } catch (driveErr) {
+              console.warn("Creación de carpeta en Google Drive diferida:", driveErr.message);
+            }
+          }
+
           close();
           showNotification(`Sistema "${name}" creado exitosamente.`);
           await loadDashboard();
@@ -7429,6 +7441,20 @@
           });
 
           showNotification(res.message || `Invitación creada exitosamente para ${email}`);
+
+          // Compartir carpeta de Google Drive con el invitado
+          if (window.EconodeDrive && email) {
+            try {
+              const driveRole = role === "auditor" ? "commenter" : (role === "client" ? "reader" : "writer");
+              const rootFolderId = await window.EconodeDrive.getOrCreateRootFolder();
+              if (rootFolderId) {
+                await window.EconodeDrive.shareProjectFolder(rootFolderId, email, driveRole, true);
+                showNotification(`Carpeta compartida en Google Drive con ${email} (${driveRole}) ✓`);
+              }
+            } catch (driveShareErr) {
+              console.warn("Compartición en Google Drive diferida:", driveShareErr.message);
+            }
+          }
 
           // Mostrar box de enlace generado
           const box = document.getElementById("inviteGeneratedBox");
