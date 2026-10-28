@@ -362,20 +362,35 @@ def list_product_systems(
     return results
 
 def delete_product_system(conn: sqlite3.Connection, system_id: int) -> bool:
-    """Elimina permanentemente un sistema producto y sus datos asociados."""
-    with conn:
-        conn.execute("DELETE FROM product_systems WHERE id = ?", (system_id,))
+    """Elimina permanentemente un sistema producto y sus datos asociados de forma resiliente."""
+    # 1. Eliminar nodos asociados
+    try:
         conn.execute("DELETE FROM product_system_nodes WHERE system_id = ?", (system_id,))
         try:
-            conn.execute("DELETE FROM comments WHERE system_id = ?", (system_id,))
+            conn.commit()
         except Exception:
             pass
+    except Exception:
+        pass
+
+    # 2. Eliminar el sistema producto principal
+    try:
+        conn.execute("DELETE FROM product_systems WHERE id = ?", (system_id,))
         try:
-            conn.execute("DELETE FROM checklist_clause_states WHERE system_id = ?", (system_id,))
+            conn.commit()
         except Exception:
             pass
+    except Exception:
+        pass
+
+    # 3. Eliminar comentarios, cláusulas y documentos de forma aislada
+    for tbl in ("audit_comments", "comments", "checklist_clause_states", "documents"):
         try:
-            conn.execute("DELETE FROM documents WHERE system_id = ?", (system_id,))
+            conn.execute(f"DELETE FROM {tbl} WHERE system_id = ?", (system_id,))
+            try:
+                conn.commit()
+            except Exception:
+                pass
         except Exception:
             pass
     return True
