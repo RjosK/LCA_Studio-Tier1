@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "env": {
-    "DATABASE_URL": "postgresql://postgres.nttdfdsntwlbeqwtgnci:47Tw4W-v8Z7rkqe@aws-1-us-west-2.pooler.supabase.com:6543/postgres"
-  },
   "rewrites": [
     { "source": "/api/:match*", "destination": "/api/index.py?__slug=:match*" },
     { "source": "/css/(.*)", "destination": "/css/$1" },

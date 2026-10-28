@@ -26,12 +26,9 @@ class Settings:
     JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "72"))
     PASSWORD_SALT: str = os.getenv("PASSWORD_SALT", "econode_secure_pbkdf2_salt_v1")
 
-    # Conexión Supabase PostgreSQL (Cloud / Producción)
-    DEFAULT_SUPABASE_URL: str = "postgresql://postgres.nttdfdsntwlbeqwtgnci:47Tw4W-v8Z7rkqe@aws-1-us-west-2.pooler.supabase.com:6543/postgres"
-    DATABASE_URL: str = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or (
-        DEFAULT_SUPABASE_URL if os.getenv("VERCEL") or not os.path.exists(os.path.join(BASE_DIR, "ecoinvent", "ecoinvent_312.db")) else ""
-    )
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://nttdfdsntwlbeqwtgnci.supabase.co")
+    # Conexión Supabase PostgreSQL (Cloud / Producción - Configurar vía Variables de Entorno)
+    DATABASE_URL: str = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or ""
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
     SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
     SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "econode-vault")
@@ -67,7 +64,7 @@ class Settings:
     CREDENCIALES_TXT_PATH: str = os.getenv("CREDENCIALES_TXT_PATH", os.path.join(DATA_DIR, "credenciales_demo.txt"))
 
     # Google Identity Services
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com")
-    ADMIN_EMAILS: str = os.getenv("ADMIN_EMAILS", "josuearenteriaz09@gmail.com")
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    ADMIN_EMAILS: str = os.getenv("ADMIN_EMAILS", "")
 
 settings = Settings()
