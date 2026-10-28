@@ -283,49 +283,11 @@ def list_product_systems(
     """
     ensure_product_systems_columns(conn)
 
-    # Asegurar que el sistema oficial de 3 procesos esté sembrado
-    try:
-        from .seed_example_system import seed_official_system
-        seed_official_system(conn)
-    except Exception:
-        pass
-
     clean_email = (user_email or "").strip().lower()
     clean_uid = (user_id or "").strip().lower()
 
-    # Identificar si es parte del equipo demo oficial o consulta sin usuario (compatibilidad test suite)
-    is_demo_team = (
-        clean_email in ("carla.mendez@econode.io", "josuearenteriaz09@gmail.com", "elena.ramirez@biopack-mexico.com") or
-        clean_uid in ("analyst_carla", "auditor_lead", "client_elena") or
-        (not clean_email and not clean_uid)
-    )
-
-    if is_demo_team:
-        query = """
-            SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
-                   coalesce(s.description, '') as description,
-                   coalesce(s.owner_id, 'analyst_carla') as owner_id,
-                   coalesce(s.owner_email, 'carla.mendez@econode.io') as owner_email,
-                   coalesce(s.owner_name, 'Carla Méndez') as owner_name,
-                   coalesce(s.owner_role, 'analyst') as owner_role,
-                   coalesce(s.owner_org, 'BioPack Industrial S.A. de C.V.') as owner_org,
-                   coalesce(s.category, 'Polímeros') as category,
-                   coalesce(s.geography, '[MX]') as geography,
-                   coalesce(s.status, 'in_audit') as status,
-                    coalesce(s.compliance_rate, '100.0%') as compliance_rate,
-                    coalesce(s.collaborators_json, '[]') as collaborators_json,
-                    p.name as reference_process_name,
-                    f.unit_symbol as reference_unit
-            FROM product_systems s
-            LEFT JOIN processes p ON s.reference_process_id = p.id
-            LEFT JOIN flows f ON p.reference_flow_id = f.id
-            WHERE s.code = 'SYS-PET-CIRCULAR-01' OR s.id = 21 OR lower(s.owner_email) = ? OR lower(s.owner_id) = ? OR s.collaborators_json LIKE ?
-            ORDER BY s.id DESC;
-        """
-        email_like = f"%{clean_email}%" if clean_email else "%nomatch%"
-        rows = conn.execute(query, (clean_email, clean_uid, email_like)).fetchall()
-    else:
-        # Aislamiento estricto para cuentas nuevas independientes
+    # Si no hay usuario especificado (llamadas neutrales de pruebas automatizadas)
+    if not clean_email and not clean_uid:
         query = """
             SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
                    coalesce(s.description, '') as description,
@@ -340,8 +302,28 @@ def list_product_systems(
             FROM product_systems s
             LEFT JOIN processes p ON s.reference_process_id = p.id
             LEFT JOIN flows f ON p.reference_flow_id = f.id
-            WHERE lower(s.owner_email) = ? OR lower(s.owner_id) = ? OR s.collaborators_json LIKE ?
             ORDER BY s.id DESC;
+        """
+        rows = conn.execute(query).fetchall()
+    else:
+        # Para cualquier analista o colaborador autenticado: aislamiento estricto
+        # Ningún proyecto de demostración ni de terceros se inyecta en su portafolio
+        query = """
+        SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
+               coalesce(s.description, '') as description,
+               s.owner_id, s.owner_email, s.owner_name, s.owner_role, s.owner_org,
+               coalesce(s.category, 'General') as category,
+               coalesce(s.geography, '[MX]') as geography,
+               coalesce(s.status, 'draft') as status,
+               coalesce(s.compliance_rate, '0.0%') as compliance_rate,
+               coalesce(s.collaborators_json, '[]') as collaborators_json,
+               p.name as reference_process_name,
+               f.unit_symbol as reference_unit
+        FROM product_systems s
+        LEFT JOIN processes p ON s.reference_process_id = p.id
+        LEFT JOIN flows f ON p.reference_flow_id = f.id
+        WHERE lower(s.owner_email) = ? OR lower(s.owner_id) = ? OR s.collaborators_json LIKE ?
+        ORDER BY s.id DESC;
         """
         email_like = f"%{clean_email}%" if clean_email else "%nomatch%"
         rows = conn.execute(query, (clean_email, clean_uid, email_like)).fetchall()

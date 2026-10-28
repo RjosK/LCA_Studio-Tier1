@@ -94,6 +94,11 @@ def ensure_auth_tables() -> None:
             conn.execute("DELETE FROM users WHERE id IN ('analyst_carla', 'auditor_lead', 'client_elena');")
     except Exception:
         pass
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("DELETE FROM product_systems WHERE id = 21 OR code = 'SYS-PET-CIRCULAR-01';")
+    except Exception:
+        pass
 
 
 def init_auth_db(default_accounts: Optional[List[Dict[str, Any]]] = None) -> None:
