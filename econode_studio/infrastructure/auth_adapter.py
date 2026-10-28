@@ -1,14 +1,11 @@
 """
-econode_studio/infrastructure/auth_adapter.py - Adaptador SQLite/PostgreSQL de Autenticación, Usuarios e Invitaciones
-Maneja la conexión a 'econode_auth.db', el esquema DDL de las tablas 'users' e 'invitations'
-e índices únicos en modo WAL para autenticación mediante Google Identity Services.
+econode_studio/infrastructure/auth_adapter.py - Adaptador de Persistencia de Autenticación, RBAC e Invitaciones
+Compatible dual: Supabase PostgreSQL (Cloud / Vercel Serverless) y SQLite Local (Offline).
 """
 
 import os
 import json
-import sqlite3
-import time
-from typing import Dict, List, Any, Optional
+from typing import Optional, List, Dict, Any
 
 try:
     from config import settings
@@ -28,76 +25,80 @@ def get_auth_db_connection() -> Any:
     return get_db_connection(AUTH_DB_PATH)
 
 
-def init_auth_db(default_accounts: Optional[List[Dict[str, Any]]] = None) -> None:
-    """Crea las tablas users e invitations e índices únicos, y purga cuentas de prueba obsoletas."""
-    with get_auth_db_connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                display_name TEXT NOT NULL,
-                organization TEXT DEFAULT '',
-                role TEXT NOT NULL DEFAULT 'analyst',
-                role_title TEXT DEFAULT '',
-                bio TEXT DEFAULT '',
-                avatar TEXT DEFAULT '',
-                token TEXT DEFAULT '',
-                permissions_json TEXT DEFAULT '[]',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS invitations (
-                id TEXT PRIMARY KEY,
-                email TEXT NOT NULL,
-                name TEXT DEFAULT '',
-                role TEXT NOT NULL DEFAULT 'auditor',
-                invited_by_id TEXT NOT NULL,
-                invited_by_name TEXT NOT NULL,
-                organization TEXT DEFAULT '',
-                system_id INTEGER DEFAULT NULL,
-                token TEXT UNIQUE NOT NULL,
-                status TEXT DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                accepted_at TIMESTAMP DEFAULT NULL
-            );
-        """)
-        try:
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(lower(email));")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(lower(username));")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(lower(email));")
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);")
-        except Exception:
-            pass
+def ensure_auth_tables() -> None:
+    """Garantiza la creación independiente y resiliente de tablas e índices para SQLite y Supabase PostgreSQL."""
+    # 1. Tabla de invitaciones (aislada para que nunca sea abortada por errores en otras tablas)
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS invitations (
+                    id TEXT PRIMARY KEY,
+                    email TEXT NOT NULL,
+                    name TEXT DEFAULT '',
+                    role TEXT NOT NULL DEFAULT 'auditor',
+                    invited_by_id TEXT NOT NULL,
+                    invited_by_name TEXT NOT NULL,
+                    organization TEXT DEFAULT '',
+                    system_id INTEGER DEFAULT NULL,
+                    token TEXT UNIQUE NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    accepted_at TIMESTAMP DEFAULT NULL
+                );
+            """)
+            try:
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(lower(email));")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);")
+            except Exception:
+                pass
+    except Exception as e:
+        print("[auth_adapter] Warning creating invitations table:", e)
 
-        # Purga definitiva de cuentas de demostración hardcodeadas
-        try:
+    # 2. Tabla users (en SQLite crea la tabla; en Supabase se ignora si users ya es una vista)
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    organization TEXT DEFAULT '',
+                    role TEXT NOT NULL DEFAULT 'analyst',
+                    role_title TEXT DEFAULT '',
+                    bio TEXT DEFAULT '',
+                    avatar TEXT DEFAULT '',
+                    token TEXT DEFAULT '',
+                    permissions_json TEXT DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+            try:
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(lower(email));")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_users_username ON users(lower(username));")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # 3. Purga de cuentas de prueba tanto en auth_users (Supabase PostgreSQL) como en users (SQLite)
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("DELETE FROM auth_users WHERE id IN ('analyst_carla', 'auditor_lead', 'client_elena');")
+    except Exception:
+        pass
+    try:
+        with get_auth_db_connection() as conn:
             conn.execute("DELETE FROM users WHERE id IN ('analyst_carla', 'auditor_lead', 'client_elena');")
-        except Exception:
-            pass
+    except Exception:
+        pass
 
-        if default_accounts:
-            for d in default_accounts:
-                perms = json.dumps(d.get("permissions", []))
-                try:
-                    existing = conn.execute("SELECT id FROM users WHERE id = ?;", (d["id"],)).fetchone()
-                    if not existing:
-                        conn.execute("""
-                            INSERT INTO users (
-                                id, username, email, password_hash, display_name,
-                                organization, role, role_title, bio, avatar, token, permissions_json
-                            )
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-                        """, (
-                            d["id"], d["username"], d["email"].lower(), d["password_hash"],
-                            d["display_name"], d["organization"], d["role"],
-                            d["role_title"], d["bio"], d["avatar"], d["token"], perms
-                        ))
-                except Exception:
-                    pass
+
+def init_auth_db(default_accounts: Optional[List[Dict[str, Any]]] = None) -> None:
+    """Inicializa esquemas y purga accesos de prueba obsoletos."""
+    ensure_auth_tables()
 
 
 def _row_to_user_dict(row: Any) -> Dict[str, Any]:
@@ -132,72 +133,138 @@ def _row_to_invitation_dict(row: Any) -> Dict[str, Any]:
 
 def get_all_users() -> List[Dict[str, Any]]:
     """Recupera la lista completa de usuarios registrados."""
-    with get_auth_db_connection() as conn:
-        rows = conn.execute("SELECT * FROM users ORDER BY created_at ASC;").fetchall()
-        return [_row_to_user_dict(r) for r in rows]
+    ensure_auth_tables()
+    try:
+        with get_auth_db_connection() as conn:
+            rows = conn.execute("SELECT * FROM auth_users ORDER BY created_at ASC;").fetchall()
+            return [_row_to_user_dict(r) for r in rows]
+    except Exception:
+        with get_auth_db_connection() as conn:
+            rows = conn.execute("SELECT * FROM users ORDER BY created_at ASC;").fetchall()
+            return [_row_to_user_dict(r) for r in rows]
 
 
 def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
-    """Busca un usuario por su clave primaria ID."""
+    """Busca un usuario por su identificador único."""
+    if not user_id:
+        return None
+    ensure_auth_tables()
+    try:
+        with get_auth_db_connection() as conn:
+            row = conn.execute("SELECT * FROM auth_users WHERE id = ?;", (user_id,)).fetchone()
+            if row:
+                return _row_to_user_dict(row)
+    except Exception:
+        pass
     with get_auth_db_connection() as conn:
         row = conn.execute("SELECT * FROM users WHERE id = ?;", (user_id,)).fetchone()
         return _row_to_user_dict(row) if row else None
 
 
-def get_user_by_identifier(identifier: str) -> Optional[Dict[str, Any]]:
-    """Busca un usuario por ID, username o correo electrónico (case-insensitive)."""
-    clean = (identifier or "").strip().lower()
+def get_user_by_identifier(clean: str) -> Optional[Dict[str, Any]]:
+    """Busca un usuario por ID, username o email."""
     if not clean:
         return None
+    c = clean.strip().lower()
+    ensure_auth_tables()
+    try:
+        with get_auth_db_connection() as conn:
+            row = conn.execute("""
+                SELECT * FROM auth_users
+                WHERE lower(id) = ? OR lower(username) = ? OR lower(email) = ?;
+            """, (c, c, c)).fetchone()
+            if row:
+                return _row_to_user_dict(row)
+    except Exception:
+        pass
+
     with get_auth_db_connection() as conn:
         row = conn.execute("""
             SELECT * FROM users
             WHERE lower(id) = ? OR lower(username) = ? OR lower(email) = ?;
-        """, (clean, clean, clean)).fetchone()
+        """, (c, c, c)).fetchone()
         return _row_to_user_dict(row) if row else None
 
 
 def get_user_by_role_or_identifier(clean: str) -> Optional[Dict[str, Any]]:
     """Busca un usuario por rol, ID, username o email."""
+    if not clean:
+        return None
+    c = clean.strip().lower()
+    ensure_auth_tables()
+    try:
+        with get_auth_db_connection() as conn:
+            row = conn.execute("""
+                SELECT * FROM auth_users
+                WHERE lower(id) = ? OR lower(username) = ? OR lower(email) = ? OR lower(role) = ?
+                LIMIT 1;
+            """, (c, c, c, c)).fetchone()
+            if row:
+                return _row_to_user_dict(row)
+    except Exception:
+        pass
+
     with get_auth_db_connection() as conn:
         row = conn.execute("""
             SELECT * FROM users
             WHERE lower(id) = ? OR lower(username) = ? OR lower(email) = ? OR lower(role) = ?
             LIMIT 1;
-        """, (clean, clean, clean, clean)).fetchone()
+        """, (c, c, c, c)).fetchone()
         return _row_to_user_dict(row) if row else None
 
 
 def insert_user(user_data: Dict[str, Any]) -> None:
-    """Inserta un nuevo usuario de forma transaccional."""
+    """Inserta un nuevo usuario de forma transaccional, con soporte dual para users y auth_users."""
+    perms_json = json.dumps(user_data.get("permissions", []))
+    params = (
+        user_data["id"],
+        user_data["username"],
+        user_data["email"].lower(),
+        user_data["password_hash"],
+        user_data["display_name"],
+        user_data.get("organization", ""),
+        user_data.get("role", "analyst"),
+        user_data.get("role_title", ""),
+        user_data.get("bio", ""),
+        user_data.get("avatar", ""),
+        user_data.get("token", ""),
+        perms_json
+    )
+    # Intentar primero en auth_users (si estamos en Supabase PostgreSQL)
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("""
+                INSERT INTO auth_users (
+                    id, username, email, password_hash, display_name,
+                    organization, role, role_title, bio, avatar, token, permissions_json
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            """, params)
+            return
+    except Exception:
+        pass
+
+    # Fallback o modo local SQLite en users
     with get_auth_db_connection() as conn:
-        perms_json = json.dumps(user_data.get("permissions", []))
         conn.execute("""
             INSERT INTO users (
                 id, username, email, password_hash, display_name,
                 organization, role, role_title, bio, avatar, token, permissions_json
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-        """, (
-            user_data["id"],
-            user_data["username"],
-            user_data["email"].lower(),
-            user_data["password_hash"],
-            user_data["display_name"],
-            user_data.get("organization", ""),
-            user_data.get("role", "analyst"),
-            user_data.get("role_title", ""),
-            user_data.get("bio", ""),
-            user_data.get("avatar", ""),
-            user_data.get("token", ""),
-            perms_json
-        ))
+        """, params)
 
 
 def update_user_token(user_id: str, new_token: str) -> None:
     """Actualiza el token de sesión de un usuario."""
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("UPDATE auth_users SET token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (new_token, user_id))
+            return
+    except Exception:
+        pass
     with get_auth_db_connection() as conn:
-        conn.execute("UPDATE users SET token = ? WHERE id = ?;", (new_token, user_id))
+        conn.execute("UPDATE users SET token = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (new_token, user_id))
 
 
 # =========================================================================
@@ -206,13 +273,17 @@ def update_user_token(user_id: str, new_token: str) -> None:
 
 def insert_invitation(invitation: Dict[str, Any]) -> Dict[str, Any]:
     """Crea un registro de invitación para Auditor o Cliente."""
+    ensure_auth_tables()
     with get_auth_db_connection() as conn:
         clean_email = invitation["email"].strip().lower()
-        conn.execute("""
-            UPDATE invitations
-            SET status = 'superseded'
-            WHERE lower(email) = ? AND status = 'pending';
-        """, (clean_email,))
+        try:
+            conn.execute("""
+                UPDATE invitations
+                SET status = 'superseded'
+                WHERE lower(email) = ? AND status = 'pending';
+            """, (clean_email,))
+        except Exception:
+            pass
 
         conn.execute("""
             INSERT INTO invitations (
@@ -240,9 +311,20 @@ def get_invitation_by_token(token: str) -> Optional[Dict[str, Any]]:
     clean = (token or "").strip()
     if not clean:
         return None
-    with get_auth_db_connection() as conn:
-        row = conn.execute("SELECT * FROM invitations WHERE token = ? LIMIT 1;", (clean,)).fetchone()
-        return _row_to_invitation_dict(row) if row else None
+    try:
+        with get_auth_db_connection() as conn:
+            row = conn.execute("SELECT * FROM invitations WHERE token = ? LIMIT 1;", (clean,)).fetchone()
+            return _row_to_invitation_dict(row) if row else None
+    except Exception as e:
+        if "invitations" in str(e).lower():
+            ensure_auth_tables()
+            try:
+                with get_auth_db_connection() as conn:
+                    row = conn.execute("SELECT * FROM invitations WHERE token = ? LIMIT 1;", (clean,)).fetchone()
+                    return _row_to_invitation_dict(row) if row else None
+            except Exception:
+                return None
+        return None
 
 
 def get_pending_invitation_by_email(email: str) -> Optional[Dict[str, Any]]:
@@ -250,49 +332,99 @@ def get_pending_invitation_by_email(email: str) -> Optional[Dict[str, Any]]:
     clean = (email or "").strip().lower()
     if not clean:
         return None
-    with get_auth_db_connection() as conn:
-        row = conn.execute("""
-            SELECT * FROM invitations 
-            WHERE lower(email) = ? AND status = 'pending'
-            ORDER BY created_at DESC LIMIT 1;
-        """, (clean,)).fetchone()
-        return _row_to_invitation_dict(row) if row else None
+    try:
+        with get_auth_db_connection() as conn:
+            row = conn.execute("""
+                SELECT * FROM invitations 
+                WHERE lower(email) = ? AND status = 'pending'
+                ORDER BY created_at DESC LIMIT 1;
+            """, (clean,)).fetchone()
+            return _row_to_invitation_dict(row) if row else None
+    except Exception as e:
+        if "invitations" in str(e).lower():
+            ensure_auth_tables()
+            try:
+                with get_auth_db_connection() as conn:
+                    row = conn.execute("""
+                        SELECT * FROM invitations 
+                        WHERE lower(email) = ? AND status = 'pending'
+                        ORDER BY created_at DESC LIMIT 1;
+                    """, (clean,)).fetchone()
+                    return _row_to_invitation_dict(row) if row else None
+            except Exception:
+                return None
+        return None
 
 
 def list_invitations_by_analyst(analyst_id: str) -> List[Dict[str, Any]]:
     """Retorna todas las invitaciones generadas por un analista determinado."""
-    with get_auth_db_connection() as conn:
-        rows = conn.execute("""
-            SELECT * FROM invitations 
-            WHERE invited_by_id = ?
-            ORDER BY created_at DESC;
-        """, (analyst_id,)).fetchall()
-        return [_row_to_invitation_dict(r) for r in rows]
+    try:
+        with get_auth_db_connection() as conn:
+            rows = conn.execute("""
+                SELECT * FROM invitations 
+                WHERE invited_by_id = ?
+                ORDER BY created_at DESC;
+            """, (analyst_id,)).fetchall()
+            return [_row_to_invitation_dict(r) for r in rows]
+    except Exception as e:
+        if "invitations" in str(e).lower():
+            ensure_auth_tables()
+            try:
+                with get_auth_db_connection() as conn:
+                    rows = conn.execute("""
+                        SELECT * FROM invitations 
+                        WHERE invited_by_id = ?
+                        ORDER BY created_at DESC;
+                    """, (analyst_id,)).fetchall()
+                    return [_row_to_invitation_dict(r) for r in rows]
+            except Exception:
+                return []
+        return []
 
 
 def get_all_invitations() -> List[Dict[str, Any]]:
     """Retorna todas las invitaciones registradas en el sistema."""
-    with get_auth_db_connection() as conn:
-        rows = conn.execute("SELECT * FROM invitations ORDER BY created_at DESC;").fetchall()
-        return [_row_to_invitation_dict(r) for r in rows]
+    try:
+        with get_auth_db_connection() as conn:
+            rows = conn.execute("SELECT * FROM invitations ORDER BY created_at DESC;").fetchall()
+            return [_row_to_invitation_dict(r) for r in rows]
+    except Exception as e:
+        if "invitations" in str(e).lower():
+            ensure_auth_tables()
+            try:
+                with get_auth_db_connection() as conn:
+                    rows = conn.execute("SELECT * FROM invitations ORDER BY created_at DESC;").fetchall()
+                    return [_row_to_invitation_dict(r) for r in rows]
+            except Exception:
+                return []
+        return []
 
 
 def mark_invitation_accepted(token_or_id: str) -> None:
     """Marca una invitación como aceptada tras el registro o inicio de sesión con Google."""
-    with get_auth_db_connection() as conn:
-        conn.execute("""
-            UPDATE invitations
-            SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
-            WHERE token = ? OR id = ?;
-        """, (token_or_id, token_or_id))
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute("""
+                UPDATE invitations
+                SET status = 'accepted', accepted_at = CURRENT_TIMESTAMP
+                WHERE token = ? OR id = ?;
+            """, (token_or_id, token_or_id))
+    except Exception as e:
+        if "invitations" in str(e).lower():
+            ensure_auth_tables()
 
 
 def cancel_invitation(invitation_id: str, analyst_id: str) -> bool:
     """Cancela o revoca una invitación pendiente generada por un analista."""
-    with get_auth_db_connection() as conn:
-        cur = conn.execute("""
-            UPDATE invitations
-            SET status = 'cancelled'
-            WHERE id = ? AND invited_by_id = ? AND status = 'pending';
-        """, (invitation_id, analyst_id))
-        return bool(cur.rowcount and cur.rowcount > 0)
+    try:
+        with get_auth_db_connection() as conn:
+            cur = conn.execute("""
+                UPDATE invitations
+                SET status = 'cancelled'
+                WHERE id = ? AND invited_by_id = ? AND status = 'pending';
+            """, (invitation_id, analyst_id))
+            return bool(cur.rowcount and cur.rowcount > 0)
+    except Exception as e:
+        if "invitations" in str(e).lower():
+            ensure_auth_tables()
+        return False

@@ -52,6 +52,25 @@ SELECT
     updated_at
 FROM auth_users;
 
+-- 2b. Invitaciones de Colaboración (Solo Analistas pueden invitar)
+CREATE TABLE IF NOT EXISTS invitations (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    name TEXT DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'auditor',
+    invited_by_id TEXT NOT NULL,
+    invited_by_name TEXT NOT NULL,
+    organization TEXT DEFAULT '',
+    system_id INTEGER DEFAULT NULL,
+    token TEXT UNIQUE NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    accepted_at TIMESTAMPTZ DEFAULT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(lower(email));
+CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
+
 -- ------------------------------------------------------------------------------
 -- 3. Categorías Industriales LCI
 -- ------------------------------------------------------------------------------

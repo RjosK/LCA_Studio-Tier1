@@ -547,8 +547,9 @@
         const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
         showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name} (${rLabel})`);
 
-        // Si es un Analista nuevo que se acaba de registrar, abrir el modal de suscripción
-        if (res.user.role === "analyst" && res.user.is_new) {
+        // Si es un Analista (nuevo o sin plan seleccionado), abrir la pantalla de suscripción
+        const hasSub = sessionStorage.getItem("econode_subscribed");
+        if (res.user.role === "analyst" && (res.user.is_new || state.currentView === "signup" || !hasSub)) {
           const modalSub = document.getElementById("modalSubscription");
           if (modalSub) {
             modalSub.style.display = "flex";
@@ -7749,7 +7750,8 @@
     if (btnSkip) {
       btnSkip.addEventListener("click", () => {
         close();
-        showNotification("Espacio de Analista activado en Periodo de Prueba.");
+        sessionStorage.setItem("econode_subscribed", "trial");
+        showNotification("Espacio de Analista activado en Periodo de Prueba (14 días).");
         showView("dashboard");
       });
     }
@@ -7761,6 +7763,7 @@
       modal.style.display = "none";
       modal.classList.remove("active");
     }
+    sessionStorage.setItem("econode_subscribed", plan);
     const planNames = {
       starter: "Starter ACV ($99/mes)",
       pro: "Profesional Bureau ($240/mes)",
@@ -8029,7 +8032,8 @@
                 applyRolePermissions();
                 const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
                 showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name} (${rLabel})`);
-                if (res.user.role === "analyst" && res.user.is_new) {
+                const hasSub = sessionStorage.getItem("econode_subscribed");
+                if (res.user.role === "analyst" && (res.user.is_new || state.currentView === "signup" || !hasSub)) {
                   const modalSub = document.getElementById("modalSubscription");
                   if (modalSub) {
                     modalSub.style.display = "flex";
