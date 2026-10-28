@@ -439,20 +439,23 @@ def create_product_system(
                     owner_id, owner_email, owner_name, owner_role, owner_org,
                     category, geography, status, compliance_rate
                 )
-                VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%');
+                VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%')
             """, (name, code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography))
             return cur.lastrowid
-        except sqlite3.IntegrityError:
-            unique_code = f"{code}_{os.urandom(2).hex()}"
-            cur = conn.execute("""
-                INSERT INTO product_systems (
-                    name, code, target_amount, description, parameters_json,
-                    owner_id, owner_email, owner_name, owner_role, owner_org,
-                    category, geography, status, compliance_rate
-                )
-                VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%');
-            """, (name, unique_code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography))
-            return cur.lastrowid
+        except Exception as err:
+            err_str = str(err).lower()
+            if "unique" in err_str or "duplicate" in err_str or "integrity" in err_str:
+                unique_code = f"{code}_{os.urandom(2).hex()}"
+                cur = conn.execute("""
+                    INSERT INTO product_systems (
+                        name, code, target_amount, description, parameters_json,
+                        owner_id, owner_email, owner_name, owner_role, owner_org,
+                        category, geography, status, compliance_rate
+                    )
+                    VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%')
+                """, (name, unique_code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography))
+                return cur.lastrowid
+            raise err
 
 def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene un sistema producto con sus nodos y enlaces."""

@@ -35,6 +35,9 @@ class PostgresCursorProxy:
         if cleaned_query.upper().startswith("PRAGMA"):
             return self
 
+        # Eliminar punto y coma final para evitar errores de sintaxis al anexar cláusulas (RETURNING, ON CONFLICT)
+        cleaned_query = cleaned_query.rstrip(";").strip()
+
         # 1. Convertir '?' a '%s' y escapar '%' literales
         if "?" in cleaned_query:
             cleaned_query = cleaned_query.replace("%", "%%").replace("?", "%s")
