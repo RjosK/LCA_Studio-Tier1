@@ -43,7 +43,10 @@
     selectedSpreadsheetCell: null, // { row, col, address, val, meta }
     leftPanelVisible: true, // Visibilidad del catálogo (panel izquierdo)
     rightPanelVisible: true, // Visibilidad del inspector (panel derecho en diagrama)
-    canvasZoom: 1.0 // Nivel de zoom del lienzo (0.5 a 1.75, 1.0 por defecto)
+    canvasZoom: 1.0, // Nivel de zoom del lienzo (0.5 a 1.75, 1.0 por defecto)
+    pendingInviteToken: null, // Token de invitación recibido vía URL (?invite=...)
+    pendingInviteEmail: null,
+    pendingInviteInfo: null
   };
 
   // =========================================================================
@@ -89,9 +92,18 @@
     getAuthConfig: () => api.get("/api/auth/config"),
     loginWithCredentials: (emailOrUser, password) => api.post("/api/auth/login", { email: emailOrUser, password }),
     loginDemo: (userId) => api.post("/api/auth/login", { user_id: userId }),
-    loginGoogle: (credential, email) => api.post("/api/auth/google", { credential, email }),
+    loginGoogle: (credential, email, inviteToken, role) => api.post("/api/auth/google", {
+      credential,
+      email,
+      invite_token: inviteToken || state.pendingInviteToken,
+      role
+    }),
     signup: (data) => api.post("/api/auth/signup", data),
     logout: () => api.post("/api/auth/logout"),
+    inviteMember: (data) => api.post("/api/auth/invite", data),
+    getInvitations: () => api.get("/api/auth/invitations"),
+    cancelInvitation: (invId) => api.post("/api/auth/invitations/cancel", { invitation_id: invId }),
+    verifyInviteToken: (tok) => api.get("/api/auth/invite/verify?token=" + encodeURIComponent(tok)),
 
     // Systems & Canvas
     getSystems: () => {
@@ -311,8 +323,11 @@
     const reportHighlightTooltip = document.getElementById("reportHighlightTooltip");
     const reportDocBody = document.getElementById("reportDocumentBody");
 
+    const btnNavInvite = document.getElementById("btnNavInviteMember");
+
     if (role === "auditor") {
       // PERFIL AUDITOR LÍDER:
+      if (btnNavInvite) btnNavInvite.style.display = "none";
       document.body.classList.remove("role-client");
       if (navCatalog) navCatalog.style.display = "none";
       if (navImport) navImport.style.display = "none";
@@ -335,6 +350,7 @@
       if (reportDocBody) reportDocBody.setAttribute("contenteditable", "true");
     } else if (role === "client") {
       // PERFIL CLIENTE PRODUCTOR:
+      if (btnNavInvite) btnNavInvite.style.display = "none";
       document.body.classList.add("role-client");
       if (navCatalog) navCatalog.style.display = "none";
       if (navImport) navImport.style.display = "none";
@@ -361,6 +377,7 @@
       if (reportDocBody) reportDocBody.setAttribute("contenteditable", "false");
     } else {
       // PERFIL ANALISTA DE ACV (CREADOR):
+      if (btnNavInvite) btnNavInvite.style.display = "inline-flex";
       document.body.classList.remove("role-client");
       if (navCatalog) navCatalog.style.display = "inline-flex";
       if (navImport) navImport.style.display = "inline-flex";
@@ -7206,12 +7223,63 @@
     }
   }
 
-  // Modal para Invitar Auditor / Cliente Colaborador
+  // Modal para Invitar Auditor / Cliente Colaborador (RBAC: Exclusivo del Analista)
+  async function loadActiveInvitationsList() {
+    const tbody = document.getElementById("tbodyActiveInvitations");
+    const badgeCount = document.getElementById("badgeInviteCount");
+    if (!tbody) return;
+
+    try {
+      const res = await api.getInvitations();
+      const items = res.invitations || [];
+      if (badgeCount) badgeCount.textContent = `${items.length} registradas`;
+
+      if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 14px;">No hay invitaciones enviadas aún.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = items.map(inv => {
+        const roleLabel = inv.role === "auditor" ? "Auditor Líder ACV" : (inv.role === "client" ? "Cliente Productor" : "Analista ACV");
+        const roleBadgeClass = inv.role === "auditor" ? "badge-blue" : (inv.role === "client" ? "badge-emerald" : "badge-slate");
+        const statusClass = inv.status === "accepted" ? "badge-emerald" : (inv.status === "pending" ? "badge-amber" : "badge-slate");
+        const statusLabel = inv.status === "accepted" ? "Aceptada" : (inv.status === "pending" ? "Pendiente" : "Cancelada");
+        const fullUrl = `${window.location.origin}${window.location.pathname}?invite=${inv.token}`;
+
+        return `
+          <tr>
+            <td style="font-weight: 600; color: var(--text-primary);">
+              <div>${escapeHtml(inv.name || inv.email)}</div>
+              <div style="font-size: 9.5px; color: var(--text-muted); font-family: var(--font-mono);">${escapeHtml(inv.email)}</div>
+            </td>
+            <td><span class="badge-pill ${roleBadgeClass}">${roleLabel}</span></td>
+            <td><span class="badge-pill ${statusClass}">${statusLabel}</span></td>
+            <td style="text-align: right; white-space: nowrap;">
+              <button type="button" class="btn btn-secondary btn-sm" onclick="window.ECONODE.copyToClipboard('${fullUrl}')" style="font-size: 10px; padding: 2px 7px; height: 22px;" title="Copiar enlace de acceso">
+                📋 Copiar
+              </button>
+              ${inv.status === 'pending' ? `
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.ECONODE.cancelInvite('${inv.id}')" style="font-size: 10px; padding: 2px 6px; height: 22px; color: #EF4444; margin-left: 4px;" title="Revocar invitación">
+                  ✕
+                </button>
+              ` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    } catch (err) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 10px;">${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
   function setupInviteCollaboratorModal() {
     const modal = document.getElementById("modalInviteCollaborator");
     const btnClose = document.getElementById("btnCloseInviteModal");
     const btnCancel = document.getElementById("btnCancelInvite");
     const btnSubmit = document.getElementById("btnSubmitInvite");
+    const roleSelect = document.getElementById("inviteCollaboratorRole");
+    const roleHint = document.getElementById("inviteRoleHint");
+    const btnCopyLink = document.getElementById("btnCopyInviteLink");
 
     const close = () => {
       if (modal) {
@@ -7228,32 +7296,80 @@
       });
     }
 
+    if (roleSelect && roleHint) {
+      roleSelect.addEventListener("change", () => {
+        const val = roleSelect.value;
+        if (val === "auditor") {
+          roleHint.textContent = "✓ Verificador oficial con facultades de firma conforme NOM-070-SE-2024 e ISO 14040/14044.";
+        } else if (val === "client") {
+          roleHint.textContent = "✓ Cliente productor con acceso para subir recibos, balances y consultar reportes finales.";
+        } else {
+          roleHint.textContent = "✓ Analista colaborador con acceso total para editar procesos y conectar flujos.";
+        }
+      });
+    }
+
+    if (btnCopyLink) {
+      btnCopyLink.addEventListener("click", () => {
+        const inputUrl = document.getElementById("inputGeneratedInviteUrl");
+        if (inputUrl && inputUrl.value) {
+          window.ECONODE.copyToClipboard(inputUrl.value);
+        }
+      });
+    }
+
     if (btnSubmit) {
       btnSubmit.addEventListener("click", async () => {
-        const sysId = parseInt(document.getElementById("inviteSystemId")?.value || "0", 10);
+        const sysIdVal = document.getElementById("inviteSystemId")?.value;
+        const sysId = sysIdVal ? parseInt(sysIdVal, 10) : null;
         const name = (document.getElementById("inviteCollaboratorName")?.value || "").trim();
         const email = (document.getElementById("inviteCollaboratorEmail")?.value || "").trim();
         const role = document.getElementById("inviteCollaboratorRole")?.value || "auditor";
+        const org = (document.getElementById("inviteCollaboratorOrg")?.value || "").trim();
 
-        if (!sysId) {
-          alert("Error: No se identificó el sistema producto.");
+        if (!email) {
+          alert("Por favor indica la dirección de correo electrónico del invitado.");
           return;
         }
-        if (!name || !email) {
-          alert("Por favor indica el nombre y correo del colaborador.");
-          return;
-        }
+
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = "Generando invitación...";
 
         try {
-          const res = await api.inviteCollaborator(sysId, name, email, role);
-          close();
-          showNotification(res.message || `Colaborador ${name} asignado al proyecto.`);
-          await loadDashboard();
-          if (state.activeSystem && state.activeSystem.id === sysId) {
-            openSystem(sysId, false);
+          const res = await api.inviteMember({
+            email,
+            role,
+            name,
+            organization: org,
+            system_id: sysId
+          });
+
+          showNotification(res.message || `Invitación creada exitosamente para ${email}`);
+
+          // Mostrar box de enlace generado
+          const box = document.getElementById("inviteGeneratedBox");
+          const inputUrl = document.getElementById("inputGeneratedInviteUrl");
+          const fullInviteUrl = `${window.location.origin}${window.location.pathname}?invite=${res.invitation.token}`;
+          if (inputUrl) inputUrl.value = fullInviteUrl;
+          if (box) box.style.display = "block";
+
+          // Copiar automáticamente al portapapeles
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(fullInviteUrl).catch(() => {});
+          }
+
+          await loadActiveInvitationsList();
+          if (sysId) {
+            await loadDashboard();
+            if (state.activeSystem && state.activeSystem.id === sysId) {
+              openSystem(sysId, false);
+            }
           }
         } catch (err) {
-          alert("Error al invitar colaborador: " + err.message);
+          alert("Error al crear invitación: " + err.message);
+        } finally {
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = "Crear Invitación & Enlace Google ➔";
         }
       });
     }
@@ -7951,17 +8067,84 @@
       });
     }
 
-    // Google Sign-In Action
+    // Handler Universal para Google Sign-In (Login y Signup)
+    const handleGoogleAuthTrigger = () => {
+      if (window.google && window.google.accounts && window.google.accounts.id) {
+        window.google.accounts.id.prompt();
+      } else {
+        // En ambiente de desarrollo local / offline, prompt para verificar rol e invitación
+        const defaultEmail = state.pendingInviteEmail || "auditor.google@ecometrics.io";
+        const promptEmail = prompt("Ingresa correo Google Workspace para iniciar sesión (Demo/Offline):", defaultEmail);
+        if (promptEmail) {
+          api.loginGoogle("mock_google_jwt", promptEmail, state.pendingInviteToken)
+            .then(res => {
+              if (res.user) {
+                state.activeUser = res.user;
+                state.isAuthenticated = true;
+                if (res.user.token) sessionStorage.setItem("econode_token", res.user.token);
+                updateUserUI();
+                applyRolePermissions();
+                const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
+                showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name} (${rLabel})`);
+                showView("dashboard");
+              }
+            })
+            .catch(err => alert("Error: " + err.message));
+        }
+      }
+    };
+
     const btnGoogle = document.getElementById("btnGoogleSignInAction");
     if (btnGoogle) {
-      btnGoogle.addEventListener("click", () => {
-        if (window.google && window.google.accounts && window.google.accounts.id) {
-          window.google.accounts.id.prompt();
-        } else {
-          handleDemoLogin("auditor_lead");
-        }
+      btnGoogle.addEventListener("click", handleGoogleAuthTrigger);
+    }
+    const btnGoogleSignup = document.getElementById("btnGoogleSignUpAction");
+    if (btnGoogleSignup) {
+      btnGoogleSignup.addEventListener("click", handleGoogleAuthTrigger);
+    }
+
+    const btnNavInvite = document.getElementById("btnNavInviteMember");
+    if (btnNavInvite) {
+      btnNavInvite.addEventListener("click", () => {
+        window.ECONODE.openInviteModal(null, "Espacio Global de Trabajo");
       });
     }
+
+    // Comprobar si el usuario llegó mediante un enlace de invitación (?invite=...)
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("invite")) {
+        const invTok = urlParams.get("invite");
+        state.pendingInviteToken = invTok;
+        api.verifyInviteToken(invTok).then(res => {
+          if (res.invitation && res.invitation.valid) {
+            const inv = res.invitation;
+            state.pendingInviteEmail = inv.email;
+            state.pendingInviteInfo = inv;
+
+            // Mostrar banners informativos en login y signup
+            const bLogin = document.getElementById("bannerLoginInvite");
+            const bLoginDesc = document.getElementById("bannerLoginInviteDesc");
+            const bSignup = document.getElementById("bannerSignupInvite");
+            const bSignupDesc = document.getElementById("bannerSignupInviteDesc");
+            const emailLoginInput = document.getElementById("inputLoginEmail");
+            const emailSignupInput = document.getElementById("inputSignupEmail");
+
+            const descText = `Has sido invitado(a) como <strong>${escapeHtml(inv.role_title)}</strong> por <strong>${escapeHtml(inv.invited_by_name)}</strong> en <strong>${escapeHtml(inv.organization)}</strong>. Continúa con Google para acceder con este rol.`;
+
+            if (bLogin) bLogin.style.display = "block";
+            if (bLoginDesc) bLoginDesc.innerHTML = descText;
+            if (bSignup) bSignup.style.display = "block";
+            if (bSignupDesc) bSignupDesc.innerHTML = descText;
+            if (emailLoginInput) emailLoginInput.value = inv.email;
+            if (emailSignupInput) emailSignupInput.value = inv.email;
+
+            showNotification(`Invitación detectada: ${inv.role_title} para ${inv.email}`);
+            showView("login");
+          }
+        }).catch(() => {});
+      }
+    } catch (e) {}
 
     // Dashboard Filtros & Búsqueda
     document.querySelectorAll(".table-filters .segmented-btn[data-filter]").forEach((btn) => {
@@ -8375,20 +8558,44 @@
         modal.classList.remove("active");
       }
     },
+    copyToClipboard: (text) => {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          showNotification("¡Enlace copiado al portapapeles!");
+        }).catch(() => {
+          prompt("Copia este enlace de invitación:", text);
+        });
+      } else {
+        prompt("Copia este enlace de invitación:", text);
+      }
+    },
+    cancelInvite: async (invId) => {
+      if (!confirm("¿Deseas revocar esta invitación? El enlace dejará de ser válido.")) return;
+      try {
+        await api.cancelInvitation(invId);
+        showNotification("Invitación revocada exitosamente.");
+        await loadActiveInvitationsList();
+      } catch (err) {
+        alert("Error al revocar: " + err.message);
+      }
+    },
     openInviteModal: (systemId, systemName) => {
       const modal = document.getElementById("modalInviteCollaborator");
       const idInput = document.getElementById("inviteSystemId");
       const nameInput = document.getElementById("inviteSystemNameDisplay");
       const personName = document.getElementById("inviteCollaboratorName");
       const personEmail = document.getElementById("inviteCollaboratorEmail");
-      if (idInput) idInput.value = systemId;
-      if (nameInput) nameInput.value = unescape(systemName || `Sistema #${systemId}`);
+      const genBox = document.getElementById("inviteGeneratedBox");
+      if (idInput) idInput.value = systemId || "";
+      if (nameInput) nameInput.value = systemName ? unescape(systemName) : "Todos los proyectos de la organización";
       if (personName) personName.value = "";
       if (personEmail) personEmail.value = "";
+      if (genBox) genBox.style.display = "none";
       if (modal) {
         modal.style.display = "flex";
         modal.classList.add("active");
       }
+      loadActiveInvitationsList();
     },
     closeInviteModal: () => {
       const modal = document.getElementById("modalInviteCollaborator");

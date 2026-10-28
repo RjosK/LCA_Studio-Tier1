@@ -222,6 +222,32 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     })
                     return
 
+                # Listar Invitaciones (Solo Analistas)
+                elif path == "/api/auth/invitations":
+                    user = self._get_request_user(query) or auth_service.get_active_account()
+                    if not user or user.get("role") != "analyst":
+                        self._send_error_json("Acceso denegado: Solo los Analistas pueden consultar las invitaciones.", 403)
+                        return
+                    try:
+                        invs = auth_service.list_invitations(user)
+                        self._send_json({"status": "success", "invitations": invs, "count": len(invs)})
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
+                    return
+
+                # Verificar Token de Invitación (Público)
+                elif path == "/api/auth/invite/verify":
+                    tok = query.get("token", [""])[0]
+                    if not tok:
+                        self._send_error_json("Token de invitación no proporcionado", 400)
+                        return
+                    info = auth_service.verify_invite_token(tok)
+                    if not info:
+                        self._send_error_json("Invitación no encontrada o token inválido", 404)
+                        return
+                    self._send_json({"status": "success", "invitation": info})
+                    return
+
                 # Profile
                 elif path == "/api/profile":
                     self._send_json({
@@ -476,15 +502,60 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         conn = get_active_db_connection()
         try:
-            # Google OAuth Login
+            # Google OAuth Login & Onboarding con asignación de Roles
             if path == "/api/auth/google":
                 cred = body.get("credential", "")
                 email = body.get("email")
+                invite_token = body.get("invite_token")
+                requested_role = body.get("role")
                 try:
-                    user = auth_service.login_with_google(cred, fallback_email=email)
-                    self._send_json({"status": "success", "authenticated": True, "user": user})
+                    user = auth_service.login_with_google(cred, fallback_email=email, invite_token=invite_token, requested_role=requested_role)
+                    self._send_json({"status": "success", "authenticated": True, "user": user, "token": user.get("token")})
                 except Exception as e:
-                    self._send_error_json(str(e), 401)
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Crear Invitación para Auditor o Cliente (Solo Analistas)
+            elif path == "/api/auth/invite":
+                user = self._get_request_user() or auth_service.get_active_account()
+                if not user or user.get("role") != "analyst":
+                    self._send_error_json("Acceso denegado: Únicamente los Analistas de Ciclo de Vida pueden invitar Auditores y Clientes.", 403)
+                    return
+                email = body.get("email")
+                role = body.get("role") or "auditor"
+                name = body.get("name") or body.get("display_name") or ""
+                org = body.get("organization") or ""
+                sys_id = body.get("system_id")
+                sys_int = int(sys_id) if sys_id else None
+                try:
+                    inv = auth_service.invite_collaborator(user, email, role, name=name, organization=org, system_id=sys_int)
+                    if sys_int:
+                        try:
+                            add_system_collaborator_use_case(conn, sys_int, {
+                                "name": name or email.split("@")[0].title(),
+                                "display_name": name or email.split("@")[0].title(),
+                                "email": email,
+                                "role": role
+                            })
+                        except Exception:
+                            pass
+                    self._send_json({"status": "success", "invitation": inv, "message": inv.get("message")})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Cancelar / Revocar Invitación (Solo Analistas)
+            elif path == "/api/auth/invitations/cancel":
+                user = self._get_request_user() or auth_service.get_active_account()
+                if not user or user.get("role") != "analyst":
+                    self._send_error_json("Acceso denegado: Solo el Analista puede revocar invitaciones.", 403)
+                    return
+                inv_id = body.get("invitation_id") or body.get("id") or ""
+                try:
+                    cancelled = auth_service.cancel_invitation(user, inv_id)
+                    self._send_json({"status": "success", "cancelled": cancelled})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
                 return
 
             # Login con Usuario/Correo y Contraseña (con fallback para pruebas)

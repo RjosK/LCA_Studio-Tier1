@@ -48,19 +48,28 @@ class ServerTestManager:
             cls.server_thread = None
 
 
-def request_json(path, data=None, method="GET"):
+def request_json(path, data=None, method="GET", headers=None):
     url = f"http://127.0.0.1:{TEST_PORT}{path}"
-    headers = {"Content-Type": "application/json"} if data else {}
+    req_headers = {"Content-Type": "application/json"} if data else {}
+    if headers:
+        req_headers.update(headers)
     body = json.dumps(data).encode("utf-8") if data else None
-    req = urllib.request.Request(url, data=body, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=60) as resp:
-        content = resp.read()
-        content_type = resp.headers.get("Content-Type", "")
-        if "application/json" in content_type:
-            return resp.status, json.loads(content.decode("utf-8"))
-        elif "application/zip" in content_type:
-            return resp.status, len(content)
-        return resp.status, content.decode("utf-8", errors="replace")
+    req = urllib.request.Request(url, data=body, headers=req_headers, method=method)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            content = resp.read()
+            content_type = resp.headers.get("Content-Type", "")
+            if "application/json" in content_type:
+                return resp.status, json.loads(content.decode("utf-8"))
+            elif "application/zip" in content_type:
+                return resp.status, len(content)
+            return resp.status, content.decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as e:
+        content = e.read()
+        try:
+            return e.code, json.loads(content.decode("utf-8"))
+        except Exception:
+            return e.code, content.decode("utf-8", errors="replace")
 
 
 TEST_CASES = [
@@ -161,6 +170,45 @@ TEST_CASES = [
     ("GET /api/systems/21/export/csv", lambda: request_json("/api/systems/21/export/csv")),
     ("GET /api/systems/21/export/nom070", lambda: request_json("/api/systems/21/export/nom070")),
     ("GET /api/systems/21/export/expediente", lambda: request_json("/api/systems/21/export/expediente")),
+
+    # 9. RBAC: Invitaciones por Analista y Google OAuth Onboarding
+    ("POST /api/auth/login (Activar Analista Carla)", lambda: request_json("/api/auth/login", {"user_id": "analyst_carla"}, "POST")),
+    ("POST /api/auth/invite (Analista invita Auditor)", lambda: request_json("/api/auth/invite", {
+        "email": "auditor.test.oficial@ecometrics.io",
+        "role": "auditor",
+        "name": "Lic. Auditor Externo NOM-070",
+        "organization": "EcoMetrics Certificaciones"
+    }, "POST")),
+    ("POST /api/auth/invite (Analista invita Cliente)", lambda: request_json("/api/auth/invite", {
+        "email": "cliente.test.oficial@biopack-industrial.mx",
+        "role": "client",
+        "name": "Ing. Productor Industrial",
+        "organization": "BioPack Planta Toluca"
+    }, "POST")),
+    ("POST /api/auth/switch-account (Cambiar a Auditor Josué)", lambda: request_json("/api/auth/switch-account", {"role": "auditor"}, "POST")),
+    ("POST /api/auth/invite (Auditor intenta invitar -> 403 Prohibido)", lambda: request_json("/api/auth/invite", {
+        "email": "intruso@test.com",
+        "role": "auditor"
+    }, "POST")),
+    ("POST /api/auth/switch-account (Cambiar a Cliente Elena)", lambda: request_json("/api/auth/switch-account", {"role": "client"}, "POST")),
+    ("POST /api/auth/invite (Cliente intenta invitar -> 403 Prohibido)", lambda: request_json("/api/auth/invite", {
+        "email": "intruso2@test.com",
+        "role": "client"
+    }, "POST")),
+    ("POST /api/auth/login (Restaurar Analista Carla)", lambda: request_json("/api/auth/login", {"user_id": "analyst_carla"}, "POST")),
+    ("GET /api/auth/invitations (Listar invitaciones del analista)", lambda: request_json("/api/auth/invitations")),
+    ("POST /api/auth/google (Google Onboarding para Auditor Invitado)", lambda: request_json("/api/auth/google", {
+        "email": "auditor.test.oficial@ecometrics.io",
+        "credential": "mock_google_token_auditor"
+    }, "POST")),
+    ("POST /api/auth/google (Google Onboarding para Cliente Invitado)", lambda: request_json("/api/auth/google", {
+        "email": "cliente.test.oficial@biopack-industrial.mx",
+        "credential": "mock_google_token_client"
+    }, "POST")),
+    ("POST /api/auth/google (Google Onboarding para Analista Autónomo)", lambda: request_json("/api/auth/google", {
+        "email": "nuevo.analista.independiente@workspace.io",
+        "credential": "mock_google_token_analyst"
+    }, "POST")),
     ("POST /api/auth/logout", lambda: request_json("/api/auth/logout", {}, "POST")),
 ]
 
@@ -221,10 +269,11 @@ class TestServerApi(unittest.TestCase):
             pass
 
     def test_all_endpoints(self):
-        """Ejecuta los 44 endpoints asegurando códigos HTTP 200 o 201."""
+        """Ejecuta los endpoints asegurando códigos HTTP esperados (200/201 o 403 para accesos prohibidos)."""
         for name, fn in TEST_CASES:
             status, res = fn()
-            self.assertIn(status, (200, 201), f"Endpoint {name} retornó status {status}")
+            expected = (403,) if "403" in name else (200, 201)
+            self.assertIn(status, expected, f"Endpoint {name} retornó status {status} (esperado {expected})")
 
 
 def run_all_tests():
@@ -238,7 +287,8 @@ def run_all_tests():
     for name, fn in TEST_CASES:
         try:
             status, res = fn()
-            if status in (200, 201):
+            expected = (403,) if "403" in name else (200, 201)
+            if status in expected:
                 print(f"  [PASS] {name} (Status: {status})")
                 passed += 1
             else:

@@ -75,6 +75,9 @@
 
       <!-- Active User Profile Pill & Logout (in Studio) -->
       <div id="navUserGroup" style="display: none; align-items: center; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="btnNavInviteMember" style="display: none; align-items: center; gap: 4px; font-size: 11px; padding: 4px 10px; height: 28px; border-color: rgba(5, 150, 105, 0.4); color: var(--accent-emerald);" title="Invitar Auditor o Cliente">
+          <span style="font-weight: 700;">+</span> <span data-i18n="nav.btn_invite">Invitar</span>
+        </button>
         <div class="user-pill" id="btnUserMenu" title="Configuración y Perfil">
           <div class="user-avatar" id="navUserAvatar">CM</div>
           <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.1;">
@@ -489,6 +492,16 @@
           <p class="auth-subtitle" data-i18n="login.subtitle">Ingresa con tu cuenta o selecciona el rol correspondiente para tu sesión</p>
         </div>
 
+        <!-- Banner de Invitación Activa (Si se accede mediante link con ?invite=...) -->
+        <div id="bannerLoginInvite" style="display: none; margin-bottom: 14px; padding: 12px 14px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); font-size: 11px; line-height: 1.45; text-align: left;">
+          <div style="font-weight: 700; color: var(--accent-emerald); display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span>👋</span> <span id="bannerLoginInviteTitle" data-i18n="invite.banner_welcome">Invitación de Colaboración Activa</span>
+          </div>
+          <div id="bannerLoginInviteDesc" style="color: var(--text-secondary);">
+            Has sido invitado(a) como colaborador(a). Inicia sesión con Google para activar tu acceso.
+          </div>
+        </div>
+
         <!-- Google Sign-In Container -->
         <button class="btn-google" id="btnGoogleSignInAction">
           <span class="google-icon-box">G</span>
@@ -568,6 +581,27 @@
           <span class="badge-pill badge-emerald">● NUEVA ORGANIZACIÓN · TIER 1</span>
           <h1 class="auth-title">Crear Cuenta en ECONODE Studio</h1>
           <p class="auth-subtitle">Espacio colaborativo de modelado de producto y expedientes NOM-070</p>
+        </div>
+
+        <!-- Banner de Invitación Activa en Registro -->
+        <div id="bannerSignupInvite" style="display: none; margin-bottom: 14px; padding: 12px 14px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); font-size: 11px; line-height: 1.45; text-align: left;">
+          <div style="font-weight: 700; color: var(--accent-emerald); display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
+            <span>👋</span> <span>Invitación Oficial de Colaboración</span>
+          </div>
+          <div id="bannerSignupInviteDesc" style="color: var(--text-secondary);">
+            Asignación de rol gestionada por tu Analista de Ciclo de Vida.
+          </div>
+        </div>
+
+        <!-- Google Sign-Up Container -->
+        <button class="btn-google" id="btnGoogleSignUpAction" style="margin-bottom: 14px;">
+          <span class="google-icon-box">G</span>
+          <span data-i18n="signup.google_btn">Registrarse rápidamente con Google Workspace</span>
+        </button>
+        <div style="display: flex; align-items: center; margin: 12px 0 16px 0; color: var(--text-dim); font-size: 10px;">
+          <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+          <span style="padding: 0 10px;" data-i18n="signup.divider">o completar registro manual</span>
+          <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
         </div>
 
         <form id="formSignup" onsubmit="return false;">
@@ -1451,52 +1485,103 @@
   <!-- ============================================================= -->
   <!-- 14. MODAL: INVITAR AUDITOR O CLIENTE (#modalInviteCollaborator) -->
   <!-- ============================================================= -->
-  <div class="modal-overlay" id="modalInviteCollaborator" role="dialog" aria-modal="true" aria-labelledby="modalInviteTitle">
-    <div class="modal-dialog" style="max-width: 520px;">
+  <div class="modal-overlay" id="modalInviteCollaborator" role="dialog" aria-modal="true" aria-labelledby="modalInviteTitle" style="display: none;">
+    <div class="modal-dialog" style="max-width: 620px; max-height: 90vh; display: flex; flex-direction: column;">
       <div class="modal-header">
         <div>
-          <h2 style="font-size: 17px; font-weight: 700;" id="modalInviteTitle">Invitar Colaborador al Proyecto</h2>
-          <p style="font-size: 11px; color: var(--text-muted);">Asigna un Auditor Líder acreditado o Cliente Productor para revisión</p>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <h2 style="font-size: 16px; font-weight: 700; margin: 0;" id="modalInviteTitle" data-i18n="invite.modal_title">Invitar Auditor o Cliente al Espacio</h2>
+            <span class="badge-pill badge-emerald" style="font-size: 9px;">● CONTROL DEL ANALISTA</span>
+          </div>
+          <p style="font-size: 11px; color: var(--text-muted); margin: 3px 0 0 0;" data-i18n="invite.modal_subtitle">Como Analista de Ciclo de Vida, puedes incorporar auditores verificadores NOM-070 o empresas cliente.</p>
         </div>
         <button class="btn btn-secondary btn-sm" id="btnCloseInviteModal">✕</button>
       </div>
 
-      <div class="modal-body">
+      <div class="modal-body" style="overflow-y: auto; padding: 16px 20px;">
         <form id="formInviteCollaborator" onsubmit="return false;">
           <input type="hidden" id="inviteSystemId" value="">
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Sistema Producto</label>
-            <input type="text" class="form-input" id="inviteSystemNameDisplay" readonly style="background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600;">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" data-i18n="invite.sys_label">Sistema Producto Asignado</label>
+            <input type="text" class="form-input" id="inviteSystemNameDisplay" readonly style="background: var(--bg-subtle); color: var(--text-secondary); font-weight: 600; font-size: 11.5px;">
           </div>
 
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Rol del Colaborador</label>
-            <select class="form-input" id="inviteCollaboratorRole">
-              <option value="auditor" selected>Auditor Líder (Revisión técnica, verificación y firma NOM-070)</option>
-              <option value="client">Cliente / Productor (Consulta de inventario LCI y aprobación)</option>
-              <option value="analyst">Analista de ACV (Edición y modelado conjunto)</option>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" data-i18n="invite.role_label">Rol del Colaborador</label>
+            <select class="form-input" id="inviteCollaboratorRole" style="font-size: 11.5px; height: 36px;">
+              <option value="auditor" selected data-i18n="invite.role_auditor_opt">Auditor Líder ACV (Verificación técnica, comentarios y firma NOM-070)</option>
+              <option value="client" data-i18n="invite.role_client_opt">Cliente / Productor Industrial (Carga de evidencia, recibos y consulta)</option>
+              <option value="analyst" data-i18n="invite.role_analyst_opt">Analista de ACV (Modelado conjunto de sistemas producto)</option>
             </select>
+            <div id="inviteRoleHint" style="font-size: 10px; color: var(--accent-emerald); margin-top: 4px; line-height: 1.35;">
+              ✓ Verificador oficial con permisos de firma conforme NOM-070-SE-2024 e ISO 14040/14044.
+            </div>
           </div>
 
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Nombre del Profesional</label>
-            <input type="text" class="form-input" id="inviteCollaboratorName" placeholder="Ej. Dr. Josué Arentería / Ing. Carlos Mendoza" required>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" data-i18n="invite.name_label">Nombre del Profesional</label>
+              <input type="text" class="form-input" id="inviteCollaboratorName" placeholder="Ej. Dr. Josué Arentería" style="font-size: 11.5px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" data-i18n="invite.org_label">Organización / Empresa</label>
+              <input type="text" class="form-input" id="inviteCollaboratorOrg" placeholder="EcoMetrics / BioPack Industrial" style="font-size: 11.5px;">
+            </div>
           </div>
 
-          <div class="form-group" style="margin-bottom: 14px;">
-            <label class="form-label">Correo Electrónico Oficial</label>
-            <input type="email" class="form-input" id="inviteCollaboratorEmail" placeholder="ejemplo@auditoria-ambiental.com" required>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" data-i18n="invite.email_label">Correo Electrónico Oficial (Google Workspace o Institucional)</label>
+            <input type="email" class="form-input" id="inviteCollaboratorEmail" placeholder="ejemplo@auditoria-ambiental.com" required style="font-size: 11.5px;">
           </div>
 
-          <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 10.5px; color: var(--text-secondary);">
-            🔒 El colaborador invitado obtendrá acceso en su propio espacio de trabajo con permisos restringidos según su rol.
+          <!-- Box de Enlace Generado (Oculto hasta crear) -->
+          <div id="inviteGeneratedBox" style="display: none; margin-bottom: 14px; padding: 12px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-sm);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span style="font-size: 11px; font-weight: 700; color: var(--accent-emerald);">🔗 Enlace de Invitación Google Generado:</span>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnCopyInviteLink" style="font-size: 10px; padding: 2px 8px; height: 24px;">
+                📋 Copiar Enlace
+              </button>
+            </div>
+            <input type="text" class="form-input" id="inputGeneratedInviteUrl" readonly style="font-family: var(--font-mono); font-size: 10px; background: var(--bg-card); height: 28px;">
+            <div style="font-size: 9.5px; color: var(--text-muted); margin-top: 4px;">
+              El colaborador invitado puede iniciar sesión directamente con su cuenta de Google Workspace para aceptar y recibir su perfil.
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 16px;">
+            <button type="button" class="btn btn-secondary btn-sm" id="btnCancelInvite">Cerrar</button>
+            <button type="button" class="btn btn-primary btn-sm" id="btnSubmitInvite" style="height: 32px;" data-i18n="invite.btn_submit">
+              Crear Invitación & Enlace Google ➔
+            </button>
           </div>
         </form>
-      </div>
 
-      <div class="modal-footer">
-        <button class="btn btn-secondary" id="btnCancelInvite">Cancelar</button>
-        <button class="btn btn-primary" id="btnSubmitInvite">Enviar Invitación & Asignar ➔</button>
+        <!-- Historial / Lista de Invitaciones Activas -->
+        <div style="border-top: 1px solid var(--border-color); padding-top: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.04em;" data-i18n="invite.list_title">
+              Invitaciones Enviadas por el Analista
+            </span>
+            <span id="badgeInviteCount" class="badge-pill badge-slate" style="font-size: 9px;">0 activas</span>
+          </div>
+          <div style="max-height: 180px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+            <table class="data-table" style="font-size: 10.5px; margin: 0; width: 100%;">
+              <thead>
+                <tr>
+                  <th data-i18n="invite.th_email">Correo</th>
+                  <th data-i18n="invite.th_role">Rol</th>
+                  <th data-i18n="invite.th_status">Estado</th>
+                  <th style="text-align: right;" data-i18n="invite.th_actions">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyActiveInvitations">
+                <tr>
+                  <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 12px;">Cargando invitaciones...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   </div>
