@@ -446,6 +446,18 @@ def create_product_system(
 ) -> int:
     """Crea un nuevo sistema producto desde el Wizard asociándolo al usuario activo."""
     ensure_product_systems_columns(conn)
+    # Evitar duplicaciones accidentales por doble clic rápido
+    try:
+        existing_check = conn.execute("""
+            SELECT id FROM product_systems 
+            WHERE lower(name) = lower(?) AND code = ? AND lower(owner_email) = lower(?)
+            ORDER BY id DESC LIMIT 1;
+        """, (name, code, owner_email)).fetchone()
+        if existing_check:
+            return existing_check[0]
+    except Exception:
+        pass
+
     with conn:
         try:
             cur = conn.execute("""

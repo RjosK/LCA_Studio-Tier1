@@ -7268,7 +7268,9 @@
     }
 
     if (btnSubmit) {
+      let isSubmittingWizard = false;
       btnSubmit.addEventListener("click", async () => {
+        if (isSubmittingWizard) return;
         const name = document.getElementById("wizSystemName")?.value || "";
         let code = document.getElementById("wizSystemCode")?.value || "";
         const category = document.getElementById("wizSystemCategory")?.value || "";
@@ -7284,6 +7286,11 @@
         if (!code) {
           code = generateSkuFromName(name);
         }
+
+        isSubmittingWizard = true;
+        btnSubmit.disabled = true;
+        const prevText = btnSubmit.textContent;
+        btnSubmit.textContent = "Creando sistema...";
 
         try {
           const res = await api.createSystem({
@@ -7314,6 +7321,10 @@
           }
         } catch (err) {
           alert("Error al crear sistema: " + err.message);
+        } finally {
+          isSubmittingWizard = false;
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = prevText;
         }
       });
     }

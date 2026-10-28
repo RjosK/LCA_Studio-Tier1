@@ -132,6 +132,23 @@
     const rootId = await getOrCreateRootFolder();
     const folderDisplayName = `[${projectCode || "SYS"}] ${projectName}`;
 
+    // Verificar si ya existe una carpeta con este nombre para evitar duplicados en Drive
+    try {
+      const q = `'${rootId}' in parents and name = '${folderDisplayName.replace(/'/g, "\\'")}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+      const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
+      const listRes = await driveFetch(searchUrl);
+      if (listRes.files && listRes.files.length > 0) {
+        const existing = listRes.files[0];
+        return {
+          folderId: existing.id,
+          folderName: existing.name,
+          folderUrl: `https://drive.google.com/drive/folders/${existing.id}`
+        };
+      }
+    } catch (e) {
+      console.warn("Verificación de carpeta existente en Drive omitida:", e);
+    }
+
     // 1. Crear carpeta principal del proyecto
     const projectFolder = await driveFetch("https://www.googleapis.com/drive/v3/files", {
       method: "POST",
@@ -362,3 +379,4 @@
   };
 
 })();
+
