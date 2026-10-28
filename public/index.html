@@ -481,110 +481,80 @@
   </main>
 
   <!-- ============================================================= -->
-  <!-- 3. VISTA: LOGIN & SELECCIÓN DE LOS 3 PERFILES (#viewLogin) -->
+  <!-- 3. VISTA: LOGIN ÚNICAMENTE CON GOOGLE (#viewLogin) -->
   <!-- ============================================================= -->
   <main class="view-container" id="viewLogin">
     <div class="auth-wrapper">
-      <div class="auth-card">
+      <div class="auth-card" style="max-width: 440px;">
         <div class="auth-header">
-          <span class="badge-pill badge-emerald" data-i18n="login.tier_badge">● TIER 1 STUDIO · CONTROL DE ACCESO</span>
-          <h1 class="auth-title" data-i18n="login.title">Iniciar Sesión en ECONODE</h1>
-          <p class="auth-subtitle" data-i18n="login.subtitle">Ingresa con tu cuenta o selecciona el rol correspondiente para tu sesión</p>
+          <span class="badge-pill badge-emerald">● GOOGLE WORKSPACE · TIER 1 STUDIO</span>
+          <h1 class="auth-title">Iniciar Sesión con Google</h1>
+          <p class="auth-subtitle">Acceso seguro para Analistas de Ciclo de Vida, Auditores NOM-070 y Clientes</p>
         </div>
 
         <!-- Banner de Invitación Activa (Si se accede mediante link con ?invite=...) -->
-        <div id="bannerLoginInvite" style="display: none; margin-bottom: 14px; padding: 12px 14px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); font-size: 11px; line-height: 1.45; text-align: left;">
+        <div id="bannerLoginInvite" style="display: none; margin-bottom: 16px; padding: 12px 14px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); font-size: 11px; line-height: 1.45; text-align: left;">
           <div style="font-weight: 700; color: var(--accent-emerald); display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
-            <span>👋</span> <span id="bannerLoginInviteTitle" data-i18n="invite.banner_welcome">Invitación de Colaboración Activa</span>
+            <span>👋</span> <span id="bannerLoginInviteTitle">Invitación de Colaboración Activa</span>
           </div>
           <div id="bannerLoginInviteDesc" style="color: var(--text-secondary);">
-            Has sido invitado(a) como colaborador(a). Inicia sesión con Google para activar tu acceso.
+            Has sido invitado(a) como colaborador(a). Haz clic abajo para iniciar sesión con Google y activar tu acceso oficial.
           </div>
         </div>
 
-        <!-- Google Sign-In Container -->
-        <button class="btn-google" id="btnGoogleSignInAction">
-          <span class="google-icon-box">G</span>
-          <span data-i18n="login.google_btn">Continuar con Google (Google Workspace)</span>
+        <!-- Google Sign-In Action -->
+        <button class="btn-google" id="btnGoogleSignInAction" style="height: 44px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-top: 6px;">
+          <span class="google-icon-box" style="font-weight: 700; font-size: 15px;">G</span>
+          <span>Continuar con Google (Google Workspace)</span>
         </button>
         <div id="g_id_onload"
              data-client_id="744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com"
              data-callback="handleGoogleCredentialResponse"
              data-auto_prompt="false">
         </div>
-        <div style="font-family: var(--font-mono); font-size: 8.5px; color: var(--text-dim); text-align: center; margin-bottom: 8px;">
+        <div style="font-family: var(--font-mono); font-size: 8.5px; color: var(--text-dim); text-align: center; margin-top: 6px; margin-bottom: 14px;">
           CLIENT ID: 744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com
         </div>
 
-        <!-- Formulario de Acceso Profesional -->
-        <form id="formLogin" onsubmit="return false;" style="margin-top: 14px;">
-          <div class="form-group">
-            <label class="form-label" data-i18n="login.email_label">Usuario o Correo Institucional</label>
-            <input type="text" class="form-input" id="inputLoginEmail" placeholder="ej. carla.mendez@econode.io o analista" required autocomplete="username">
+        <!-- Guía de Roles y Permisos (Apple HIG Compact Ergonomics) -->
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; font-size: 11px; color: var(--text-secondary); line-height: 1.45; text-align: left; margin-bottom: 16px;">
+          <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
+            <span>🛡️</span> <span>Control de Acceso y Roles</span>
           </div>
-          <div class="form-group">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-              <label class="form-label" style="margin-bottom: 0;" data-i18n="login.password_label">Contraseña</label>
-              <span style="font-size: 10px; color: var(--text-dim);">Cifrado PBKDF2</span>
-            </div>
-            <input type="password" class="form-input" id="inputLoginPassword" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+          <div style="margin-bottom: 6px;">
+            <strong style="color: var(--accent-emerald);">● Analistas de ACV:</strong> Al ingresar con Google por primera vez se genera tu espacio de trabajo como Creador de Sistemas Producto.
           </div>
-
-          <div id="loginErrorMessage" style="display: none; padding: 8px 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #EF4444; font-size: 11px; margin-bottom: 10px;">
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width: 100%; height: 40px; margin-top: 4px;" id="btnSubmitLogin" data-i18n="login.submit">
-            Iniciar Sesión ➔
-          </button>
-        </form>
-
-        <div style="margin-top: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
-          <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.05em;">
-            ⚡ Acceso Rápido Demo (1-Clic por Rol)
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;">
-            <button type="button" class="btn btn-secondary btn-sm" id="btnLoginAnalyst" style="font-size: 10px; padding: 6px 4px; justify-content: center;">
-              Analista ACV
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btnLoginAuditor" style="font-size: 10px; padding: 6px 4px; justify-content: center;">
-              Auditor Líder
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" id="btnLoginClient" style="font-size: 10px; padding: 6px 4px; justify-content: center;">
-              Cliente Productor
-            </button>
+          <div>
+            <strong style="color: var(--accent-blue);">● Auditores y Clientes:</strong> Para ingresar con permisos de verificación o consulta de planta, debes haber recibido una invitación previa de tu Analista.
           </div>
         </div>
 
-        <div style="margin-top: 14px; padding: 10px 12px; background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); font-size: 10.5px; color: var(--text-secondary); line-height: 1.4;">
-          🔒 <strong>Acceso Seguro y Escalable:</strong> Cuentas administradas localmente. Consulta las credenciales iniciales en el archivo interno: <code style="font-family: var(--font-mono); font-size: 10px; background: var(--bg-card); padding: 1px 4px; border-radius: 3px;">econode_studio/data/credenciales_demo.txt</code>.
-        </div>
-
-        <div style="margin-top: 18px; text-align: center; font-size: 11.5px; color: var(--text-muted);">
-          <span data-i18n="login.no_account">¿Tu organización aún no tiene cuenta?</span>
-          <a href="#" id="linkGoSignup" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none;" data-i18n="login.go_signup">Crear Cuenta Nueva ➔</a>
+        <div style="text-align: center; font-size: 11.5px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 14px;">
+          <span>¿Deseas activar una nueva organización?</span>
+          <a href="#" id="linkGoSignup" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none; margin-left: 4px;">Crear Cuenta de Analista ➔</a>
         </div>
       </div>
       
       <div style="margin-top: 16px; font-size: 10px; color: var(--text-muted); text-align: center;">
-        ✓ Encriptación TLS 1.3 / HMAC-SHA256 &nbsp;|&nbsp; ✓ Acreditado NOM-070-SE-2024 &nbsp;|&nbsp; ✓ Base de Datos Local SQLite
+        ✓ Verificación Oficial Google Identity Services &nbsp;|&nbsp; ✓ Acreditado NOM-070-SE-2024 &nbsp;|&nbsp; ✓ Cifrado TLS 1.3 / HMAC-SHA256
       </div>
     </div>
   </main>
 
   <!-- ============================================================= -->
-  <!-- 4. VISTA: REGISTRO DE CUENTA & ORGANIZACIÓN (#viewSignup) -->
+  <!-- 4. VISTA: REGISTRO DE ANALISTA CON GOOGLE (#viewSignup) -->
   <!-- ============================================================= -->
   <main class="view-container" id="viewSignup">
     <div class="auth-wrapper">
-      <div class="auth-card" style="max-width: 520px;">
+      <div class="auth-card" style="max-width: 460px;">
         <div class="auth-header">
-          <span class="badge-pill badge-emerald">● NUEVA ORGANIZACIÓN · TIER 1</span>
-          <h1 class="auth-title">Crear Cuenta en ECONODE Studio</h1>
-          <p class="auth-subtitle">Espacio colaborativo de modelado de producto y expedientes NOM-070</p>
+          <span class="badge-pill badge-emerald">● NUEVO ESPACIO · ANALISTA ACV</span>
+          <h1 class="auth-title">Crear Cuenta de Analista con Google</h1>
+          <p class="auth-subtitle">Activa tu espacio de trabajo de Análisis de Ciclo de Vida y expedientes NOM-070</p>
         </div>
 
         <!-- Banner de Invitación Activa en Registro -->
-        <div id="bannerSignupInvite" style="display: none; margin-bottom: 14px; padding: 12px 14px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); font-size: 11px; line-height: 1.45; text-align: left;">
+        <div id="bannerSignupInvite" style="display: none; margin-bottom: 16px; padding: 12px 14px; background: rgba(5, 150, 105, 0.08); border: 1px solid rgba(5, 150, 105, 0.3); border-radius: var(--radius-md); font-size: 11px; line-height: 1.45; text-align: left;">
           <div style="font-weight: 700; color: var(--accent-emerald); display: flex; align-items: center; gap: 6px; margin-bottom: 4px;">
             <span>👋</span> <span>Invitación Oficial de Colaboración</span>
           </div>
@@ -593,67 +563,24 @@
           </div>
         </div>
 
-        <!-- Google Sign-Up Container -->
-        <button class="btn-google" id="btnGoogleSignUpAction" style="margin-bottom: 14px;">
-          <span class="google-icon-box">G</span>
-          <span data-i18n="signup.google_btn">Registrarse rápidamente con Google Workspace</span>
+        <!-- Google Sign-Up Action -->
+        <button class="btn-google" id="btnGoogleSignUpAction" style="height: 44px; font-size: 13px; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,0.08); margin-top: 6px;">
+          <span class="google-icon-box" style="font-weight: 700; font-size: 15px;">G</span>
+          <span>Registrarse como Analista con Google Workspace</span>
         </button>
-        <div style="display: flex; align-items: center; margin: 12px 0 16px 0; color: var(--text-dim); font-size: 10px;">
-          <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
-          <span style="padding: 0 10px;" data-i18n="signup.divider">o completar registro manual</span>
-          <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+
+        <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px 14px; font-size: 11px; color: var(--text-secondary); line-height: 1.45; text-align: left; margin-top: 16px; margin-bottom: 16px;">
+          <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">
+            🌿 Beneficios de tu Cuenta de Analista:
+          </div>
+          <div style="margin-bottom: 4px;">✓ Modelado gráfico interactivo de sistemas producto y balances de masa.</div>
+          <div style="margin-bottom: 4px;">✓ Acceso al catálogo oficial ecoinvent 3.12 y cálculo matricial de impacto.</div>
+          <div>✓ <strong>Facultad exclusiva:</strong> Podrás invitar a Auditores Líderes y Clientes a tus proyectos.</div>
         </div>
 
-        <form id="formSignup" onsubmit="return false;">
-          <div class="form-group">
-            <label class="form-label" data-i18n="signup.name_label">Nombre y Apellidos del Responsable</label>
-            <input type="text" class="form-input" id="inputSignupName" placeholder="Ej. Ing. Carla Méndez" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" data-i18n="signup.email_label">Correo electrónico institucional</label>
-            <input type="email" class="form-input" id="inputSignupEmail" placeholder="ejemplo@organizacion.com" required>
-          </div>
-          <div class="form-group">
-            <label class="form-label" data-i18n="signup.org_label">Nombre de la Organización / Razón Social</label>
-            <input type="text" class="form-input" id="inputSignupOrg" placeholder="BioPack Industrial S.A. de C.V." required>
-          </div>
-
-          <!-- Selector de los 3 Perfiles -->
-          <div class="form-group">
-            <label class="form-label" data-i18n="signup.role_label">Perfil de Uso en la Plataforma</label>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;">
-              <button type="button" class="segmented-btn active" id="btnSignupRoleAnalyst" data-role="analyst" data-i18n="signup.role_analyst">
-                ● Analista (Creador)
-              </button>
-              <button type="button" class="segmented-btn" id="btnSignupRoleAuditor" data-role="auditor" data-i18n="signup.role_auditor">
-                ● Auditor Líder
-              </button>
-              <button type="button" class="segmented-btn" id="btnSignupRoleClient" data-role="client" data-i18n="signup.role_client">
-                ● Cliente Productor
-              </button>
-            </div>
-            <input type="hidden" id="inputSignupSelectedRole" value="analyst">
-            <div style="font-size: 10px; color: var(--accent-emerald); margin-top: 6px; line-height: 1.4;">
-              ● El alta de organización y plan de suscripción corresponde a <strong>Analistas de ACV</strong>. Los perfiles de Auditor y Cliente se activan cuando el Analista les comparte el proyecto.
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" data-i18n="signup.password_label">Contraseña de acceso</label>
-            <input type="password" class="form-input" id="inputSignupPassword" placeholder="Contraseña segura (mínimo 6 caracteres)" required>
-          </div>
-
-          <div id="signupErrorMessage" style="display: none; padding: 8px 10px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: var(--radius-sm); color: #EF4444; font-size: 11px; margin-bottom: 10px;">
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="width: 100%; height: 42px; margin-top: 4px;" id="btnSubmitSignup" data-i18n="signup.submit">
-            Crear Cuenta & Activar Espacio de Trabajo ➔
-          </button>
-        </form>
-
-        <div style="margin-top: 18px; text-align: center; font-size: 11.5px; color: var(--text-muted);">
-          <span data-i18n="signup.has_account">¿Ya tienes cuenta activa?</span>
-          <a href="#" id="linkGoLogin" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none;" data-i18n="signup.go_login">Iniciar Sesión ➔</a>
+        <div style="text-align: center; font-size: 11.5px; color: var(--text-muted); border-top: 1px solid var(--border-color); padding-top: 14px;">
+          <span>¿Ya tienes cuenta activa?</span>
+          <a href="#" id="linkGoLogin" style="color: var(--accent-emerald); font-weight: 700; text-decoration: none; margin-left: 4px;">Iniciar Sesión con Google ➔</a>
         </div>
       </div>
     </div>

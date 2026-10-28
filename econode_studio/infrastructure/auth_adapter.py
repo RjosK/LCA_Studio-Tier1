@@ -1,7 +1,7 @@
 """
 econode_studio/infrastructure/auth_adapter.py - Adaptador SQLite/PostgreSQL de Autenticación, Usuarios e Invitaciones
-Maneja la conexión a 'econode_auth.db', el esquema DDL de las tablas 'users' e 'invitations',
-índices únicos en modo WAL y la sincronización con 'credenciales_demo.txt'.
+Maneja la conexión a 'econode_auth.db', el esquema DDL de las tablas 'users' e 'invitations'
+e índices únicos en modo WAL para autenticación mediante Google Identity Services.
 """
 
 import os
@@ -13,17 +13,13 @@ from typing import Dict, List, Any, Optional
 try:
     from config import settings
     AUTH_DB_PATH = settings.AUTH_DB_PATH
-    CREDENCIALES_TXT_PATH = settings.CREDENCIALES_TXT_PATH
 except (ImportError, ValueError):
     try:
         from econode_studio.config import settings
         AUTH_DB_PATH = settings.AUTH_DB_PATH
-        CREDENCIALES_TXT_PATH = settings.CREDENCIALES_TXT_PATH
     except Exception:
         DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
         AUTH_DB_PATH = os.path.join(DATA_DIR, "econode_auth.db")
-        CREDENCIALES_TXT_PATH = os.path.join(DATA_DIR, "credenciales_demo.txt")
-
 
 from .db_connection import get_db_connection
 
@@ -33,7 +29,7 @@ def get_auth_db_connection() -> Any:
 
 
 def init_auth_db(default_accounts: Optional[List[Dict[str, Any]]] = None) -> None:
-    """Crea las tablas users e invitations e índices únicos e inserta las cuentas preconfiguradas si no existen."""
+    """Crea las tablas users e invitations e índices únicos, y purga cuentas de prueba obsoletas."""
     with get_auth_db_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -77,11 +73,16 @@ def init_auth_db(default_accounts: Optional[List[Dict[str, Any]]] = None) -> Non
         except Exception:
             pass
 
+        # Purga definitiva de cuentas de demostración hardcodeadas
+        try:
+            conn.execute("DELETE FROM users WHERE id IN ('analyst_carla', 'auditor_lead', 'client_elena');")
+        except Exception:
+            pass
+
         if default_accounts:
             for d in default_accounts:
                 perms = json.dumps(d.get("permissions", []))
                 try:
-                    # Inserción segura idempotente
                     existing = conn.execute("SELECT id FROM users WHERE id = ?;", (d["id"],)).fetchone()
                     if not existing:
                         conn.execute("""
@@ -157,7 +158,7 @@ def get_user_by_identifier(identifier: str) -> Optional[Dict[str, Any]]:
 
 
 def get_user_by_role_or_identifier(clean: str) -> Optional[Dict[str, Any]]:
-    """Busca un usuario por rol, ID, username o email (para cambio de cuenta demo)."""
+    """Busca un usuario por rol, ID, username o email."""
     with get_auth_db_connection() as conn:
         row = conn.execute("""
             SELECT * FROM users
@@ -199,17 +200,6 @@ def update_user_token(user_id: str, new_token: str) -> None:
         conn.execute("UPDATE users SET token = ? WHERE id = ?;", (new_token, user_id))
 
 
-def sync_credenciales_txt(name: str, email: str, username: str, role: str, plain_pass: str) -> None:
-    """Registra en el archivo de referencia interna las credenciales generadas."""
-    try:
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        entry = f"\n- [{timestamp}] {name} ({role})\n  Correo: {email}\n  Usuario: {username}\n  Contraseña: {plain_pass}\n"
-        with open(CREDENCIALES_TXT_PATH, "a", encoding="utf-8") as f:
-            f.write(entry)
-    except Exception as e:
-        print(f"Aviso al escribir en credenciales_demo.txt: {e}")
-
-
 # =========================================================================
 # GESTIÓN DE INVITACIONES (RBAC: Solo Analistas pueden invitar)
 # =========================================================================
@@ -217,7 +207,6 @@ def sync_credenciales_txt(name: str, email: str, username: str, role: str, plain
 def insert_invitation(invitation: Dict[str, Any]) -> Dict[str, Any]:
     """Crea un registro de invitación para Auditor o Cliente."""
     with get_auth_db_connection() as conn:
-        # Invalidar cualquier invitación previa pendiente para el mismo correo
         clean_email = invitation["email"].strip().lower()
         conn.execute("""
             UPDATE invitations

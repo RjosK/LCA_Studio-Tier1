@@ -1,54 +1,44 @@
 """
-econode_studio/config.py - Configuración Unificada y Escalable de ECONODE
-Sigue los principios de 'The Twelve-Factor App' para permitir configuración transparente
-mediante variables de entorno sin modificar el código fuente.
-Soporta dual-mode: Supabase PostgreSQL (Cloud / Vercel) y SQLite Local (Offline / Desktop).
+econode_studio/config.py - Configuración centralizada de ECONODE Studio
+Maneja variables de entorno, rutas absolutas a bases de datos y flags operacionales.
 """
 
 import os
-from typing import Dict, Any
+from typing import Optional
 
-# Raíz del proyecto
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STUDIO_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(STUDIO_DIR, "data")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(BASE_DIR)
+DATA_DIR = os.path.join(BASE_DIR, "data")
+VAULT_DIR = os.path.join(PROJECT_ROOT, "ECONODE_VAULT")
 
 class Settings:
-    # Entorno y Servidor
-    APP_ENV: str = os.getenv("APP_ENV", "development")
-    DEBUG: bool = os.getenv("DEBUG", "true").lower() in ("true", "1", "yes")
-    PORT: int = int(os.getenv("PORT", "8081"))
+    # Entorno
+    ENV: str = os.getenv("ENV", "production")
+    DEBUG: bool = os.getenv("DEBUG", "false").lower() in ("true", "1", "t")
+
+    # Servidor HTTP
     HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", 8080))
 
-    # Seguridad y Criptografía
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "econode_jwt_super_secret_key_tier1_2026")
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", "72"))
-    PASSWORD_SALT: str = os.getenv("PASSWORD_SALT", "econode_secure_pbkdf2_salt_v1")
+    # Criptografía y Sesiones
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "econode_jwt_studio_sec_2026_x7a9k1m4")
+    PASSWORD_SALT: str = os.getenv("PASSWORD_SALT", "econode_salt_studio_pbkdf2_2026")
+    JWT_EXPIRATION_HOURS: int = int(os.getenv("JWT_EXPIRATION_HOURS", 24))
 
-    # Conexión Supabase PostgreSQL (Cloud / Producción - Configurar vía Variables de Entorno)
-    DATABASE_URL: str = os.getenv("DATABASE_URL") or os.getenv("SUPABASE_DB_URL") or ""
-    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-    SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
-    SUPABASE_SERVICE_ROLE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
-    SUPABASE_STORAGE_BUCKET: str = os.getenv("SUPABASE_STORAGE_BUCKET", "econode-vault")
+    # Conexión Supabase PostgreSQL (Producción / Vercel Serverless)
+    DATABASE_URL: Optional[str] = os.getenv("DATABASE_URL", None)
+    SUPABASE_URL: Optional[str] = os.getenv("SUPABASE_URL", None)
+    SUPABASE_KEY: Optional[str] = os.getenv("SUPABASE_KEY", None)
 
     @property
     def IS_POSTGRES(self) -> bool:
-        return bool(self.DATABASE_URL and self.DATABASE_URL.strip().startswith(("postgres://", "postgresql://")))
+        """Determina si el backend opera sobre PostgreSQL (Cloud) o SQLite (Local)."""
+        return bool(self.DATABASE_URL and ("postgres" in self.DATABASE_URL.lower()))
 
-    # Bases de Datos Locales SQLite (Desarrollo Offline / Fallback)
+    # Conexiones SQLite Locales (Fallback y Desarrollo Local)
     ECOINVENT_DB_PATH: str = os.getenv(
         "ECOINVENT_DB_PATH",
-        os.path.join(BASE_DIR, "ecoinvent", "ecoinvent_312.db")
-    )
-    LCIA_ENGINE_DB_PATH: str = os.getenv(
-        "LCIA_ENGINE_DB_PATH",
-        os.path.join(DATA_DIR, "lcia_engine.db")
-    )
-    DOCUMENTS_DB_PATH: str = os.getenv(
-        "DOCUMENTS_DB_PATH",
-        os.path.join(DATA_DIR, "econode_documents.db")
+        os.path.join(PROJECT_ROOT, "ecoinvent", "ecoinvent_312.db")
     )
     AUDIT_DB_PATH: str = os.getenv(
         "AUDIT_DB_PATH",
@@ -59,12 +49,11 @@ class Settings:
     STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "supabase" if bool(os.getenv("SUPABASE_URL")) else "local")
     STORAGE_LOCAL_DIR: str = os.getenv("STORAGE_LOCAL_DIR", os.path.join(DATA_DIR, "documents"))
 
-    # Cuentas, Autenticación y Credenciales
+    # Cuentas, Autenticación e Invitaciones
     AUTH_DB_PATH: str = os.getenv("AUTH_DB_PATH", os.path.join(DATA_DIR, "econode_auth.db"))
-    CREDENCIALES_TXT_PATH: str = os.getenv("CREDENCIALES_TXT_PATH", os.path.join(DATA_DIR, "credenciales_demo.txt"))
 
-    # Google Identity Services
-    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    # Google Identity Services (GSI)
+    GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com")
     ADMIN_EMAILS: str = os.getenv("ADMIN_EMAILS", "")
 
 settings = Settings()

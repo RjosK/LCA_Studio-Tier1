@@ -19,7 +19,13 @@ from .auth_adapter import (
     get_user_by_role_or_identifier,
     insert_user,
     update_user_token,
-    sync_credenciales_txt
+    insert_invitation,
+    get_invitation_by_token,
+    get_pending_invitation_by_email,
+    list_invitations_by_analyst,
+    get_all_invitations,
+    mark_invitation_accepted,
+    cancel_invitation
 )
 from .audit_adapter import (
     get_audit_db_connection,
@@ -54,4 +60,3 @@ from .exporters_adapter import (
 )
 from .google_oauth_adapter import verify_google_id_token, get_configured_client_id, resolve_role_for_email
 from .crypto_signer import compute_model_sha256, sign_audit_dossier
-

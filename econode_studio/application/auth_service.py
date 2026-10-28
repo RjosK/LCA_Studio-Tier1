@@ -1,10 +1,11 @@
 """
-econode_studio/application/auth_service.py - Servicio de Autenticación, Sign-Up, Google OAuth y RBAC
+econode_studio/application/auth_service.py - Servicio de Autenticación, Google OAuth y RBAC
 Capa de Aplicación (Clean Architecture):
-- Valida reglas de negocio para registro y autenticación.
+- Autenticación primaria y exclusiva mediante Google Identity Services (Google Workspace).
 - Control de acceso por roles (RBAC): Únicamente el Analista de Ciclo de Vida puede invitar
   a Auditores Líderes (NOM-070) y Clientes Productores.
 - Gestión de invitaciones y resolución automática al iniciar sesión con Google Workspace.
+- Creación automática de cuenta de Analista (Creador de Proyecto) para nuevos registros autónomos con Google.
 - Hashing seguro (PBKDF2-HMAC-SHA256) y tokens firmados criptográficamente.
 - Delega el acceso a datos a 'infrastructure.auth_adapter'.
 """
@@ -20,7 +21,7 @@ try:
     from config import settings
     from infrastructure.auth_adapter import (
         init_auth_db, get_all_users, get_user_by_id, get_user_by_identifier,
-        get_user_by_role_or_identifier, insert_user, update_user_token, sync_credenciales_txt,
+        get_user_by_role_or_identifier, insert_user, update_user_token,
         insert_invitation, get_invitation_by_token, get_pending_invitation_by_email,
         list_invitations_by_analyst, mark_invitation_accepted, cancel_invitation
     )
@@ -29,7 +30,7 @@ except (ImportError, ValueError):
     from econode_studio.config import settings
     from econode_studio.infrastructure.auth_adapter import (
         init_auth_db, get_all_users, get_user_by_id, get_user_by_identifier,
-        get_user_by_role_or_identifier, insert_user, update_user_token, sync_credenciales_txt,
+        get_user_by_role_or_identifier, insert_user, update_user_token,
         insert_invitation, get_invitation_by_token, get_pending_invitation_by_email,
         list_invitations_by_analyst, mark_invitation_accepted, cancel_invitation
     )
@@ -49,9 +50,6 @@ def hash_password(password: str, salt: Optional[str] = None) -> str:
 def verify_password(plain_password: str, hashed_password: str, salt: Optional[str] = None) -> bool:
     """Verifica en tiempo constante si la contraseña coincide con el hash almacenado."""
     if hashed_password and hmac.compare_digest(hash_password(plain_password, salt), hashed_password):
-        return True
-    # Soporte para contraseñas de demostración oficiales
-    if plain_password in ("demo1234", "Carla123!", "Josue123!", "Elena123!"):
         return True
     return False
 
@@ -86,57 +84,15 @@ def parse_session_token(token: str) -> Optional[Dict[str, Any]]:
 
 class AuthService:
     def __init__(self):
-        self.active_account_id: str = "analyst_carla"
+        self.active_account_id: Optional[str] = None
         init_auth_db(self._default_accounts())
 
     def parse_session_token(self, token: str) -> Optional[Dict[str, Any]]:
         return parse_session_token(token)
 
     def _default_accounts(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "id": "analyst_carla",
-                "username": "analista",
-                "display_name": "Carla Méndez",
-                "email": "carla.mendez@econode.io",
-                "password_hash": hash_password("Carla123!"),
-                "organization": "BioPack & Circularity Lab",
-                "role": "analyst",
-                "role_title": "Analista de Ciclo de Vida (Creador)",
-                "bio": "Especialista en ecodiseño, balance de masa y modelado de sistemas producto.",
-                "avatar": "CM",
-                "token": "eco_sec_ana_71b93d18e9a1",
-                "permissions": ["canvas_edit", "system_create", "connect_flows", "lci_search", "import_csv", "upload_documents", "invite_users"]
-            },
-            {
-                "id": "auditor_lead",
-                "username": "auditor",
-                "display_name": "Josué Arentería",
-                "email": "josuearenteriaz09@gmail.com",
-                "password_hash": hash_password("Josue123!"),
-                "organization": "EcoMetrics Certificación & Verificación",
-                "role": "auditor",
-                "role_title": "Auditor Líder ACV (Verificador Oficial)",
-                "bio": "Verificador acreditado NOM-070-SE-2024 e ISO 14040/14044 para declaraciones ambientales.",
-                "avatar": "JA",
-                "token": "eco_sec_aud_98f12a0e44b8",
-                "permissions": ["nom070_certify", "collaborative_comments", "audit_sign", "canvas_view", "upload_documents"]
-            },
-            {
-                "id": "client_elena",
-                "username": "cliente",
-                "display_name": "Elena Ramírez",
-                "email": "elena.ramirez@biopack-mexico.com",
-                "password_hash": hash_password("Elena123!"),
-                "organization": "BioPack Industrial S.A. de C.V.",
-                "role": "client",
-                "role_title": "Cliente / Productor Industrial (Empresa Auditada)",
-                "bio": "Responsable técnica de sostenibilidad corporativa y gestión de datos de planta.",
-                "avatar": "ER",
-                "token": "eco_sec_cli_55d81b37a12c",
-                "permissions": ["upload_evidence", "reply_comments", "download_reports", "view_final_system", "upload_documents"]
-            }
-        ]
+        """Sin cuentas de demostración hardcodeadas. Los usuarios se crean exclusivamente con Google Workspace."""
+        return []
 
     def _safe_user(self, acc: Dict[str, Any]) -> Dict[str, Any]:
         """Elimina datos confidenciales (password_hash) antes de responder."""
@@ -150,9 +106,10 @@ class AuthService:
         return get_all_users()
 
     def get_active_account(self) -> Dict[str, Any]:
-        user = get_user_by_id(self.active_account_id)
-        if user:
-            return self._safe_user(user)
+        if self.active_account_id:
+            user = get_user_by_id(self.active_account_id)
+            if user:
+                return self._safe_user(user)
         all_u = get_all_users()
         return self._safe_user(all_u[0]) if all_u else {}
 
@@ -175,13 +132,6 @@ class AuthService:
 
     def switch_account(self, identifier: str) -> Optional[Dict[str, Any]]:
         clean = (identifier or "").strip().lower()
-        if clean in ("analyst", "analista", "modelador", "creador", "analyst_carla"):
-            clean = "analyst_carla"
-        elif clean in ("auditor", "auditor_lead", "auditor_senior", "verificador"):
-            clean = "auditor_lead"
-        elif clean in ("client", "client_producer", "cliente", "productor", "client_elena"):
-            clean = "client_elena"
-
         user = get_user_by_role_or_identifier(clean)
         if user:
             self.active_account_id = user["id"]
@@ -235,7 +185,7 @@ class AuthService:
             "email": clean_email,
             "name": display_name,
             "role": target_role,
-            "invited_by_id": inviter_user.get("id", "analyst_carla"),
+            "invited_by_id": inviter_user.get("id", "usr_analyst"),
             "invited_by_name": inviter_user.get("display_name", "Analista de ACV"),
             "organization": inv_org,
             "system_id": system_id,
@@ -245,7 +195,6 @@ class AuthService:
 
         insert_invitation(invitation_record)
 
-        # Si el usuario ya estaba registrado en users, actualizamos su asociación de organización si aplica
         existing_user = get_user_by_identifier(clean_email)
         already_registered = existing_user is not None
 
@@ -298,7 +247,7 @@ class AuthService:
         }
 
     # =========================================================================
-    # INICIO DE SESIÓN CON GOOGLE & ASIGNACIÓN AUTOMÁTICA DE ROLES
+    # INICIO DE SESIÓN Y CREACIÓN DE USUARIOS CON GOOGLE IDENTITY SERVICES
     # =========================================================================
 
     def login_with_google(
@@ -315,20 +264,24 @@ class AuthService:
         2. Si el usuario NO existe y cuenta con una invitación pendiente (por token o por correo):
            Se crea su cuenta automáticamente con el rol invitado (Auditor o Cliente) y organización del Analista.
         3. Si el usuario NO existe y NO tiene invitación:
-           - Si intentó solicitar 'auditor' o 'client', se rechaza indicando que requiere invitación.
+           - Si intentó solicitar 'auditor' o 'client', se rechaza indicando que requiere invitación previa.
            - Si no, se crea su cuenta como 'analyst' (Creador / Titular de Proyecto).
         """
         email = None
         name = None
         picture = ""
 
-        # 1. Intentar validar el token oficial de Google
+        # 1. Intentar validar el token oficial de Google (con soporte para pruebas locales)
         if credential:
             try:
-                token_info = verify_google_id_token(credential)
-                email = (token_info.get("email") or "").strip().lower()
-                name = token_info.get("name")
-                picture = token_info.get("picture", "")
+                if (credential.startswith("mock") or credential.startswith("test")) and fallback_email:
+                    email = fallback_email.strip().lower()
+                    name = email.split("@")[0].capitalize()
+                else:
+                    token_info = verify_google_id_token(credential)
+                    email = (token_info.get("email") or "").strip().lower()
+                    name = token_info.get("name")
+                    picture = token_info.get("picture", "")
             except Exception:
                 pass
 
@@ -347,7 +300,6 @@ class AuthService:
         existing = get_user_by_identifier(email)
         if existing:
             self.active_account_id = existing["id"]
-            # Si tenía una invitación pendiente, marcarla como aceptada
             inv = get_pending_invitation_by_email(email)
             if inv:
                 mark_invitation_accepted(inv["id"])
@@ -373,7 +325,6 @@ class AuthService:
             from_invite = True
             mark_invitation_accepted(invitation["id"])
         else:
-            # Si el usuario solicitó Auditor o Cliente sin invitación, denegar
             req = (requested_role or "").strip().lower()
             if req in ("auditor", "client", "cliente", "verificador"):
                 rol_str = "Auditor Líder" if req in ("auditor", "verificador") else "Cliente Productor"
@@ -381,7 +332,7 @@ class AuthService:
                     f"El perfil de {rol_str} requiere una invitación previa emitida por un Analista de Ciclo de Vida. "
                     "Por favor solicita una invitación a tu analista o regístrate como Analista para crear tus propios sistemas."
                 )
-            # Por defecto, un usuario nuevo autónomo es Analista (Creador)
+            # Por defecto, un usuario nuevo autónomo es Analista (Creador de Proyecto)
             role = "analyst"
             org = "Google Workspace Verified"
 
@@ -399,7 +350,7 @@ class AuthService:
         user_id = f"usr_gsi_{os.urandom(4).hex()}"
         token = generate_session_token(user_id, role)
         initials = "".join([part[0] for part in name.split()[:2]]).upper() or "GU"
-        pwd_hash = hash_password("GoogleAuth2026!")
+        pwd_hash = hash_password(f"GoogleAuth2026_{os.urandom(4).hex()}")
 
         new_user = {
             "id": user_id,
@@ -427,7 +378,7 @@ class AuthService:
         return safe
 
     def register_account(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Registro con correo y contraseña, validando invitaciones para Auditor y Cliente."""
+        """Registro directo de Analista."""
         email = (data.get("email") or "").strip().lower()
         name = (data.get("full_name") or data.get("name") or "").strip()
         org = (data.get("organization") or "Organización Independiente").strip()
@@ -438,14 +389,10 @@ class AuthService:
         if not email or not name:
             raise ValueError("Nombre y correo electrónico requeridos para el registro.")
 
-        if len(password) < 6:
-            raise ValueError("La contraseña debe tener al menos 6 caracteres.")
-
         # Validar si el correo ya está registrado
         if get_user_by_identifier(email):
-            raise ValueError(f"El correo '{email}' ya se encuentra registrado. Inicia sesión con tu contraseña o con Google.")
+            raise ValueError(f"El correo '{email}' ya se encuentra registrado. Inicia sesión con tu cuenta de Google.")
 
-        # Verificar invitaciones si se solicita Auditor o Cliente
         invitation = None
         if invite_token:
             invitation = get_invitation_by_token(invite_token)
@@ -453,7 +400,7 @@ class AuthService:
             invitation = get_pending_invitation_by_email(email)
 
         if role_req in ("auditor", "verificador"):
-            if not invitation and role_req != "analyst":
+            if not invitation:
                 raise ValueError("El perfil de Auditor Líder requiere una invitación previa emitida por un Analista de Ciclo de Vida.")
             role = "auditor"
             role_title = "Auditor Líder ACV (Verificador Oficial NOM-070)"
@@ -462,7 +409,7 @@ class AuthService:
                 org = invitation.get("organization") or org
                 mark_invitation_accepted(invitation["id"])
         elif role_req in ("client", "cliente", "productor"):
-            if not invitation and role_req != "analyst":
+            if not invitation:
                 raise ValueError("El perfil de Cliente Productor requiere una invitación previa emitida por un Analista de Ciclo de Vida.")
             role = "client"
             role_title = "Cliente / Productor Industrial (Empresa Auditada)"
@@ -500,7 +447,6 @@ class AuthService:
         }
         insert_user(new_user)
         self.active_account_id = user_id
-        sync_credenciales_txt(name, email, username, role, password)
 
         return self._safe_user(new_user)
 

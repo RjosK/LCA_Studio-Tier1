@@ -101,10 +101,11 @@ TEST_CASES = [
     ("GET /api/systems/21/canvas (3 procesos oficiales)", lambda: request_json("/api/systems/21/canvas")),
     ("GET /api/documents?system_id=21 (Bóveda acotada)", lambda: request_json("/api/documents?system_id=21")),
 
-    # 6. POST Endpoints - Los 3 Perfiles Oficiales
-    ("POST /api/auth/login (Analista Carla)", lambda: request_json("/api/auth/login", {"user_id": "analyst_carla"}, "POST")),
-    ("POST /api/auth/login (Auditor Josué)", lambda: request_json("/api/auth/login", {"user_id": "auditor_lead"}, "POST")),
-    ("POST /api/auth/login (Cliente Elena)", lambda: request_json("/api/auth/login", {"user_id": "client_elena"}, "POST")),
+    # 6. Google Identity Services - Creación Inicial de Analista con Google
+    ("POST /api/auth/google (Crear Analista Carla con Google)", lambda: request_json("/api/auth/google", {
+        "email": "carla.mendez@econode.io",
+        "credential": "mock_google_jwt_carla"
+    }, "POST")),
     ("POST /api/systems/create (Wizard)", lambda: request_json("/api/systems/create", {
         "name": "Botella Biodegradable PLA 250ml",
         "code": "SKU-PLA-250",
@@ -172,7 +173,7 @@ TEST_CASES = [
     ("GET /api/systems/21/export/expediente", lambda: request_json("/api/systems/21/export/expediente")),
 
     # 9. RBAC: Invitaciones por Analista y Google OAuth Onboarding
-    ("POST /api/auth/login (Activar Analista Carla)", lambda: request_json("/api/auth/login", {"user_id": "analyst_carla"}, "POST")),
+    ("POST /api/auth/switch-account (Activar Analista Carla)", lambda: request_json("/api/auth/switch-account", {"role": "analyst"}, "POST")),
     ("POST /api/auth/invite (Analista invita Auditor)", lambda: request_json("/api/auth/invite", {
         "email": "auditor.test.oficial@ecometrics.io",
         "role": "auditor",
@@ -185,26 +186,24 @@ TEST_CASES = [
         "name": "Ing. Productor Industrial",
         "organization": "BioPack Planta Toluca"
     }, "POST")),
-    ("POST /api/auth/switch-account (Cambiar a Auditor Josué)", lambda: request_json("/api/auth/switch-account", {"role": "auditor"}, "POST")),
-    ("POST /api/auth/invite (Auditor intenta invitar -> 403 Prohibido)", lambda: request_json("/api/auth/invite", {
-        "email": "intruso@test.com",
-        "role": "auditor"
-    }, "POST")),
-    ("POST /api/auth/switch-account (Cambiar a Cliente Elena)", lambda: request_json("/api/auth/switch-account", {"role": "client"}, "POST")),
-    ("POST /api/auth/invite (Cliente intenta invitar -> 403 Prohibido)", lambda: request_json("/api/auth/invite", {
-        "email": "intruso2@test.com",
-        "role": "client"
-    }, "POST")),
-    ("POST /api/auth/login (Restaurar Analista Carla)", lambda: request_json("/api/auth/login", {"user_id": "analyst_carla"}, "POST")),
-    ("GET /api/auth/invitations (Listar invitaciones del analista)", lambda: request_json("/api/auth/invitations")),
     ("POST /api/auth/google (Google Onboarding para Auditor Invitado)", lambda: request_json("/api/auth/google", {
         "email": "auditor.test.oficial@ecometrics.io",
         "credential": "mock_google_token_auditor"
+    }, "POST")),
+    ("POST /api/auth/invite (Auditor intenta invitar -> 403 Prohibido)", lambda: request_json("/api/auth/invite", {
+        "email": "intruso@test.com",
+        "role": "auditor"
     }, "POST")),
     ("POST /api/auth/google (Google Onboarding para Cliente Invitado)", lambda: request_json("/api/auth/google", {
         "email": "cliente.test.oficial@biopack-industrial.mx",
         "credential": "mock_google_token_client"
     }, "POST")),
+    ("POST /api/auth/invite (Cliente intenta invitar -> 403 Prohibido)", lambda: request_json("/api/auth/invite", {
+        "email": "intruso2@test.com",
+        "role": "client"
+    }, "POST")),
+    ("POST /api/auth/switch-account (Restaurar Analista Carla)", lambda: request_json("/api/auth/switch-account", {"role": "analyst"}, "POST")),
+    ("GET /api/auth/invitations (Listar invitaciones del analista)", lambda: request_json("/api/auth/invitations")),
     ("POST /api/auth/google (Google Onboarding para Analista Autónomo)", lambda: request_json("/api/auth/google", {
         "email": "nuevo.analista.independiente@workspace.io",
         "credential": "mock_google_token_analyst"
