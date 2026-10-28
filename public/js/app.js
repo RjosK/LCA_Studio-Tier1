@@ -7080,6 +7080,19 @@
               description: `Archivo ${file.name} custodiado en base de datos.`
             });
 
+            // Sincronizar archivo con la carpeta de Evidencias en Google Drive si está activo
+            if (window.EconodeDrive) {
+              try {
+                const rootFolderId = await window.EconodeDrive.getOrCreateRootFolder();
+                if (rootFolderId) {
+                  await window.EconodeDrive.uploadEvidenceFile(rootFolderId, file);
+                  showNotification(`Archivo "${file.name}" sincronizado con Google Drive 📁`);
+                }
+              } catch (driveErr) {
+                console.warn("Sincronización con Google Drive diferida:", driveErr.message);
+              }
+            }
+
             showNotification(`Archivo "${file.name}" subido exitosamente a la bóveda.`);
             formUpload.reset();
             loadDocumentsList();

@@ -18,12 +18,38 @@ except (ImportError, ValueError):
 from .db_connection import get_db_connection
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
-UPLOADS_DIR = getattr(settings, "STORAGE_LOCAL_DIR", os.path.join(DATA_DIR, "documents"))
 DOCS_DB_PATH = getattr(settings, "DOCUMENTS_DB_PATH", os.path.join(DATA_DIR, "econode_documents.db"))
+
+def get_uploads_dir() -> str:
+    """Retorna un directorio de almacenamiento con permisos de escritura (resiliente en Vercel /tmp)."""
+    custom = getattr(settings, "STORAGE_LOCAL_DIR", None)
+    if custom:
+        try:
+            os.makedirs(custom, exist_ok=True)
+            return custom
+        except OSError:
+            pass
+
+    default_dir = os.path.join(DATA_DIR, "documents")
+    try:
+        os.makedirs(default_dir, exist_ok=True)
+        # Verificar capacidad de escritura real
+        test_file = os.path.join(default_dir, ".write_test")
+        with open(test_file, "w") as tf:
+            tf.write("ok")
+        os.remove(test_file)
+        return default_dir
+    except (OSError, PermissionError):
+        # Fallback estándar para Vercel Serverless (AWS Lambda: solo /tmp tiene permisos de escritura)
+        tmp_dir = os.path.join("/tmp", "econode_documents")
+        os.makedirs(tmp_dir, exist_ok=True)
+        return tmp_dir
+
+UPLOADS_DIR = get_uploads_dir()
 
 def init_documents_db():
     """Inicializa el directorio y la base de datos de documentos si no existen."""
-    os.makedirs(UPLOADS_DIR, exist_ok=True)
+    get_uploads_dir()
     if getattr(settings, "IS_POSTGRES", False):
         return
     with get_db_connection(DOCS_DB_PATH) as conn:
@@ -91,10 +117,18 @@ def save_document(
     timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = "".join(c for c in original_filename if c.isalnum() or c in "._- ") or "archivo.bin"
     disk_filename = f"{timestamp_str}_{safe_name}"
-    file_path = os.path.join(UPLOADS_DIR, disk_filename)
+    target_dir = get_uploads_dir()
+    file_path = os.path.join(target_dir, disk_filename)
 
-    with open(file_path, "wb") as f:
-        f.write(file_bytes)
+    try:
+        with open(file_path, "wb") as f:
+            f.write(file_bytes)
+    except OSError:
+        target_dir = os.path.join("/tmp", "econode_documents")
+        os.makedirs(target_dir, exist_ok=True)
+        file_path = os.path.join(target_dir, disk_filename)
+        with open(file_path, "wb") as f:
+            f.write(file_bytes)
 
     now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     file_size = len(file_bytes)
@@ -145,9 +179,15 @@ def get_document_file(document_id: int) -> Optional[Tuple[str, str, str]]:
         row = conn.execute("SELECT disk_filename, original_filename, mime_type FROM documents WHERE id = ?;", (document_id,)).fetchone()
         if not row:
             return None
-        disk_path = os.path.join(UPLOADS_DIR, row["disk_filename"])
+        disk_filename = row["disk_filename"]
+        target_dir = get_uploads_dir()
+        disk_path = os.path.join(target_dir, disk_filename)
         if not os.path.exists(disk_path):
-            return None
+            alt_path = os.path.join("/tmp", "econode_documents", disk_filename)
+            if os.path.exists(alt_path):
+                disk_path = alt_path
+            else:
+                return None
         return disk_path, row["original_filename"], row["mime_type"]
 
 def delete_document(document_id: int) -> bool:
