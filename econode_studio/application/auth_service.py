@@ -306,7 +306,9 @@ class AuthService:
             new_token = generate_session_token(existing["id"], existing["role"])
             update_user_token(existing["id"], new_token)
             existing["token"] = new_token
-            return self._safe_user(existing)
+            safe = self._safe_user(existing)
+            safe["is_new"] = False
+            return safe
 
         # 3. Usuario nuevo: Buscar si tiene una invitación pendiente
         invitation = None
@@ -369,6 +371,7 @@ class AuthService:
         insert_user(new_user)
         self.active_account_id = user_id
         safe = self._safe_user(new_user)
+        safe["is_new"] = True
         safe["from_invitation"] = from_invite
         if invitation:
             safe["invitation_info"] = {

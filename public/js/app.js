@@ -287,6 +287,12 @@
     applyRolePermissions();
 
     // Inicializaciones específicas por vista
+    if (viewName === "login" || viewName === "signup") {
+      if (window.initGoogleAuthUI) {
+        window.initGoogleAuthUI(viewName);
+        setTimeout(() => { if (window.initGoogleAuthUI) window.initGoogleAuthUI(viewName); }, 80);
+      }
+    }
     if (viewName === "dashboard") loadDashboard();
     if (viewName === "canvas") {
       switchCanvasViewMode(state.canvasViewMode || "visual");
@@ -534,13 +540,89 @@
       if (res.user) {
         state.activeUser = res.user;
         state.isAuthenticated = true;
+        if (res.user.token) sessionStorage.setItem("econode_token", res.user.token);
+        if (res.user.id) sessionStorage.setItem("econode_user_id", res.user.id);
         updateUserUI();
         applyRolePermissions();
-        showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name}`);
+        const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
+        showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name} (${rLabel})`);
+
+        // Si es un Analista nuevo que se acaba de registrar, abrir el modal de suscripción
+        if (res.user.role === "analyst" && res.user.is_new) {
+          const modalSub = document.getElementById("modalSubscription");
+          if (modalSub) {
+            modalSub.style.display = "flex";
+            modalSub.classList.add("active");
+            return;
+          }
+        }
         showView("dashboard");
       }
     } catch (err) {
       alert("Error al validar token de Google: " + err.message);
+    }
+  };
+
+  // Inicializador y Renderizador de Botones Oficiales de Google GSI
+  window.initGoogleAuthUI = function (targetView) {
+    const clientId = "744175439482-15giv41g1363tkof89s25bpn36akif3o.apps.googleusercontent.com";
+    if (window.google && window.google.accounts && window.google.accounts.id) {
+      try {
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: window.handleGoogleCredentialResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        if (!targetView || targetView === "login") {
+          const loginBox = document.getElementById("gsiLoginContainer");
+          if (loginBox) {
+            loginBox.innerHTML = "";
+            window.google.accounts.id.renderButton(loginBox, {
+              theme: "outline",
+              size: "large",
+              type: "standard",
+              text: "continue_with",
+              shape: "rectangular",
+              logo_alignment: "left",
+              width: 320
+            });
+            const btnIn = document.getElementById("btnGoogleSignInAction");
+            if (btnIn) btnIn.style.display = "none";
+          }
+        }
+
+        if (!targetView || targetView === "signup") {
+          const signupBox = document.getElementById("gsiSignupContainer");
+          if (signupBox) {
+            signupBox.innerHTML = "";
+            window.google.accounts.id.renderButton(signupBox, {
+              theme: "outline",
+              size: "large",
+              type: "standard",
+              text: "signup_with",
+              shape: "rectangular",
+              logo_alignment: "left",
+              width: 320
+            });
+            const btnUp = document.getElementById("btnGoogleSignUpAction");
+            if (btnUp) btnUp.style.display = "none";
+          }
+        }
+      } catch (e) {
+        console.warn("GSI renderButton fallo:", e);
+        const btnIn = document.getElementById("btnGoogleSignInAction");
+        if (btnIn) btnIn.style.display = "flex";
+        const btnUp = document.getElementById("btnGoogleSignUpAction");
+        if (btnUp) btnUp.style.display = "flex";
+      }
+    } else {
+      // Si la librería de Google aún no está disponible (o bloqueada), mostrar botones de respaldo
+      const btnIn = document.getElementById("btnGoogleSignInAction");
+      if (btnIn) btnIn.style.display = "flex";
+      const btnUp = document.getElementById("btnGoogleSignUpAction");
+      if (btnUp) btnUp.style.display = "flex";
     }
   };
 
@@ -7914,11 +7996,26 @@
 
     // Handler Universal para Google Sign-In (Login y Signup)
     const handleGoogleAuthTrigger = () => {
+      // 1. Si existe el botón oficial renderizado de Google en la vista actual, invocar su clic
+      const activeContainer = (state.currentView === "signup")
+        ? document.getElementById("gsiSignupContainer")
+        : document.getElementById("gsiLoginContainer");
+      const nativeBtn = activeContainer ? activeContainer.querySelector("div[role='button']") : null;
+      if (nativeBtn) {
+        nativeBtn.click();
+        return;
+      }
+
+      // 2. Si GSI está cargado pero no renderizado, llamar prompt con callback de diagnóstico
       if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.prompt();
+        window.google.accounts.id.prompt((notification) => {
+          if (notification && notification.isNotDisplayed()) {
+            console.warn("Google One Tap no desplegado:", notification.getNotDisplayedReason());
+          }
+        });
       } else {
         // En ambiente de desarrollo local / offline, prompt para verificar rol e invitación
-        const defaultEmail = state.pendingInviteEmail || "auditor.google@ecometrics.io";
+        const defaultEmail = state.pendingInviteEmail || "josuearenteriaz09@gmail.com";
         const promptEmail = prompt("Ingresa correo Google Workspace para iniciar sesión (Demo/Offline):", defaultEmail);
         if (promptEmail) {
           api.loginGoogle("mock_google_jwt", promptEmail, state.pendingInviteToken)
@@ -7927,10 +8024,19 @@
                 state.activeUser = res.user;
                 state.isAuthenticated = true;
                 if (res.user.token) sessionStorage.setItem("econode_token", res.user.token);
+        if (res.user.id) sessionStorage.setItem("econode_user_id", res.user.id);
                 updateUserUI();
                 applyRolePermissions();
                 const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
                 showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name} (${rLabel})`);
+                if (res.user.role === "analyst" && res.user.is_new) {
+                  const modalSub = document.getElementById("modalSubscription");
+                  if (modalSub) {
+                    modalSub.style.display = "flex";
+                    modalSub.classList.add("active");
+                    return;
+                  }
+                }
                 showView("dashboard");
               }
             })
