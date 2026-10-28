@@ -19,6 +19,7 @@ from .auth_adapter import (
     get_user_by_role_or_identifier,
     insert_user,
     update_user_token,
+    update_user_role,
     insert_invitation,
     get_invitation_by_token,
     get_pending_invitation_by_email,

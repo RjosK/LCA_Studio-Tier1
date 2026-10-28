@@ -536,7 +536,8 @@
   // Callback Google GSI
   window.handleGoogleCredentialResponse = async function (response) {
     try {
-      const res = await api.loginGoogle(response.credential);
+      const storedInvite = state.pendingInviteToken || sessionStorage.getItem("econode_pending_invite");
+      const res = await api.loginGoogle(response.credential, null, storedInvite);
       if (res.user) {
         state.activeUser = res.user;
         state.isAuthenticated = true;
@@ -8071,6 +8072,7 @@
       if (urlParams.has("invite")) {
         const invTok = urlParams.get("invite");
         state.pendingInviteToken = invTok;
+        try { sessionStorage.setItem("econode_pending_invite", invTok); } catch(e){}
         api.verifyInviteToken(invTok).then(res => {
           if (res.invitation && res.invitation.valid) {
             const inv = res.invitation;
@@ -8474,7 +8476,9 @@
   window.openSystem = openSystem;
 
   // API Pública para llamadas inline desde HTML y pruebas
+  window.ECONODE = null;
   window.EconodeApp = {
+
     showView,
     openSystem,
     selectCatalogProcess,
@@ -8798,6 +8802,7 @@
       updateUserUI();
     }
   };
+  window.ECONODE = window.EconodeApp;
 
   // Arranque al cargar el DOM
   if (document.readyState === "loading") {

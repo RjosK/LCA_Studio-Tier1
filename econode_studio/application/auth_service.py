@@ -22,6 +22,7 @@ try:
     from infrastructure.auth_adapter import (
         init_auth_db, get_all_users, get_user_by_id, get_user_by_identifier,
         get_user_by_role_or_identifier, insert_user, update_user_token,
+        update_user_role,
         insert_invitation, get_invitation_by_token, get_pending_invitation_by_email,
         list_invitations_by_analyst, mark_invitation_accepted, cancel_invitation
     )
@@ -31,6 +32,7 @@ except (ImportError, ValueError):
     from econode_studio.infrastructure.auth_adapter import (
         init_auth_db, get_all_users, get_user_by_id, get_user_by_identifier,
         get_user_by_role_or_identifier, insert_user, update_user_token,
+        update_user_role,
         insert_invitation, get_invitation_by_token, get_pending_invitation_by_email,
         list_invitations_by_analyst, mark_invitation_accepted, cancel_invitation
     )
@@ -300,14 +302,42 @@ class AuthService:
         existing = get_user_by_identifier(email)
         if existing:
             self.active_account_id = existing["id"]
-            inv = get_pending_invitation_by_email(email)
+            inv = None
+            if invite_token:
+                inv = get_invitation_by_token(invite_token)
+                if inv and inv.get("status") != "pending":
+                    inv = None
+            if not inv:
+                inv = get_pending_invitation_by_email(email)
+
             if inv:
                 mark_invitation_accepted(inv["id"])
+                new_role = inv["role"]
+                new_org = inv.get("organization") or existing.get("organization") or "Organización Colaboradora"
+                try:
+                    update_user_role(existing["id"], new_role, new_org)
+                except Exception:
+                    pass
+                existing["role"] = new_role
+                existing["organization"] = new_org
+                if new_role == "auditor":
+                    existing["role_title"] = "Auditor Líder ACV (Verificador Oficial NOM-070)"
+                    existing["permissions"] = ["nom070_certify", "collaborative_comments", "audit_sign", "canvas_view", "upload_documents"]
+                elif new_role == "client":
+                    existing["role_title"] = "Cliente / Productor Industrial (Empresa Auditada)"
+                    existing["permissions"] = ["upload_evidence", "reply_comments", "download_reports", "view_final_system", "upload_documents"]
+
             new_token = generate_session_token(existing["id"], existing["role"])
             update_user_token(existing["id"], new_token)
             existing["token"] = new_token
             safe = self._safe_user(existing)
             safe["is_new"] = False
+            if inv:
+                safe["from_invitation"] = True
+                safe["invitation_info"] = {
+                    "invited_by": inv.get("invited_by_name", "Analista"),
+                    "system_id": inv.get("system_id")
+                }
             return safe
 
         # 3. Usuario nuevo: Buscar si tiene una invitación pendiente

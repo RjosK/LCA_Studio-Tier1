@@ -260,6 +260,38 @@ def insert_user(user_data: Dict[str, Any]) -> None:
         """, params)
 
 
+def update_user_role(user_id: str, new_role: str, new_org: str = "") -> None:
+    """Actualiza el rol y organización de un usuario tras aceptar una invitación."""
+    if new_role == "auditor":
+        perms = ["nom070_certify", "collaborative_comments", "audit_sign", "canvas_view", "upload_documents"]
+        role_title = "Auditor Líder ACV (Verificador Oficial NOM-070)"
+    elif new_role == "client":
+        perms = ["upload_evidence", "reply_comments", "download_reports", "view_final_system", "upload_documents"]
+        role_title = "Cliente / Productor Industrial (Empresa Auditada)"
+    else:
+        perms = ["canvas_edit", "system_create", "connect_flows", "lci_search", "import_csv", "upload_documents", "invite_users"]
+        role_title = "Analista de Ciclo de Vida (Creador)"
+
+    perms_json = json.dumps(perms)
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute(
+                "UPDATE auth_users SET role = ?, role_title = ?, organization = coalesce(nullif(?, ''), organization), permissions_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;",
+                (new_role, role_title, new_org, perms_json, user_id)
+            )
+            return
+    except Exception:
+        pass
+    try:
+        with get_auth_db_connection() as conn:
+            conn.execute(
+                "UPDATE users SET role = ?, role_title = ?, organization = coalesce(nullif(?, ''), organization), permissions_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;",
+                (new_role, role_title, new_org, perms_json, user_id)
+            )
+    except Exception:
+        pass
+
+
 def update_user_token(user_id: str, new_token: str) -> None:
     """Actualiza el token de sesión de un usuario."""
     try:
