@@ -7117,91 +7117,58 @@
       isUploadingDoc = true;
       if (btnSubmitDoc) {
         btnSubmitDoc.disabled = true;
-        btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Subiendo...`;
+        btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Conectando Google Drive...`;
       }
 
       try {
-        // 1. Calcular hash SHA-256 criptográfico localmente en milisegundos con Web Crypto API
+        // 1. Autorización de Google Drive en el gesto del usuario (User Gesture)
+        if (window.EconodeDrive && !window.EconodeDrive.hasToken()) {
+          await window.EconodeDrive.getAccessToken();
+        }
+
+        // 2. Obtener o crear carpeta de evidencias del proyecto en Google Drive
+        if (btnSubmitDoc) {
+          btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Localizando carpeta en Drive...`;
+        }
+        const evidenceFolderId = await window.EconodeDrive.getOrCreateEvidencesFolder(currentSys.name, currentSys.code);
+
+        // 3. Subir archivo DIRECTAMENTE a Google Drive (Cero bytes pasan por Vercel)
+        if (btnSubmitDoc) {
+          btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Subiendo a tu Google Drive...`;
+        }
+        const driveFile = await window.EconodeDrive.uploadEvidenceFile(evidenceFolderId, file);
+        const driveLink = driveFile.webViewLink || (driveFile.id ? `https://drive.google.com/file/d/${driveFile.id}/view` : "");
+
+        // 4. Calcular hash criptográfico SHA-256 en el cliente para sello inmutable ISO 14044
+        if (btnSubmitDoc) {
+          btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Sellando SHA-256...`;
+        }
         const arrayBuffer = await file.arrayBuffer();
         const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const sha256Hex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 
-        // 2. Determinar destino: ¿Google Drive (BYOS) o base de datos local?
-        // En Vercel Serverless, los archivos > 2.5 MB deben ir a Google Drive directamente
-        const isLargeFile = file.size > 2.5 * 1024 * 1024;
-        const driveAvailable = Boolean(window.EconodeDrive && (window.EconodeDrive.hasToken() || isLargeFile));
-
-        let uploadedToDrive = false;
-        let driveLink = "";
-
-        if (driveAvailable && window.EconodeDrive) {
-          try {
-            if (btnSubmitDoc) {
-              btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Conectando Google Drive...`;
-            }
-            const evidenceFolderId = await window.EconodeDrive.getOrCreateEvidencesFolder(currentSys.name, currentSys.code);
-
-            if (btnSubmitDoc) {
-              btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Guardando en Drive...`;
-            }
-            const driveFile = await window.EconodeDrive.uploadEvidenceFile(evidenceFolderId, file);
-            driveLink = driveFile.webViewLink || (driveFile.id ? `https://drive.google.com/file/d/${driveFile.id}/view` : "");
-            uploadedToDrive = true;
-          } catch (driveErr) {
-            console.warn("Fallo subida a Google Drive:", driveErr);
-            if (isLargeFile) {
-              throw new Error(`El archivo (${(file.size / (1024 * 1024)).toFixed(1)} MB) supera el límite del servidor. Se requiere conectar tu Google Drive para archivos mayores a 2.5 MB: ` + (driveErr.message || driveErr));
-            }
-          }
+        // 5. Registrar ficha técnica en PostgreSQL (Vercel recibe sólo metadatos < 1 KB)
+        if (btnSubmitDoc) {
+          btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Registrando en Bóveda...`;
         }
+        await api.uploadDocument({
+          title: title,
+          original_filename: file.name,
+          file_size: file.size,
+          sha256_hash: sha256Hex,
+          system_id: sysId,
+          uploaded_by: uploader,
+          user_role: role,
+          description: `Google Drive: ${driveLink}`
+        });
 
-        // 3. Registrar en la Bóveda (PostgreSQL)
-        if (uploadedToDrive) {
-          // Payload ultra-ligero (< 1 KB): Sin enviar bytes pesados a Vercel
-          await api.uploadDocument({
-            title: title,
-            original_filename: file.name,
-            file_size: file.size,
-            sha256_hash: sha256Hex,
-            system_id: sysId,
-            uploaded_by: uploader,
-            user_role: role,
-            description: `Google Drive: ${driveLink}`
-          });
-          showNotification(`Archivo "${file.name}" custodiado con éxito en Google Drive 📁`);
-        } else {
-          // Para archivos pequeños (< 2.5 MB) sin Google Drive, guardar copia en base de datos
-          const base64Content = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const res = reader.result;
-              const b64 = typeof res === "string" && res.includes(",") ? res.split(",")[1] : res;
-              resolve(b64);
-            };
-            reader.onerror = () => reject(new Error("Error al leer el archivo en memoria"));
-            reader.readAsDataURL(file);
-          });
-
-          await api.uploadDocument({
-            title: title,
-            original_filename: file.name,
-            file_size: file.size,
-            sha256_hash: sha256Hex,
-            content_base64: base64Content,
-            system_id: sysId,
-            uploaded_by: uploader,
-            user_role: role,
-            description: `Archivo ${file.name} custodiado en base de datos.`
-          });
-          showNotification(`Archivo "${file.name}" subido exitosamente a la bóveda.`);
-        }
-
+        showNotification(`Archivo "${file.name}" custodiado con éxito en tu Google Drive 📁`);
         if (formUpload) formUpload.reset();
         await loadDocumentsList(sysId);
       } catch (err) {
-        console.error("Error al subir archivo a la bóveda:", err);
-        alert("Error al subir archivo: " + (err.message || err));
+        console.error("Error al subir archivo a Google Drive / Bóveda:", err);
+        alert("Error al subir archivo a tu Google Drive: " + (err.message || err));
       } finally {
         isUploadingDoc = false;
         if (btnSubmitDoc) {

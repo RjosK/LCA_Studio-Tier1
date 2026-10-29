@@ -367,55 +367,38 @@
     };
 
     const boundary = "-------314159265358979323846";
-    const delimiter = "
+    const d = "\r\n--" + boundary + "\r\n";
+    const cd = "\r\n--" + boundary + "--";
 
---" + boundary + "
-
-";
-    const closeDelim = "
-
---" + boundary + "--";
+    const metaHeader = d + "Content-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(metadata);
+    const fileHeader = d + "Content-Type: " + (file.type || "application/octet-stream") + "\r\n\r\n";
 
     const multipartRequestBody = new Blob([
-      delimiter,
-      "Content-Type: application/json; charset=UTF-8
-
-
-
-",
-      JSON.stringify(metadata),
-      delimiter,
-      `Content-Type: ${file.type || "application/octet-stream"}
-
-
-
-`,
+      metaHeader,
+      fileHeader,
       file,
-      closeDelim
-    ], { type: `multipart/related; boundary=${boundary}` });
+      cd
+    ], { type: "multipart/related; boundary=" + boundary });
 
-    const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
+    const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,size", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${token}`
+        "Authorization": "Bearer " + token
       },
       body: multipartRequestBody
     });
 
     if (!res.ok) {
-      let errText = "Error al subir archivo a Google Drive";
+      let errText = "Error al subir archivo a Google Drive (" + res.status + ")";
       try {
         const errJson = await res.json();
-        errText = errJson.error?.message || errText;
+        errText = errJson?.error?.message || errText;
       } catch (e) {}
       throw new Error(errText);
     }
     return await res.json();
   }
 
-  /**
-   * Lista todos los proyectos disponibles en Google Drive dentro de 'ECONODE Studio Projects'.
-   */
   async function listProjects() {
     try {
       const rootId = await getOrCreateRootFolder();
