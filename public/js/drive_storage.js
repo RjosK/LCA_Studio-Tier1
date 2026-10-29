@@ -21,6 +21,16 @@
   let cachedRootFolderId = null;
 
   /**
+   * Comprueba si existe un token de Google Drive válido y no expirado.
+   */
+  function hasToken() {
+    if (accessToken && Date.now() < tokenExpiration) return true;
+    const storedTok = sessionStorage.getItem("econode_drive_token");
+    const storedExp = parseInt(sessionStorage.getItem("econode_drive_token_exp") || "0", 10);
+    return Boolean(storedTok && Date.now() < storedExp);
+  }
+
+  /**
    * Obtiene un Access Token de Google Identity Services con el scope drive.file.
    * Si ya existe un token válido en memoria o sessionStorage, lo reutiliza.
    */
@@ -326,27 +336,42 @@
     };
 
     const boundary = "-------314159265358979323846";
-    const delimiter = "\r\n--" + boundary + "\r\n";
-    const closeDelim = "\r\n--" + boundary + "--";
+    const delimiter = "
+--" + boundary + "
+";
+    const closeDelim = "
+--" + boundary + "--";
 
-    // Convertir archivo a arrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    const metadataBlob = new Blob([JSON.stringify(metadata)], { type: "application/json; charset=UTF-8" });
+    const multipartRequestBody = new Blob([
+      delimiter,
+      "Content-Type: application/json; charset=UTF-8
+
+",
+      JSON.stringify(metadata),
+      delimiter,
+      `Content-Type: ${file.type || "application/octet-stream"}
+
+`,
+      file,
+      closeDelim
+    ], { type: `multipart/related; boundary=${boundary}` });
 
-    const form = new FormData();
-    form.append("metadata", metadataBlob);
-    form.append("file", file);
-
-    // Usar multipart upload para archivos binarios
     const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`
       },
-      body: form
+      body: multipartRequestBody
     });
 
-    if (!res.ok) throw new Error("Error al subir archivo a Google Drive");
+    if (!res.ok) {
+      let errText = "Error al subir archivo a Google Drive";
+      try {
+        const errJson = await res.json();
+        errText = errJson.error?.message || errText;
+      } catch (e) {}
+      throw new Error(errText);
+    }
     return await res.json();
   }
 
@@ -368,6 +393,7 @@
 
   // Exportar API global
   window.EconodeDrive = {
+    hasToken,
     getAccessToken,
     getOrCreateRootFolder,
     createProjectFolder,

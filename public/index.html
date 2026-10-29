@@ -1201,16 +1201,17 @@
         <!-- Subir nuevo archivo -->
         <div id="vaultUploadBox" style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px; margin-bottom: 20px;">
           <h4 style="font-size: 12px; font-weight: 700; margin-bottom: 10px;" data-i18n="vault.upload_title">Subir Nuevo Archivo o Script a la Bóveda</h4>
-          <form id="formUploadDocument" onsubmit="return false;" style="display: grid; grid-template-columns: 2fr 1fr 140px; gap: 10px; align-items: flex-end;">
+          <form id="formUploadDocument" style="display: grid; grid-template-columns: 2fr 1fr 140px; gap: 10px; align-items: flex-end;">
+            <input type="hidden" id="inputDocSystemId" value="">
             <div>
               <label class="form-label" data-i18n="docs.title_label">Título / Descripción del Archivo</label>
-              <input type="text" class="form-input" id="inputDocTitle" placeholder="Ej. Factura CFE Mayo 2026 / Certificado OEC / Balances" required>
+              <input type="text" class="form-input" id="inputDocTitle" placeholder="Ej. Factura CFE Mayo 2026 / Certificado OEC / Balances">
             </div>
             <div>
               <label class="form-label" data-i18n="docs.file_label">Seleccionar Archivo Local</label>
-              <input type="file" id="inputFileDocument" class="form-input" style="padding-top: 5px; height: 36px;" accept=".sql,.xlsx,.xls,.csv,.pdf,.json,.zip,.png,.jpg" required>
+              <input type="file" id="inputFileDocument" class="form-input" style="padding-top: 5px; height: 36px;" accept=".sql,.xlsx,.xls,.csv,.pdf,.json,.zip,.png,.jpg">
             </div>
-            <button type="submit" class="btn btn-primary" style="height: 36px;" id="btnSubmitDocUpload" data-i18n="vault.upload_btn">
+            <button type="button" class="btn btn-primary" style="height: 36px;" id="btnSubmitDocUpload" data-i18n="vault.upload_btn">
               Subir a Bóveda ➔
             </button>
           </form>

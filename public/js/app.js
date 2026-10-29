@@ -6939,12 +6939,18 @@
   // =========================================================================
   // 10. BÓVEDA DE DOCUMENTOS (SQL, EXCEL, PDF, JSON, ZIP)
   // =========================================================================
-  async function loadDocumentsList() {
+  async function loadDocumentsList(systemId = null) {
     const tbody = document.getElementById("docsTableBody");
     if (!tbody) return;
 
     try {
-      const sysId = state.activeSystem ? state.activeSystem.id : 21;
+      const hiddenSys = document.getElementById("inputDocSystemId");
+      const sysId = systemId || (hiddenSys && hiddenSys.value ? parseInt(hiddenSys.value, 10) : null) || (state.activeSystem ? state.activeSystem.id : null) || (state.systems && state.systems.length > 0 ? state.systems[0].id : null);
+      if (!sysId) {
+        state.documents = [];
+        renderDocumentsTable();
+        return;
+      }
       const res = await api.getDocuments(sysId);
       state.documents = res.items || [];
       renderDocumentsTable();
@@ -7024,6 +7030,9 @@
     const btnClose = document.getElementById("btnCloseDocsModal");
     const btnDone = document.getElementById("btnDoneDocsModal");
     const formUpload = document.getElementById("formUploadDocument");
+    const btnSubmitDoc = document.getElementById("btnSubmitDocUpload");
+    const fileInput = document.getElementById("inputFileDocument");
+    const titleInput = document.getElementById("inputDocTitle");
 
     const kpiDoc = document.getElementById("kpiDocCard");
 
@@ -7049,59 +7058,115 @@
       });
     }
 
-    if (formUpload) {
-      formUpload.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const title = document.getElementById("inputDocTitle")?.value || "";
-        const fileInput = document.getElementById("inputFileDocument");
+    if (fileInput) {
+      fileInput.addEventListener("change", () => {
+        if (fileInput.files && fileInput.files[0] && titleInput && !titleInput.value.trim()) {
+          const rawName = fileInput.files[0].name;
+          const cleanName = rawName.substring(0, rawName.lastIndexOf('.')) || rawName;
+          titleInput.value = cleanName;
+        }
+      });
+    }
 
-        if (!title || !fileInput || !fileInput.files || !fileInput.files[0]) {
-          alert("Por favor selecciona un archivo y escribe un título.");
-          return;
+    let isUploadingDoc = false;
+
+    const executeUpload = async () => {
+      if (isUploadingDoc) return;
+
+      const file = fileInput && fileInput.files ? fileInput.files[0] : null;
+      if (!file) {
+        showNotification("Por favor selecciona un archivo local para custodiar.", "warning");
+        if (fileInput) fileInput.focus();
+        return;
+      }
+
+      let title = titleInput ? titleInput.value.trim() : "";
+      if (!title) {
+        title = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+        if (titleInput) titleInput.value = title;
+      }
+
+      const hiddenSys = document.getElementById("inputDocSystemId");
+      const sysId = (hiddenSys && hiddenSys.value ? parseInt(hiddenSys.value, 10) : null) || (state.activeSystem ? state.activeSystem.id : null) || (state.systems && state.systems.length > 0 ? state.systems[0].id : null);
+
+      if (!sysId) {
+        alert("Por favor selecciona o crea un Sistema Producto antes de subir documentos.");
+        return;
+      }
+
+      isUploadingDoc = true;
+      if (btnSubmitDoc) {
+        btnSubmitDoc.disabled = true;
+        btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Subiendo...`;
+      }
+
+      try {
+        const base64Content = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const res = reader.result;
+            const b64 = typeof res === "string" && res.includes(",") ? res.split(",")[1] : res;
+            resolve(b64);
+          };
+          reader.onerror = () => reject(new Error("Error al leer el archivo seleccionado"));
+          reader.readAsDataURL(file);
+        });
+
+        const uploader = state.activeUser ? state.activeUser.display_name : "Usuario";
+        const role = state.activeUser ? state.activeUser.role : "client";
+
+        const uploadRes = await api.uploadDocument({
+          title: title,
+          original_filename: file.name,
+          content_base64: base64Content,
+          system_id: sysId,
+          uploaded_by: uploader,
+          user_role: role,
+          description: `Archivo ${file.name} custodiado en base de datos.`
+        });
+
+        if (uploadRes && uploadRes.error) {
+          throw new Error(uploadRes.error);
         }
 
-        const file = fileInput.files[0];
-        const reader = new FileReader();
-
-        reader.onload = async function () {
-          try {
-            const base64Content = reader.result.split(",")[1];
-            const sysId = state.activeSystem ? state.activeSystem.id : 21;
-            const uploader = state.activeUser ? state.activeUser.display_name : "Usuario";
-            const role = state.activeUser ? state.activeUser.role : "client";
-
-            await api.uploadDocument({
-              title: title,
-              original_filename: file.name,
-              content_base64: base64Content,
-              system_id: sysId,
-              uploaded_by: uploader,
-              user_role: role,
-              description: `Archivo ${file.name} custodiado en base de datos.`
-            });
-
-            // Sincronizar archivo con la carpeta de Evidencias en Google Drive si está activo
-            if (window.EconodeDrive) {
-              try {
-                const rootFolderId = await window.EconodeDrive.getOrCreateRootFolder();
-                if (rootFolderId) {
-                  await window.EconodeDrive.uploadEvidenceFile(rootFolderId, file);
-                  showNotification(`Archivo "${file.name}" sincronizado con Google Drive 📁`);
-                }
-              } catch (driveErr) {
-                console.warn("Sincronización con Google Drive diferida:", driveErr.message);
-              }
+        // Sincronizar archivo con Google Drive en segundo plano si está disponible y autenticado
+        if (window.EconodeDrive && (sessionStorage.getItem("econode_drive_token") || (window.EconodeDrive.hasToken && window.EconodeDrive.hasToken()))) {
+          window.EconodeDrive.getOrCreateRootFolder().then(async (rootFolderId) => {
+            if (rootFolderId) {
+              await window.EconodeDrive.uploadEvidenceFile(rootFolderId, file);
+              showNotification(`Archivo "${file.name}" respaldado en Google Drive 📁`);
             }
+          }).catch((driveErr) => {
+            console.warn("Sincronización con Google Drive omitida/diferida:", driveErr.message);
+          });
+        }
 
-            showNotification(`Archivo "${file.name}" subido exitosamente a la bóveda.`);
-            formUpload.reset();
-            loadDocumentsList();
-          } catch (err) {
-            alert("Error al subir archivo: " + err.message);
-          }
-        };
+        showNotification(`Archivo "${file.name}" subido exitosamente a la bóveda.`);
+        if (formUpload) formUpload.reset();
+        await loadDocumentsList(sysId);
+      } catch (err) {
+        console.error("Error al subir archivo a la bóveda:", err);
+        alert("Error al subir archivo: " + (err.message || err));
+      } finally {
+        isUploadingDoc = false;
+        if (btnSubmitDoc) {
+          btnSubmitDoc.disabled = false;
+          btnSubmitDoc.innerHTML = window.I18n ? window.I18n.t("vault.upload_btn", "Subir a Bóveda ➔") : "Subir a Bóveda ➔";
+        }
+      }
+    };
 
-        reader.readAsDataURL(file);
+    if (btnSubmitDoc) {
+      btnSubmitDoc.addEventListener("click", (e) => {
+        e.preventDefault();
+        executeUpload();
+      });
+    }
+
+    if (formUpload) {
+      formUpload.addEventListener("submit", (e) => {
+        e.preventDefault();
+        executeUpload();
       });
     }
   }
@@ -8655,21 +8720,27 @@
       });
     },
     openDocsModal: (systemId = null) => {
-      if (systemId) {
-        const found = state.systems.find(s => s.id === systemId);
+      let targetId = systemId ? parseInt(systemId, 10) : (state.activeSystem ? state.activeSystem.id : null);
+      if (!targetId && state.systems && state.systems.length > 0) {
+        targetId = state.systems[0].id;
+      }
+      if (targetId) {
+        const found = state.systems.find(s => parseInt(s.id, 10) === targetId);
         if (found) {
           state.activeSystem = found;
           const modalTitle = document.getElementById("modalDocsTitle");
           if (modalTitle) {
-            modalTitle.textContent = `Bóveda de Documentos: ${found.name}`;
+            modalTitle.textContent = `${window.I18n ? window.I18n.t("vault.modal_title", "Bóveda de Documentos") : "Bóveda de Documentos"}: ${found.name}`;
           }
         }
+        const hiddenSys = document.getElementById("inputDocSystemId");
+        if (hiddenSys) hiddenSys.value = targetId;
       }
       const modal = document.getElementById("modalDocuments");
       if (modal) {
         modal.style.display = "flex";
         modal.classList.add("active");
-        loadDocumentsList();
+        loadDocumentsList(targetId);
       }
     },
     deleteVaultDocument: async (docId, title) => {
