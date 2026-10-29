@@ -420,6 +420,15 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     info = get_document_file(doc_id)
                     if not info:
                         self._send_error_json("Archivo no encontrado en la bóveda", 404)
+                    elif info[0] == "DRIVE_REDIRECT":
+                        drive_url = info[2]
+                        if "http" in drive_url:
+                            import re as regex_mod
+                            m = regex_mod.search(r"https://drive\.google\.com\S+", drive_url)
+                            if m:
+                                drive_url = m.group(0)
+                        self._set_headers(302, "text/plain", {"Location": drive_url})
+                        self.wfile.write(b"Redirigiendo a Google Drive...")
                     else:
                         fpath, orig_name, mime_type = info
                         with open(fpath, "rb") as f:
@@ -886,6 +895,13 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 desc = body.get("description", "")
                 uploaded_by = body.get("uploaded_by") or body.get("author_name") or auth_service.get_active_account().get("display_name", "Usuario")
                 role = body.get("user_role") or body.get("author_role") or auth_service.get_active_account().get("role", "client")
+                override_sha = body.get("sha256_hash") or body.get("sha256")
+                override_size = body.get("file_size")
+                if override_size is not None:
+                    try:
+                        override_size = int(override_size)
+                    except (ValueError, TypeError):
+                        override_size = None
 
                 import base64
                 if content_b64:
@@ -896,10 +912,14 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 elif content_text:
                     file_bytes = content_text.encode("utf-8")
                 else:
-                    file_bytes = b"Contenido vacio"
+                    file_bytes = b""
 
                 try:
-                    doc = save_document(title, orig_name, file_bytes, uploaded_by, role, sys_id, desc)
+                    doc = save_document(
+                        title, orig_name, file_bytes, uploaded_by, role, sys_id, desc,
+                        override_sha256=override_sha,
+                        override_file_size=override_size
+                    )
                     self._send_json({"status": "success", "document": doc})
                 except Exception as e:
                     self._send_error_json(str(e), 500)

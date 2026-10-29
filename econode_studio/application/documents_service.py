@@ -25,14 +25,17 @@ def upload_document_use_case(
     uploaded_by: str,
     user_role: str,
     system_id: Optional[int] = 1,
-    description: str = ""
+    description: str = "",
+    override_sha256: Optional[str] = None,
+    override_file_size: Optional[int] = None
 ) -> Dict[str, Any]:
     """Valida y almacena un archivo (SQL, Excel, PDF, JSON, ZIP) en la bóveda con hash SHA-256."""
-    if not file_bytes:
+    is_drive_link = bool(description and "drive.google.com" in description)
+    if not file_bytes and not is_drive_link and not override_sha256:
         raise ValueError("El contenido del archivo no puede estar vacío.")
 
-    # Límite de seguridad: 50 MB
-    if len(file_bytes) > 50 * 1024 * 1024:
+    # Límite de seguridad: 50 MB para subidas directas
+    if file_bytes and len(file_bytes) > 50 * 1024 * 1024:
         raise ValueError("El archivo excede el tamaño máximo permitido de 50 MB.")
 
     title = (title or original_filename or "Documento").strip()
@@ -43,7 +46,9 @@ def upload_document_use_case(
         uploaded_by=uploaded_by,
         user_role=user_role,
         system_id=system_id,
-        description=description
+        description=description,
+        override_sha256=override_sha256,
+        override_file_size=override_file_size
     )
 
 

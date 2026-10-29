@@ -77,11 +77,22 @@
           headers,
           body: JSON.stringify(data)
         });
-        const json = await res.json();
-        if (!res.ok || json.status === "error") {
-          throw new Error(json.message || `HTTP ${res.status}`);
+        const text = await res.text();
+        let json = null;
+        try {
+          json = JSON.parse(text);
+        } catch (e) {
+          if (res.status === 413) {
+            throw new Error("El archivo excede el tamaño máximo permitido por Vercel (4.5 MB). Los archivos grandes se guardan directamente en tu Google Drive personal.");
+          }
+          if (!res.ok) {
+            throw new Error(`Error del servidor (${res.status}): ${text.slice(0, 150)}`);
+          }
         }
-        return json;
+        if (!res.ok || (json && json.status === "error")) {
+          throw new Error((json && json.message) || `HTTP ${res.status}`);
+        }
+        return json || { status: "success" };
       } catch (err) {
         console.error(`API POST error on ${endpoint}:`, err);
         throw err;
@@ -7009,9 +7020,14 @@
           </td>
           <td>
             <div style="display: flex; gap: 4px; align-items: center;">
-              <a href="/api/documents/${doc.id}/download" class="btn btn-secondary btn-sm" download="${doc.original_filename}" title="Descargar archivo">
-                🡇 Descargar
-              </a>
+              ${doc.description && doc.description.includes("drive.google.com")
+                ? `<a href="${doc.description.match(/https:\/\/drive\.google\.com\S*/)?.[0] || doc.description.replace('Google Drive: ', '')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Abrir archivo en Google Drive">
+                     📁 Abrir en Drive
+                   </a>`
+                : `<a href="/api/documents/${doc.id}/download" class="btn btn-secondary btn-sm" download="${doc.original_filename}" title="Descargar archivo">
+                     🡇 Descargar
+                   </a>`
+              }
               <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 7px; color: #EF4444;" onclick="window.EconodeApp.deleteVaultDocument(${doc.id}, '${escape(doc.title)}')" title="Eliminar este archivo de la bóveda">
                 🗑️
               </button>
@@ -7094,6 +7110,10 @@
         return;
       }
 
+      const currentSys = (state.systems && state.systems.find(s => parseInt(s.id, 10) === sysId)) || state.activeSystem || { name: "Proyecto", code: "SYS" };
+      const uploader = state.activeUser ? state.activeUser.display_name : "Usuario";
+      const role = state.activeUser ? state.activeUser.role : "client";
+
       isUploadingDoc = true;
       if (btnSubmitDoc) {
         btnSubmitDoc.disabled = true;
@@ -7101,47 +7121,82 @@
       }
 
       try {
-        const base64Content = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => {
-            const res = reader.result;
-            const b64 = typeof res === "string" && res.includes(",") ? res.split(",")[1] : res;
-            resolve(b64);
-          };
-          reader.onerror = () => reject(new Error("Error al leer el archivo seleccionado"));
-          reader.readAsDataURL(file);
-        });
+        // 1. Calcular hash SHA-256 criptográfico localmente en milisegundos con Web Crypto API
+        const arrayBuffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest("SHA-256", arrayBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const sha256Hex = hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
 
-        const uploader = state.activeUser ? state.activeUser.display_name : "Usuario";
-        const role = state.activeUser ? state.activeUser.role : "client";
+        // 2. Determinar destino: ¿Google Drive (BYOS) o base de datos local?
+        // En Vercel Serverless, los archivos > 2.5 MB deben ir a Google Drive directamente
+        const isLargeFile = file.size > 2.5 * 1024 * 1024;
+        const driveAvailable = Boolean(window.EconodeDrive && (window.EconodeDrive.hasToken() || isLargeFile));
 
-        const uploadRes = await api.uploadDocument({
-          title: title,
-          original_filename: file.name,
-          content_base64: base64Content,
-          system_id: sysId,
-          uploaded_by: uploader,
-          user_role: role,
-          description: `Archivo ${file.name} custodiado en base de datos.`
-        });
+        let uploadedToDrive = false;
+        let driveLink = "";
 
-        if (uploadRes && uploadRes.error) {
-          throw new Error(uploadRes.error);
-        }
-
-        // Sincronizar archivo con Google Drive en segundo plano si está disponible y autenticado
-        if (window.EconodeDrive && (sessionStorage.getItem("econode_drive_token") || (window.EconodeDrive.hasToken && window.EconodeDrive.hasToken()))) {
-          window.EconodeDrive.getOrCreateRootFolder().then(async (rootFolderId) => {
-            if (rootFolderId) {
-              await window.EconodeDrive.uploadEvidenceFile(rootFolderId, file);
-              showNotification(`Archivo "${file.name}" respaldado en Google Drive 📁`);
+        if (driveAvailable && window.EconodeDrive) {
+          try {
+            if (btnSubmitDoc) {
+              btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Conectando Google Drive...`;
             }
-          }).catch((driveErr) => {
-            console.warn("Sincronización con Google Drive omitida/diferida:", driveErr.message);
-          });
+            const evidenceFolderId = await window.EconodeDrive.getOrCreateEvidencesFolder(currentSys.name, currentSys.code);
+
+            if (btnSubmitDoc) {
+              btnSubmitDoc.innerHTML = `<span style="display:inline-block; width:12px; height:12px; border:2px solid currentColor; border-top-color:transparent; border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle;"></span> Guardando en Drive...`;
+            }
+            const driveFile = await window.EconodeDrive.uploadEvidenceFile(evidenceFolderId, file);
+            driveLink = driveFile.webViewLink || (driveFile.id ? `https://drive.google.com/file/d/${driveFile.id}/view` : "");
+            uploadedToDrive = true;
+          } catch (driveErr) {
+            console.warn("Fallo subida a Google Drive:", driveErr);
+            if (isLargeFile) {
+              throw new Error(`El archivo (${(file.size / (1024 * 1024)).toFixed(1)} MB) supera el límite del servidor. Se requiere conectar tu Google Drive para archivos mayores a 2.5 MB: ` + (driveErr.message || driveErr));
+            }
+          }
         }
 
-        showNotification(`Archivo "${file.name}" subido exitosamente a la bóveda.`);
+        // 3. Registrar en la Bóveda (PostgreSQL)
+        if (uploadedToDrive) {
+          // Payload ultra-ligero (< 1 KB): Sin enviar bytes pesados a Vercel
+          await api.uploadDocument({
+            title: title,
+            original_filename: file.name,
+            file_size: file.size,
+            sha256_hash: sha256Hex,
+            system_id: sysId,
+            uploaded_by: uploader,
+            user_role: role,
+            description: `Google Drive: ${driveLink}`
+          });
+          showNotification(`Archivo "${file.name}" custodiado con éxito en Google Drive 📁`);
+        } else {
+          // Para archivos pequeños (< 2.5 MB) sin Google Drive, guardar copia en base de datos
+          const base64Content = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const res = reader.result;
+              const b64 = typeof res === "string" && res.includes(",") ? res.split(",")[1] : res;
+              resolve(b64);
+            };
+            reader.onerror = () => reject(new Error("Error al leer el archivo en memoria"));
+            reader.readAsDataURL(file);
+          });
+
+          await api.uploadDocument({
+            title: title,
+            original_filename: file.name,
+            file_size: file.size,
+            sha256_hash: sha256Hex,
+            content_base64: base64Content,
+            system_id: sysId,
+            uploaded_by: uploader,
+            user_role: role,
+            description: `Archivo ${file.name} custodiado en base de datos.`
+          });
+          showNotification(`Archivo "${file.name}" subido exitosamente a la bóveda.`);
+        }
+
         if (formUpload) formUpload.reset();
         await loadDocumentsList(sysId);
       } catch (err) {

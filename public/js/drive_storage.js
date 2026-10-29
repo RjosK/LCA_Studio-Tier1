@@ -204,6 +204,37 @@
   }
 
   /**
+   * Obtiene o crea la subcarpeta '01_Evidencias_y_Facturas' para un proyecto en Google Drive.
+   */
+  async function getOrCreateEvidencesFolder(projectName, projectCode) {
+    const proj = await createProjectFolder(projectName, projectCode);
+    if (proj.evidencesFolderId) return proj.evidencesFolderId;
+
+    try {
+      const q = `'${proj.folderId}' in parents and name = '01_Evidencias_y_Facturas' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+      const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name)`;
+      const listRes = await driveFetch(searchUrl);
+      if (listRes.files && listRes.files.length > 0) {
+        return listRes.files[0].id;
+      }
+    } catch (e) {
+      console.warn("Búsqueda de subcarpeta evidencias:", e);
+    }
+
+    const subEvidence = await driveFetch("https://www.googleapis.com/drive/v3/files", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "01_Evidencias_y_Facturas",
+        mimeType: "application/vnd.google-apps.folder",
+        parents: [proj.folderId],
+        description: "Bóveda documental: Recibos CFE, facturas de materias primas y certificados de proveedores"
+      })
+    });
+    return subEvidence.id;
+  }
+
+  /**
    * Guarda o actualiza el archivo 'model.econode' (JSON) dentro de la carpeta del proyecto.
    */
   async function saveProjectModel(folderId, projectData) {
@@ -336,21 +367,28 @@
     };
 
     const boundary = "-------314159265358979323846";
-    const delimiter = "
---" + boundary + "
+    const delimiter = "
+
+--" + boundary + "
+
 ";
-    const closeDelim = "
+    const closeDelim = "
+
 --" + boundary + "--";
 
     const multipartRequestBody = new Blob([
       delimiter,
-      "Content-Type: application/json; charset=UTF-8
-
+      "Content-Type: application/json; charset=UTF-8
+
+
+
 ",
       JSON.stringify(metadata),
       delimiter,
-      `Content-Type: ${file.type || "application/octet-stream"}
-
+      `Content-Type: ${file.type || "application/octet-stream"}
+
+
+
 `,
       file,
       closeDelim
@@ -397,6 +435,7 @@
     getAccessToken,
     getOrCreateRootFolder,
     createProjectFolder,
+    getOrCreateEvidencesFolder,
     saveProjectModel,
     loadProjectModel,
     shareProjectFolder,

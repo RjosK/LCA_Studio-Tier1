@@ -79,7 +79,9 @@ def save_document(
     uploaded_by: str,
     user_role: str,
     system_id: Optional[int] = 1,
-    description: str = ""
+    description: str = "",
+    override_sha256: Optional[str] = None,
+    override_file_size: Optional[int] = None
 ) -> Dict[str, Any]:
     """Guarda un archivo en disco y registra sus metadatos en la base de datos."""
     init_documents_db()
@@ -113,25 +115,29 @@ def save_document(
     }
     mime_type = mime_map.get(ext, "application/octet-stream")
 
-    sha256 = hashlib.sha256(file_bytes).hexdigest()
+    sha256 = override_sha256 or (hashlib.sha256(file_bytes).hexdigest() if file_bytes else "N/A")
+    file_size = override_file_size if override_file_size is not None else len(file_bytes)
+
     timestamp_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     safe_name = "".join(c for c in original_filename if c.isalnum() or c in "._- ") or "archivo.bin"
     disk_filename = f"{timestamp_str}_{safe_name}"
-    target_dir = get_uploads_dir()
-    file_path = os.path.join(target_dir, disk_filename)
 
-    try:
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
-    except OSError:
-        target_dir = os.path.join("/tmp", "econode_documents")
-        os.makedirs(target_dir, exist_ok=True)
+    if file_bytes:
+        target_dir = get_uploads_dir()
         file_path = os.path.join(target_dir, disk_filename)
-        with open(file_path, "wb") as f:
-            f.write(file_bytes)
+        try:
+            with open(file_path, "wb") as f:
+                f.write(file_bytes)
+        except OSError:
+            target_dir = os.path.join("/tmp", "econode_documents")
+            os.makedirs(target_dir, exist_ok=True)
+            file_path = os.path.join(target_dir, disk_filename)
+            with open(file_path, "wb") as f:
+                f.write(file_bytes)
+    else:
+        disk_filename = f"drive_{safe_name}"
 
     now_iso = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    file_size = len(file_bytes)
 
     with get_db_connection(DOCS_DB_PATH) as conn:
         cur = conn.execute("""
@@ -176,7 +182,7 @@ def get_document_file(document_id: int) -> Optional[Tuple[str, str, str]]:
     """Obtiene la ruta en disco, nombre original y mime-type para descargar un archivo."""
     init_documents_db()
     with get_db_connection(DOCS_DB_PATH) as conn:
-        row = conn.execute("SELECT disk_filename, original_filename, mime_type FROM documents WHERE id = ?;", (document_id,)).fetchone()
+        row = conn.execute("SELECT disk_filename, original_filename, mime_type, description FROM documents WHERE id = ?;", (document_id,)).fetchone()
         if not row:
             return None
         disk_filename = row["disk_filename"]
@@ -187,6 +193,9 @@ def get_document_file(document_id: int) -> Optional[Tuple[str, str, str]]:
             if os.path.exists(alt_path):
                 disk_path = alt_path
             else:
+                desc = row["description"] if ("description" in row.keys() if hasattr(row, "keys") else True) else ""
+                if desc and "drive.google.com" in desc:
+                    return "DRIVE_REDIRECT", row["original_filename"], desc
                 return None
         return disk_path, row["original_filename"], row["mime_type"]
 
