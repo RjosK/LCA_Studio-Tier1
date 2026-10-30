@@ -79,9 +79,6 @@
 
       <!-- Active User Profile Pill & Logout (in Studio) -->
       <div id="navUserGroup" style="display: none; align-items: center; gap: 8px;">
-        <button class="btn btn-secondary btn-sm" id="btnNavInviteMember" style="display: none; align-items: center; gap: 4px; font-size: 11px; padding: 4px 10px; height: 28px; border-color: rgba(5, 150, 105, 0.4); color: var(--accent-emerald);" title="Invitar Auditor o Cliente">
-          <span style="font-weight: 700;">+</span> <span data-i18n="nav.btn_invite">Invitar</span>
-        </button>
         <div class="user-pill" id="btnUserMenu" title="Configuración y Perfil">
           <div class="user-avatar" id="navUserAvatar">CM</div>
           <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.1;">
@@ -993,10 +990,10 @@
   <!-- 5. VISTA: DASHBOARD DE PROYECTOS & PORTAFOLIO ACV (#viewDashboard) -->
   <!-- ============================================================= -->
   <main class="view-container" id="viewDashboard">
-    <div class="dashboard-header" style="margin-bottom: 20px;">
+        <div class="dashboard-header" style="margin-bottom: 28px;">
       <div>
-        <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.02em;" data-i18n="dash.title">Portafolio de Sistemas Producto</h1>
-        <p style="font-size: 11.5px; color: var(--text-muted);" data-i18n="dash.subtitle">Modelos de ciclo de vida activos, balances de masa y estado de verificación normativa</p>
+        <h1 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 32px; font-weight: 400; letter-spacing: -0.01em; color: #18232C; margin-bottom: 4px;" data-i18n="dash.title">Portafolio de Sistemas Producto</h1>
+        <p style="font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; font-size: 13px; color: #64748B;" data-i18n="dash.subtitle">Modelos de ciclo de vida activos, balances de masa y estado de verificaci&oacute;n normativa</p>
       </div>
     </div>
 
@@ -1007,7 +1004,7 @@
           <button class="segmented-btn active" data-filter="all"><span data-i18n="dash.filter_all">Todos</span> (<span id="countAllSystems">0</span>)</button>
           <button class="segmented-btn" data-filter="in_audit" data-i18n="dash.filter_in_audit">En Auditoría</button>
           <button class="segmented-btn" data-filter="certified" data-i18n="dash.filter_certified">Certificados</button>
-          <button class="segmented-btn" data-filter="draft" data-i18n="dash.filter_draft">Borradores</button>
+          
         </div>
         <div style="display: flex; gap: 10px; align-items: center;">
           <input type="text" class="form-input" style="width: 250px;" placeholder="Buscar por nombre o SKU..." id="inputSearchSystems" data-i18n-placeholder="dash.search_placeholder">
@@ -1025,8 +1022,8 @@
           <tr>
             <th data-i18n="dash.col_system">Sistema Producto</th>
             <th data-i18n="dash.col_sku">Código / SKU</th>
-            <th data-i18n="dash.col_unit">Unidad Funcional</th>
-            <th data-i18n="dash.col_processes">Procesos Conectados</th>
+            
+            
             <th data-i18n="dash.col_team">Equipo / Colaboradores</th>
             <th data-i18n="dash.col_status">Estado Normativo</th>
             <th data-i18n="dash.col_action">Acción</th>

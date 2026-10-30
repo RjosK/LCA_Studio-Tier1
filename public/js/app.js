@@ -760,8 +760,8 @@
     if (state.systems.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
-            <div style="font-size: 36px; margin-bottom: 10px;">📦</div>
+          <td colspan="5" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
+            <div style="font-size: 28px; margin-bottom: 10px; color: #7A8691;">[ Portafolio ]</div>
             <div style="font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px;">
               ${window.I18n.t("app.no_user_systems_title", "No tienes sistemas producto creados aún")}
             </div>
@@ -780,7 +780,7 @@
     }
 
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px; color: var(--text-muted);">${window.I18n.t("app.no_systems_found", "No se encontraron sistemas producto que coincidan con el filtro.")}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">${window.I18n.t("app.no_systems_found", "No se encontraron sistemas producto que coincidan con el filtro.")}</td></tr>`;
       return;
     }
 
@@ -809,9 +809,9 @@
         if (isOwner) {
           ownerNotice = `<div style="font-size: 9.5px; color: var(--accent-emerald); margin-top: 2px;">${window.I18n.t("app.creator_you", "Creador:")} ${currentUserName} ${window.I18n.t("app.you_tag", "(Tú)")}</div>`;
         } else if (isAuditor) {
-          ownerNotice = `<div style="font-size: 10px; color: var(--accent-emerald); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.created_by", "👤 Creado por:")} ${sys.owner_name || "Carla Méndez"} · ${sys.owner_org || "BioPack Industrial S.A. de C.V."}</div>`;
+          ownerNotice = `<div style="font-size: 10px; color: var(--accent-emerald); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.created_by", "Creado por:")} ${sys.owner_name || "Carla Méndez"} · ${sys.owner_org || "BioPack Industrial S.A. de C.V."}</div>`;
         } else if (isClient) {
-          ownerNotice = `<div style="font-size: 10px; color: var(--accent-blue); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.shared_by", "🔗 Compartido por:")} ${sys.owner_name || "Carla Méndez"} (BioPack Lab)</div>`;
+          ownerNotice = `<div style="font-size: 10px; color: var(--accent-blue); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.shared_by", "Compartido por:")} ${sys.owner_name || "Carla Méndez"} (BioPack Lab)</div>`;
         } else {
           ownerNotice = `<div style="font-size: 9.5px; color: var(--text-dim); margin-top: 2px;">${window.I18n.t("app.creator_you", "Creador:")} ${sys.owner_name || "Carla Méndez"}</div>`;
         }
@@ -823,18 +823,18 @@
           const cShort = c.display_name ? (c.display_name.split(" ")[0] + (c.display_name.split(" ")[1] ? " " + c.display_name.split(" ")[1][0] + "." : "")) : "Colab";
           const colorBg = c.role === "auditor" ? "rgba(16, 185, 129, 0.12)" : c.role === "client" ? "rgba(139, 92, 246, 0.12)" : "rgba(14, 165, 233, 0.12)";
           const colorText = c.role === "auditor" ? "#059669" : c.role === "client" ? "#7C3AED" : "#0284C7";
-          return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="${c.display_name} (${c.role})">${cRole} ${cShort}</span>`;
+          return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="${c.display_name} (${c.role})">${cShort}</span>`;
         }).join("");
 
         const teamHtml = isOfficial ? `
           <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;" title="Equipo de trabajo asignado al proyecto">
-            <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Carla Méndez (Analista de ACV)">👤 Carla M.</span>
-            <span class="user-chip-mini" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Josué Arentería (Auditor Líder)">🔍 Josué A.</span>
-            <span class="user-chip-mini" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Elena Ramírez (Cliente / Productor)">🏢 Elena R.</span>
+            <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Carla Méndez (Analista de ACV)">Carla M.</span>
+            <span class="user-chip-mini" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Josué Arentería (Auditor Líder)">Josué A.</span>
+            <span class="user-chip-mini" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Elena Ramírez (Cliente / Productor)">Elena R.</span>
           </div>
         ` : `
           <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;" title="Equipo del proyecto">
-            <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">👤 ${ownerShortName}</span>
+            <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${ownerShortName}</span>
             ${extraCollabsHtml}
             <button class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; border-radius: 4px;" onclick="window.EconodeApp.openInviteModal(${sys.id}, '${escape(sys.name)}')" title="Invitar auditor o cliente a este proyecto">+ Invitar</button>
           </div>
@@ -848,19 +848,17 @@
             ${ownerNotice}
           </td>
           <td><span class="mono">${sys.code || "SKU-N/A"}</span></td>
-          <td><span class="mono">${sys.target_amount || 1.0} ${sys.unit || "u"}</span></td>
-          <td><span class="badge-pill badge-slate">${sys.nodes_count || 0} ${window.I18n.t("app.processes_count", "procesos")}</span></td>
           <td>${teamHtml}</td>
           <td><span class="badge-pill ${badgeClass}">${statusText}</span></td>
           <td>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})">
-                ${window.I18n.t("app.vault_btn", "📁 Bóveda")}
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})" style="border-radius: 7px; height: 30px; padding: 0 12px; font-weight: 500; font-size: 11.5px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155;">
+                ${window.I18n.t("app.vault_btn", "Bóveda")}
               </button>
-              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openSystem(${sys.id})">
+              <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openSystem(${sys.id})" style="border-radius: 7px; height: 30px; padding: 0 13px; font-weight: 600; font-size: 11.5px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15);">
                 ${window.I18n.t("app.open_canvas_btn", "Abrir Lienzo ➔")}
               </button>
-              ${!isOfficial ? `<button class="btn btn-secondary btn-sm" style="padding: 4px 7px; color: #EF4444;" onclick="window.EconodeApp.deleteSystem(${sys.id}, '${escape(sys.name)}')" title="Eliminar este sistema producto">🗑️</button>` : ''}
+              ${!isOfficial ? `<button class="btn btn-secondary btn-sm" style="height: 30px; width: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #94A3B8; border-color: rgba(0,0,0,0.08); border-radius: 7px; background: #FFFFFF;" onclick="window.EconodeApp.deleteSystem(${sys.id}, '${escape(sys.name)}')" title="Eliminar este sistema producto" onmouseover="this.style.color='#EF4444';this.style.borderColor='rgba(239,68,68,0.3)';" onmouseout="this.style.color='#94A3B8';this.style.borderColor='rgba(0,0,0,0.08)';"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>` : ''}
             </div>
           </td>
         </tr>
@@ -903,9 +901,9 @@
           if (isOfficial) {
             canvasTeam.innerHTML = `
               <span style="font-weight: 600; color: var(--text-secondary);">${window.I18n.t("dash.col_team", "Equipo")}:</span>
-              <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">👤 Carla M. (Analista)</span>
-              <span class="user-chip-mini" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">🔍 Josué A. (Auditor)</span>
-              <span class="user-chip-mini" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">🏢 Elena R. (Cliente)</span>
+              <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Carla M. (Analista)</span>
+              <span class="user-chip-mini" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Josué A. (Auditor)</span>
+              <span class="user-chip-mini" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">Elena R. (Cliente)</span>
             `;
           } else {
             const rawOwner = res.system.owner_name || (state.activeUser ? state.activeUser.display_name : "Creador");
@@ -8365,6 +8363,10 @@
     // Comprobar si el usuario llegó mediante un enlace de invitación (?invite=...)
     try {
       const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has("demo")) {
+        const demoRole = urlParams.get("demo") || "analyst";
+        handleDemoLogin(demoRole);
+      }
       if (urlParams.has("invite")) {
         const invTok = urlParams.get("invite");
         state.pendingInviteToken = invTok;

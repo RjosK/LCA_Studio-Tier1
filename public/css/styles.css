@@ -2,7 +2,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&family=Source+Sans+3:wght@400;600;700&display=swap');
 
 :root {
-  --bg-app: #E8E9EA;
+  --bg-app: #FAF9F5;
   --bg-card: #FFFFFF;
   --bg-subtle: #F8FAFC;
   --bg-muted: #F1F5F9;
@@ -5442,4 +5442,250 @@ body.role-client #reportHighlightTooltip {
   .palladio-pricing-grid {
     grid-template-columns: 1fr;
   }
+}
+
+
+
+/* ==========================================================================
+   PORTAFOLIO & DASHBOARD REDESIGN (APPLE HIG & PALLADIO SPEC)
+   ========================================================================== */
+#viewDashboard {
+  background: #FAF9F5 !important;
+  min-height: calc(100vh - 65px);
+  padding: 32px 32px 64px 32px;
+  max-width: 1400px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+#viewDashboard .dashboard-header {
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+#viewDashboard .dashboard-header h1 {
+  font-family: 'Instrument Serif', Georgia, serif !important;
+  font-size: 34px !important;
+  font-weight: 400 !important;
+  letter-spacing: -0.015em !important;
+  color: #18232C !important;
+  line-height: 1.15 !important;
+  margin: 0 0 6px 0 !important;
+}
+
+#viewDashboard .dashboard-header p {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  font-size: 13px !important;
+  color: #64748B !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+#viewDashboard .table-card {
+  background: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02) !important;
+  overflow: hidden !important;
+  transition: box-shadow 0.2s ease !important;
+}
+
+#viewDashboard .table-toolbar {
+  padding: 16px 20px !important;
+  background: #FFFFFF !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+}
+
+#viewDashboard .table-filters {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: #F4F3EE !important;
+  padding: 3px !important;
+  border-radius: 999px !important;
+  gap: 3px !important;
+  border: 1px solid rgba(0, 0, 0, 0.04) !important;
+}
+
+#viewDashboard .table-filters .segmented-btn {
+  background: transparent !important;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 6px 15px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  color: #64748B !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  box-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard .table-filters .segmented-btn:hover {
+  color: #18232C !important;
+  background: rgba(255, 255, 255, 0.6) !important;
+}
+
+#viewDashboard .table-filters .segmented-btn.active {
+  background: #18232C !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+  box-shadow: 0 2px 6px rgba(24, 35, 44, 0.15) !important;
+}
+
+#viewDashboard #inputSearchSystems {
+  width: 240px !important;
+  height: 36px !important;
+  padding: 0 16px !important;
+  background: #FAF9F5 !important;
+  border: 1px solid rgba(0, 0, 0, 0.10) !important;
+  border-radius: 999px !important;
+  font-size: 12px !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  color: #18232C !important;
+  transition: all 0.2s ease !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+}
+
+#viewDashboard #inputSearchSystems:focus {
+  border-color: #0E7F5E !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 0 0 3px rgba(14, 127, 94, 0.12) !important;
+}
+
+#viewDashboard #btnDashInvite {
+  height: 36px !important;
+  padding: 0 13px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  border: 1px solid rgba(14, 127, 94, 0.35) !important;
+  color: #0E7F5E !important;
+  background: #F2FBF7 !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard #btnDashInvite:hover {
+  background: #E6F7F0 !important;
+  border-color: #0E7F5E !important;
+}
+
+#viewDashboard #btnDashNewSystem {
+  height: 36px !important;
+  padding: 0 15px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  background: #18232C !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(24, 35, 44, 0.15) !important;
+  transition: all 0.15s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard #btnDashNewSystem:hover {
+  background: #253644 !important;
+  transform: translateY(-1px) !important;
+}
+
+#viewDashboard .data-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  text-align: left !important;
+}
+
+#viewDashboard .data-table thead th {
+  background: #FAF6ED !important;
+  padding: 13px 18px !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.06em !important;
+  color: #7A8691 !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+  border-top: none !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard .data-table tbody td {
+  padding: 16px 18px !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  font-size: 12.5px !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  vertical-align: middle !important;
+  color: #18232C !important;
+}
+
+#viewDashboard .data-table tbody tr {
+  transition: background-color 0.15s ease !important;
+}
+
+#viewDashboard .data-table tbody tr:hover {
+  background-color: #FAF8F3 !important;
+}
+
+#viewDashboard .data-table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+
+#viewDashboard .mono {
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  background: #F1EFEA !important;
+  color: #334155 !important;
+  padding: 4px 8px !important;
+  border-radius: 6px !important;
+  display: inline-block !important;
+  letter-spacing: -0.01em !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard .user-chip-mini {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard .badge-pill {
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  white-space: nowrap !important;
+}
+
+#viewDashboard .data-table td button {
+  white-space: nowrap !important;
 }
