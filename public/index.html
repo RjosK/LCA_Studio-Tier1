@@ -7,6 +7,9 @@
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
   <title>ECONODE Studio · Plataforma de Análisis de Ciclo de Vida & EPD</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/styles.css?v=20261012_client_report_v37">
   <!-- Google Identity Services (GSI SDK) -->
   <script src="https://accounts.google.com/gsi/client" async defer onload="window.initGoogleAuthUI && window.initGoogleAuthUI()"></script>
@@ -46,10 +49,11 @@
 
     <!-- Navigation Links (Visible in Landing Mode) -->
     <nav class="nav-links" id="landingNavLinks">
-      <a href="#homeFeatures" class="landing-nav-link" id="lnkFeatures" data-i18n="home.nav_features">Características</a>
-      <a href="#homeArchitecture" class="landing-nav-link" id="lnkWhyUs" data-i18n="home.nav_why">Por qué Nosotros</a>
-      <a href="#homeTestimonials" class="landing-nav-link" id="lnkTestimonials" data-i18n="home.nav_testimonials">Testimonios</a>
-      <a href="#homeFaq" class="landing-nav-link" id="lnkFaq" data-i18n="home.nav_faq">Preguntas Frecuentes</a>
+      <a href="#homeArchitecture" class="landing-nav-link" id="lnkWhyUs" data-i18n="home.nav_why">Por qu&eacute; ECONODE</a>
+      <a href="#homeFaq" class="landing-nav-link" id="lnkFaq" data-i18n="home.nav_faq">Pilares T&eacute;cnicos</a>
+      <a href="#homeProfiles" class="landing-nav-link" id="lnkProfiles" data-i18n="home.nav_profiles">Perfiles</a>
+      <a href="#homeCases" class="landing-nav-link" id="lnkCases" data-i18n="home.nav_cases">Casos</a>
+      <a href="#homePricing" class="landing-nav-link" id="lnkPricing" data-i18n="home.nav_pricing">Planes</a>
     </nav>
 
     <!-- Top Right Actions -->
@@ -62,7 +66,7 @@
         <button class="btn btn-secondary btn-sm" id="btnNavSignup" data-i18n="home.nav_signup">
           Registrarse
         </button>
-        <button class="btn btn-primary btn-sm" id="btnNavEnterStudio" data-i18n="home.nav_enter">
+        <button class="btn btn-primary btn-sm" id="btnNavEnterStudio" data-alias="navBtnIngresarStudio" data-i18n="home.nav_enter">
           Ingresar al Studio ➔
         </button>
       </div>
@@ -95,332 +99,734 @@
   <!-- ============================================================= -->
   <!-- 2. VISTA 0: HOME LANDING PAGE DE PENPOT (#viewHome) -->
   <!-- ============================================================= -->
-  <main class="view-container active" id="viewHome">
-    <!-- HERO SECTION -->
-    <section class="home-hero-section">
-      <div class="home-hero-content">
-        <div class="badge-pill badge-emerald" style="margin-bottom: 14px;">
-          ● LIFE CYCLE ASSESSMENT PLATFORM
-        </div>
-        <h1 class="home-hero-title">ECONODE</h1>
-        <h2 class="home-hero-subtitle" data-i18n="home.hero_subtitle">Professional Life Cycle Assessment Platform</h2>
-        <p class="home-hero-desc" data-i18n="home.hero_desc">
-          Model product systems, calculate environmental impacts (LCIA), and audit ISO compliance, 100% in the cloud.
-        </p>
+    <!-- ============================================================= -->
+  <!-- 2. VISTA 0: HOME LANDING PAGE (REDISEÑO STRAND LIGHT + FOLD TOOLBAR) -->
+  <!-- ============================================================= -->
+  <main class="view-container active view-home" id="viewHome">
+    <!-- HERO SECTION (AUTHENTIC PALLADIO COMPOSITION) -->
+    <section class="palladio-hero-section">
+      <div class="palladio-hero-canvas">
+        <!-- Pinned background image that stays fixed to margins on all zoom levels -->
+        <img src="images/candidates/slate/cand_16_slate.jpg" alt="Fondo industrial" class="palladio-canvas-bg-img">
+        <script>
+          (function() {
+            try {
+              var customBg = localStorage.getItem('econode_hero_bg');
+              if (customBg) {
+                var img = document.querySelector('.palladio-canvas-bg-img');
+                if (img) img.src = customBg;
+              }
+              var customThumb = localStorage.getItem('econode_case_thumb');
+              if (customThumb) {
+                var thumb = document.querySelector('.palladio-case-thumb');
+                if (thumb) thumb.src = customThumb;
+              }
+            } catch(e) {}
+          })();
+        </script>
+        <!-- Background Overlay for contrast -->
+        <div class="palladio-fresco-overlay"></div>
 
-        <div class="home-hero-cta-group">
-          <button class="btn btn-primary" id="btnHomeEnterStudio" style="height: 42px; padding: 0 20px; font-size: 13px;" data-i18n="home.explore_btn">
-            Explore Features ➔
-          </button>
-          <button class="btn btn-secondary" id="btnHomeViewExamples" style="height: 42px; padding: 0 18px; font-size: 13px;" data-i18n="home.examples_btn">
-            LCA Examples
-          </button>
+        <!-- Top Left Pill Badge -->
+        <div class="palladio-top-badge">
+          <span class="palladio-top-plus">+</span>
+          <span class="palladio-top-text">RIGOR CIENT&Iacute;FICO EN CICLO DE VIDA INDUSTRIAL</span>
         </div>
 
-        <div class="home-hero-trust-row">
-          <span>✓ 100% Web sin instalación</span>
-          <span style="color: var(--border-strong);">•</span>
-          <span>✓ Conexión ecoinvent 3.12</span>
-          <span style="color: var(--border-strong);">•</span>
-          <span>✓ Rigor científico ISO 14044 / NOM-070</span>
+        <!-- Massive Hero Title -->
+        <h1 class="palladio-hero-title">
+          La ciencia rigurosa<br>
+          detr&aacute;s de decisiones industriales.
+        </h1>
+
+        <!-- Bottom Area: Split between Paragraph/Buttons on Left and Floating Case Study Card on Right -->
+        <div class="palladio-hero-bottom-row">
+          <!-- Left: Paragraph and Pill Buttons -->
+          <div class="palladio-bottom-left">
+            <p class="palladio-hero-paragraph">
+              ECONODE es la plataforma de ingenier&iacute;a de ciclo de vida para analistas y l&iacute;deres industriales: modelado nodal desacoplado de normativas fijas, c&aacute;lculo matricial Leontief sobre 14,000 procesos de ecoinvent 3.12 y custodia soberana de evidencias en Google Drive.
+            </p>
+            <div class="palladio-actions">
+              <button class="palladio-btn-book" id="btnHomeEnterStudio" data-alias="heroBtnIniciarACV" name="heroBtnIniciarACV">
+                <span>Ingresar al Studio</span>
+                <span class="palladio-btn-arrow">&rarr;</span>
+              </button>
+              <a href="#homeCases" class="palladio-btn-pricing" id="btnHomeViewExamples" data-alias="heroBtnEjemplosNOM" name="heroBtnEjemplosNOM">
+                <span>Ver Planes y Casos</span>
+                <span class="palladio-btn-arrow">&rarr;</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Right: Compact Floating Case Study Card (Palladio Exact Style) -->
+          <div class="palladio-floating-case-card" id="heroCaseStudyCard">
+            <a href="case_cafetera.html" class="palladio-case-card-link" id="btnOpenCaseStudy">
+              <div class="palladio-case-thumb-wrap">
+                <img src="images/case_studies/thumbs/small_07_pet_production.jpg" alt="Caso de estudio industrial" class="palladio-case-thumb">
+              </div>
+              <div class="palladio-case-body">
+                <div class="palladio-case-pill">Caso de estudio</div>
+                <p class="palladio-case-desc">
+                  Balance de masa y huella ambiental de preforma PET 28g con 18 intercambios ecoinvent verificados.
+                </p>
+                <div class="palladio-case-footer">
+                  <div class="palladio-case-stat">
+                    <span class="palladio-stat-val">1.428 kg</span>
+                    <span class="palladio-stat-lbl">CO&#8322;-eq secuenciado</span>
+                  </div>
+                  <div class="palladio-case-circle-btn">
+                    <span>&rarr;</span>
+                  </div>
+                </div>
+              </div>
+            </a>
+          </div>
         </div>
       </div>
+    </section>
 
-      <!-- HERO GRAPH VISUALIZATION (Vector Directed Graph Replica) -->
-      <div class="home-hero-visual-card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-          <span class="mono" style="font-size: 10px; color: var(--text-dim);">SYS_GRAPH :: DIRECTED_TREE</span>
-          <span class="mono" style="font-size: 10.5px; font-weight: 700; color: var(--accent-emerald);">1.00 Functional Unit</span>
-        </div>
-
-        <svg viewBox="0 0 460 280" style="width: 100%; height: auto;">
-          <!-- Enlaces / Curvas del árbol -->
-          <path d="M 60 140 Q 150 140 230 110" stroke="#CBD5E1" stroke-width="2" fill="none" />
-          <path d="M 230 110 Q 310 80 390 60" stroke="#CBD5E1" stroke-width="2" fill="none" />
-          <path d="M 230 110 Q 310 160 390 190" stroke="#CBD5E1" stroke-width="2" fill="none" />
-          <path d="M 120 220 Q 180 180 230 110" stroke="#059669" stroke-width="2" stroke-dasharray="4,4" fill="none" />
-          <path d="M 390 190 Q 320 250 230 250" stroke="#CBD5E1" stroke-width="1.5" fill="none" />
-
-          <!-- Nodos del Grafo -->
-          <!-- Insumo A: Ore Extr. -->
-          <circle cx="60" cy="140" r="7" fill="#0F172A" />
-          <text x="60" y="162" font-size="9" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">Ore Extr.</text>
-
-          <!-- Core Process -->
-          <circle cx="230" cy="110" r="10" fill="#059669" />
-          <circle cx="230" cy="110" r="16" fill="none" stroke="#86EFAC" stroke-width="2" opacity="0.6" />
-          <text x="230" y="90" font-size="10" font-family="Source Sans 3" font-weight="700" fill="#0F172A" text-anchor="middle">Core Process</text>
-          <text x="230" y="132" font-size="8" font-family="Roboto Mono" fill="#059669" text-anchor="middle">Loop 0.18</text>
-
-          <!-- Salida 1: Impact CO2 -->
-          <circle cx="390" cy="60" r="7" fill="#0284C7" />
-          <text x="390" y="80" font-size="9" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">GWP 100a</text>
-
-          <!-- Salida 2: Biomass -->
-          <circle cx="390" cy="190" r="7" fill="#059669" />
-          <text x="390" y="210" font-size="9" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">Biomass</text>
-
-          <!-- Transporte -->
-          <circle cx="120" cy="220" r="6" fill="#D97706" />
-          <text x="120" y="238" font-size="8.5" font-family="Roboto Mono" fill="#64748B" text-anchor="middle">Transport</text>
-
-          <!-- Emisiones Suelo -->
-          <circle cx="230" cy="250" r="5" fill="#64748B" />
-          <text x="230" y="266" font-size="8" font-family="Roboto Mono" fill="#94A3B8" text-anchor="middle">NH3 Soil</text>
-        </svg>
-
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px; background: var(--bg-subtle); padding: 8px 12px; border-radius: var(--radius-sm);">
+    <!-- PALLADIO BENTO SECTION: POR QUE ELEGIR ECONODE -->
+    <section class="palladio-bento-wrapper" id="homeArchitecture">
+      <div class="palladio-bento-container">
+        <!-- Header -->
+        <div class="palladio-bento-header">
           <div>
-            <span style="font-size: 8.5px; color: var(--text-muted); font-family: var(--font-mono);">IMPACT GWP 100a:</span>
-            <strong style="font-size: 11px; color: var(--accent-emerald); font-family: var(--font-mono); margin-left: 4px;">1.428 kg CO₂-eq</strong>
+            <div class="palladio-bento-tag">
+              <span class="tag-dot">+</span> POR QU&Eacute; ECONODE
+            </div>
+            <h2 class="palladio-bento-title">Por qu&eacute; elegir ECONODE</h2>
           </div>
-          <span class="badge-pill badge-emerald" style="font-size: 8px;">✓ ISO 14044 Certified</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- INTEGRATED WITH & TRUSTED BY -->
-    <section class="home-partners-section">
-      <div style="font-size: 10px; font-weight: 700; color: var(--text-dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 16px;">
-        INTEGRATED WITH & TRUSTED BY
-      </div>
-      <div class="home-partners-grid">
-        <div class="partner-badge">● Brightway</div>
-        <div class="partner-badge">● Sphera</div>
-        <div class="partner-badge">● ecoinvent 3.12</div>
-        <div class="partner-badge">● openLCA 2.x</div>
-      </div>
-    </section>
-
-    <!-- CORE CAPABILITIES (4 CARDS) -->
-    <section class="home-section" id="homeFeatures">
-      <div class="section-badge">CORE CAPABILITIES</div>
-      <h2 class="section-title">VANGUARD TECHNOLOGY FOR LCA</h2>
-
-      <div class="capabilities-grid">
-        <div class="capability-card">
-          <div class="capability-icon">➔</div>
-          <h3 class="capability-title">Visual Modeling Canvas</h3>
-          <p class="capability-desc">
-            Map complex product systems with interactive nodes, drag-and-drop palettes, process connectors, and real-time Sankey mass & energy balances.
-          </p>
-        </div>
-
-        <div class="capability-card">
-          <div class="capability-icon">✓</div>
-          <h3 class="capability-title">NOM-070 & ISO Compliance</h3>
-          <p class="capability-desc">
-            Built-in auditor checklists, 18 normative verification clauses, tamper-proof audit trails, and official digital certification seals (HMAC-SHA256).
-          </p>
-        </div>
-
-        <div class="capability-card">
-          <div class="capability-icon">📊</div>
-          <h3 class="capability-title">Bóveda Documental & Expedientes</h3>
-          <p class="capability-desc">
-            Almacena y gestiona en base de datos dedicada archivos SQL, balances en Excel (.xlsx), informes en PDF, modelos openLCA y facturas primarias de planta.
-          </p>
-        </div>
-
-        <div class="capability-card">
-          <div class="capability-icon">☁</div>
-          <h3 class="capability-title">Cloud Database Explorer</h3>
-          <p class="capability-desc">
-            Navigate 26,533+ unit processes and 14,210 elementary flows from ecoinvent 3.12 Cutoff without local Java installations or heavy setup.
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ARCHITECTURE & ROLE-BASED ACCESS (THE 3 PROFILES) -->
-    <section class="home-section" id="homeArchitecture">
-      <div class="section-badge">THE ECONODE ADVANTAGE</div>
-      <h2 class="section-title">ARCHITECTED FOR SCALE & COMPLIANCE</h2>
-
-      <div class="advantage-grid">
-        <!-- 01 Cloud Performance -->
-        <div class="advantage-card">
-          <span class="mono" style="font-size: 10px; color: var(--accent-emerald); font-weight: 700;">01 / CLOUD-NATIVE PERFORMANCE</span>
-          <h3 style="font-size: 16px; font-weight: 700; margin-top: 6px;">100% Cloud-Native Performance</h3>
-          <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 6px;">
-            Elimina las instalaciones complejas de Java y los bloqueos de memoria. Diseñado con arquitectura ligera SQLite WAL y micro-servicios autónomos en Python.
-          </p>
-          <div style="margin-top: 10px; font-size: 11px; color: var(--text-muted);">
-            ⚡ Cero dependencias pesadas &nbsp;|&nbsp; ⚡ Inicio instantáneo en puerto 8081 &nbsp;|&nbsp; ⚡ Estado colaborativo en tiempo real
+          <div>
+            <p class="palladio-bento-lead">
+              Desacoplamos la arquitectura del software de normativas fijas: c&aacute;lculo matricial Leontief transparente, custodia soberana de datos en Google Drive y rigor cient&iacute;fico sin cajas negras.
+            </p>
           </div>
         </div>
 
-        <!-- 02 Zero Lock-in -->
-        <div class="advantage-card">
-          <span class="mono" style="font-size: 10px; color: var(--accent-emerald); font-weight: 700;">02 / OPEN ECOSYSTEM</span>
-          <h3 style="font-size: 16px; font-weight: 700; margin-top: 6px;">Zero Vendor Lock-In</h3>
-          <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 6px;">
-            Exporta e importa sin pérdida en los formatos industriales estándar de la industria ACV global:
-          </p>
-          <div style="display: flex; gap: 8px; margin-top: 10px;">
-            <span class="badge-pill badge-slate">openLCA JSON-LD</span>
-            <span class="badge-pill badge-slate">ILCD / Sphera XML</span>
-            <span class="badge-pill badge-slate">SimaPro CSV</span>
-            <span class="badge-pill badge-slate">Excel / SQL Dumps</span>
-          </div>
-        </div>
-
-        <!-- 03 SMART RBAC CON LOS 3 PERFILES -->
-        <div class="advantage-card" style="grid-column: 1 / -1;">
-          <span class="mono" style="font-size: 10px; color: var(--accent-emerald); font-weight: 700;">03 / ENTERPRISE GOVERNANCE</span>
-          <h3 style="font-size: 18px; font-weight: 700; margin-top: 6px;">Smart Role-Based Access: Tres Perfiles Especializados</h3>
-          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 800px;">
-            Un espacio unificado con flujos de trabajo independientes para cada actor del estudio de ciclo de vida:
-          </p>
-
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px;">
-            <!-- Perfil 1: Analista -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                <div class="user-avatar" style="width: 24px; height: 24px; font-size: 9px; background: #0284C7;">CM</div>
-                <strong style="font-size: 12px;">Analista / Modelador</strong>
+        <!-- 4-Column Bento Grid -->
+        <div class="palladio-bento-grid">
+          <!-- Col 1: Visual Card with Historical Blueprint Drawing + Checklist -->
+          <div class="bento-card-palladio bento-card-art">
+            <div class="bento-art-inner">
+              <img src="images/bento_compass_drawing.png" alt="Ingenier&iacute;a de precisi&oacute;n" class="bento-art-img">
+              <div class="bento-art-overlay"></div>
+              <h3 class="bento-art-title">Dise&ntilde;ado para analistas y l&iacute;deres industriales.</h3>
+              <a href="#viewStudio" class="bento-art-btn">Conocer Arquitectura &rarr;</a>
+            </div>
+            <div class="bento-checklist">
+              <div class="bento-check-row">
+                <span class="bento-check-icon">&bull;</span>
+                <span>Matriz Leontief transparente y auditable</span>
               </div>
-              <div style="font-size: 10px; color: var(--accent-blue); font-weight: 700; margin-bottom: 6px;">CREADOR DEL SISTEMA PRODUCTO</div>
-              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
-                Crea sistemas producto, define la unidad funcional, arrastra procesos al lienzo, conecta flujos técnicos y configura parámetros y balances de masa.
+              <div class="bento-check-row">
+                <span class="bento-check-icon">&bull;</span>
+                <span>Custodia soberana en Google Drive BYOS</span>
+              </div>
+              <div class="bento-check-row">
+                <span class="bento-check-icon">&bull;</span>
+                <span>Auditor&iacute;a agn&oacute;stica ISO 14044 y NOM-070</span>
+              </div>
+              <div class="bento-check-row">
+                <span class="bento-check-icon">&bull;</span>
+                <span>100% web sin instalaci&oacute;n de Java local</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Col 2: ecoinvent Stat -->
+          <div class="bento-card-palladio">
+            <div>
+              <div class="bento-stat-pill">
+                <span class="bento-pill-sym">&bull;</span> Base de datos ecoinvent
+              </div>
+              <div class="bento-stat-num">14,000 +</div>
+            </div>
+            <div>
+              <p class="bento-stat-desc">
+                Procesos unitarios de fondo validados con m&aacute;s de 26,000 intercambios elementales biosfera para modelado de ciclo de vida.
               </p>
             </div>
+          </div>
 
-            <!-- Perfil 2: Auditor Líder -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                <div class="user-avatar" style="width: 24px; height: 24px; font-size: 9px; background: #0F172A;">JA</div>
-                <strong style="font-size: 12px;">Auditor Líder ACV</strong>
-              </div>
-              <div style="font-size: 10px; color: var(--accent-emerald); font-weight: 700; margin-bottom: 6px;">SUPERVISIÓN & CERTIFICACIÓN</div>
-              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
-                Inspecciona el modelo, audita las 18 cláusulas NOM-070 / ISO 14044, emite observaciones técnicas en el reporte y firma el dictamen oficial con HMAC-SHA256.
-              </p>
+          <!-- Col 3: Cloud & Sovereignty Stat -->
+          <div class="bento-card-palladio">
+            <div>
+              <div class="bento-stat-num" style="margin-top: 0;">100 %</div>
             </div>
-
-            <!-- Perfil 3: Cliente Productor -->
-            <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 16px;">
-              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                <div class="user-avatar client" style="width: 24px; height: 24px; font-size: 9px;">ER</div>
-                <strong style="font-size: 12px;">Cliente / Productor</strong>
+            <div>
+              <p class="bento-stat-desc" style="margin-bottom: 20px;">
+                En la nube y de custodia soberana local: tus modelos, balances y facturas de planta nunca salen de tu cuenta de Google Drive.
+              </p>
+              <div class="bento-stat-pill">
+                <span class="bento-pill-sym">&check;</span> Custodia BYOS Google Drive
               </div>
-              <div style="font-size: 10px; color: var(--accent-amber); font-weight: 700; margin-bottom: 6px;">EVIDENCIAS & REPORTE FINAL</div>
-              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.4;">
-                Sube información primaria (facturas CFE, dossiers en Excel/PDF), responde objeciones del auditor para resolverlas y consulta la declaración EPD final.
+            </div>
+          </div>
+
+          <!-- Col 4: International Compliance Stat -->
+          <div class="bento-card-palladio">
+            <div>
+              <div class="bento-stat-pill">
+                <span class="bento-pill-sym">&check;</span> Conformidad agn&oacute;stica
+              </div>
+              <div class="bento-stat-num">18</div>
+            </div>
+            <div>
+              <p class="bento-stat-desc">
+                Cl&aacute;usulas normativas auditables con firmas criptogr&aacute;ficas HMAC-SHA256 para emisi&oacute;n conforme a NOM-070 e ISO 14044.
               </p>
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-    <!-- METRICS STRIP -->
-    <section class="home-metrics-section">
-      <div class="metric-item">
-        <div class="metric-value">26,500+</div>
-        <div class="metric-label">ecoinvent 3.12 Processes</div>
-        <div class="metric-sub">Cutoff Unit & System Datasets</div>
-      </div>
-      <div class="metric-item">
-        <div class="metric-value">4,700+</div>
-        <div class="metric-label">Elemental Flows</div>
-        <div class="metric-sub">Air, Water & Soil Biosphere</div>
-      </div>
-      <div class="metric-item">
-        <div class="metric-value">100%</div>
-        <div class="metric-label">NOM-070 Verified</div>
-        <div class="metric-sub">Certified Mexican Standard</div>
-      </div>
-      <div class="metric-item">
-        <div class="metric-value">&lt; 1s</div>
-        <div class="metric-label">System Data Retrieval</div>
-        <div class="metric-sub">High-Performance Local SQLite</div>
-      </div>
-    </section>
-
-    <!-- TESTIMONIALS / SUCCESS STORIES -->
-    <section class="home-section" id="homeTestimonials">
-      <div class="section-badge">SUCCESS STORIES</div>
-      <h2 class="section-title">TRUSTED BY SUSTAINABILITY DIRECTORS & AUDITORS</h2>
-
-      <div class="testimonials-grid">
-        <div class="testimonial-card">
-          <div class="badge-pill badge-emerald" style="font-size: 8.5px; margin-bottom: 8px;">⚡ CLOUD SPEED</div>
-          <p class="testimonial-quote">
-            "ECONODE eliminó los cuellos de botella del modelado. Pasar de software de escritorio con bloqueos de Java a una plataforma web con ecoinvent 3.12 aceleró nuestros tiempos de entrega a la mitad."
-          </p>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
-            <div class="user-avatar client" style="width: 24px; height: 24px;">ER</div>
-            <div>
-              <strong style="font-size: 11px;">Dra. Elena Ramírez</strong>
-              <div style="font-size: 9.5px; color: var(--text-muted);">Directora de Sustentabilidad, BioPack México</div>
-            </div>
+        <!-- Bottom Logo Ribbon -->
+        <div class="palladio-logo-ribbon">
+          <div class="logo-ribbon-pill-dark">
+            <span>Interoperabilidad con est&aacute;ndares globales</span>
           </div>
-        </div>
-
-        <div class="testimonial-card">
-          <div class="badge-pill badge-emerald" style="font-size: 8.5px; margin-bottom: 8px;">✓ ISO COMPLIANCE</div>
-          <p class="testimonial-quote">
-            "Como verificadores terceros, el checklist automatizado NOM-070 y el sello criptográfico SHA-256 nos permiten emitir dictámenes acreditados con plena trazabilidad y seguridad legal."
-          </p>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
-            <div class="user-avatar" style="width: 24px; height: 24px;">MV</div>
-            <div>
-              <strong style="font-size: 11px;">Mtro. Marcus Vance, PE</strong>
-              <div style="font-size: 9.5px; color: var(--text-muted);">Auditor Líder ACV, VeriSustain</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="testimonial-card">
-          <div class="badge-pill badge-emerald" style="font-size: 8.5px; margin-bottom: 8px;">📊 COLLABORATION</div>
-          <p class="testimonial-quote">
-            "Poder trabajar analistas, auditores y clientes en un mismo hilo documental resolviendo observaciones técnicas en tiempo real cambió por completo la forma en que auditamos empaques."
-          </p>
-          <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
-            <div class="user-avatar" style="width: 24px; height: 24px; background: #0284C7;">SM</div>
-            <div>
-              <strong style="font-size: 11px;">Sofía Méndez</strong>
-              <div style="font-size: 9.5px; color: var(--text-muted);">Head of ESG Analytics, Circularis</div>
-            </div>
-          </div>
+          <div class="logo-ribbon-item">ecoinvent 3.12</div>
+          <div class="logo-ribbon-item">Brightway 2.5</div>
+          <div class="logo-ribbon-item">openLCA 2.x</div>
+          <div class="logo-ribbon-item">ISO 14040 / 14044</div>
+          <div class="logo-ribbon-item">NOM-070-SE-2024</div>
+          <div class="logo-ribbon-item">Google Drive BYOS</div>
         </div>
       </div>
     </section>
 
-    <!-- FREQUENTLY ASKED QUESTIONS (FAQ ACCORDION) -->
-    <section class="home-section" id="homeFaq">
-      <div class="section-badge">FREQUENTLY ASKED QUESTIONS</div>
-      <h2 class="section-title">EVERYTHING YOU NEED TO KNOW ABOUT ECONODE</h2>
+    
 
-      <div class="faq-container">
-        <details class="faq-item" open>
-          <summary class="faq-question">¿Cómo se compara ECONODE Studio frente a software tradicional como openLCA o SimaPro?</summary>
-          <div class="faq-answer">
-            ECONODE proporciona acceso 100% web en la nube sin necesidad de instalar entornos Java locales ni máquinas virtuales pesadas. Integra colaboración multi-usuario entre Analistas, Auditores y Clientes, auditoría normativa NOM-070-SE-2024 e inventario de ecoinvent 3.12 oficial.
+    <!-- PALLADIO ACCORDION: CUATRO PILARES DE RIGOR TECNICO (FAQ) -->
+    <section class="palladio-accordion-wrapper" id="homeFaq">
+      <div class="palladio-accordion-container">
+        <!-- Header -->
+        <div class="palladio-acc-header">
+          <div>
+            <div class="palladio-acc-tag">
+              <span class="tag-dot">+</span> PREGUNTAS CLAVE &amp; RIGOR T&Eacute;CNICO
+            </div>
+            <h2 class="palladio-acc-title">Cuatro pilares de rigor t&eacute;cnico</h2>
           </div>
-        </details>
+          <div>
+            <p class="palladio-acc-lead">
+              Abre cada disciplina para conocer el m&eacute;todo y la arquitectura detr&aacute;s del software. Dise&ntilde;ado para responder con transparencia a comit&eacute;s y auditores externos.
+            </p>
+          </div>
+        </div>
 
-        <details class="faq-item">
-          <summary class="faq-question">¿Puedo importar y exportar mis modelos existentes de openLCA, GaBi y Brightway?</summary>
-          <div class="faq-answer">
-            Sí. ECONODE cuenta con soporte nativo bidireccional para paquetes openLCA JSON-LD, estándares ILCD XML (Sphera / GaBi), matrices CSV de SimaPro y plantillas tabuladas parametrizadas en Excel.
-          </div>
-        </details>
+        <!-- The 4 Horizontal Accordion Cards -->
+        <div class="palladio-acc-deck" id="accordionDeck">
 
-        <details class="faq-item">
-          <summary class="faq-question">¿Cómo funciona la verificación de conformidad NOM-070-SE-2024 / ISO 14044?</summary>
-          <div class="faq-answer">
-            La plataforma incluye un checklist digital con las 18 cláusulas obligatorias de la norma mexicana. Cada cláusula enlaza la evidencia del modelo (facturas CFE, balances de masa, reglas de corte) y permite al auditor líder firmar digitalmente el dictamen con algoritmo HMAC-SHA256.
+          <!-- CARD 001: SOBERAN?A BYOS (Active by default) -->
+          <div class="palladio-acc-card active" data-index="1" onclick="openFaqCard(this)">
+            <div class="palladio-acc-rail">
+              <div class="palladio-acc-rail-num">001</div>
+              <div class="palladio-acc-rail-label-box">
+                <span class="palladio-acc-rail-label">Soberan&iacute;a BYOS</span>
+              </div>
+            </div>
+            <div class="palladio-acc-open-content">
+              <div class="palladio-acc-open-num-pill">001</div>
+              <div class="palladio-acc-text-col">
+                <div>
+                  <h3 class="palladio-acc-card-title">Tus datos en tu Drive, nunca en nuestro servidor.</h3>
+                  <p class="palladio-acc-card-desc">
+                    Arquitectura Bring Your Own Storage (BYOS): balances Excel, facturas primarias de CFE y bases SQL se transmiten en streaming directo a tu Google Drive sin intermediarios ni almacenamiento de terceros.
+                  </p>
+                </div>
+                <div class="palladio-acc-offers-section">
+                  <div class="palladio-acc-offers-label">QU&Eacute; OFRECE LA ARQUITECTURA</div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Streaming RFC 2387 directo a Google Drive</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Sellos hash criptogr&aacute;ficos SHA-256 en cliente</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Cero retenci&oacute;n de evidencias en servidores de ECONODE</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Conformidad estricta con soberan&iacute;a de datos ISO 27001</span>
+                  </div>
+                </div>
+              </div>
+              <div class="palladio-acc-art-col">
+                <img src="images/candidates/slate/cand_12_slate.jpg" alt="Custodia Soberana" class="palladio-acc-art-img">
+              </div>
+            </div>
           </div>
-        </details>
 
-        <details class="faq-item">
-          <summary class="faq-question">¿Cuáles son los permisos de los 3 perfiles disponibles?</summary>
-          <div class="faq-answer">
-            El <strong>Analista</strong> modela el sistema producto en el lienzo y ajusta parámetros; el <strong>Auditor Líder</strong> inspecciona la evidencia, plantea observaciones técnicas y firma el dictamen; y el <strong>Cliente</strong> sube facturas y datos primarios en la Bóveda de Documentos y resuelve observaciones técnicas.
+          <!-- CARD 002: BALANCE MATRICIAL LEONTIEF -->
+          <div class="palladio-acc-card" data-index="2" onclick="openFaqCard(this)">
+            <div class="palladio-acc-rail">
+              <div class="palladio-acc-rail-num">002</div>
+              <div class="palladio-acc-rail-label-box">
+                <span class="palladio-acc-rail-label">Balance Leontief</span>
+              </div>
+            </div>
+            <div class="palladio-acc-open-content">
+              <div class="palladio-acc-open-num-pill">002</div>
+              <div class="palladio-acc-text-col">
+                <div>
+                  <h3 class="palladio-acc-card-title">C&aacute;lculo matricial exacto con balance de masa &lt; 0.01%.</h3>
+                  <p class="palladio-acc-card-desc">
+                    Resoluci&oacute;n del sistema tecnol&oacute;gico A e intervenciones de biosfera B en milisegundos directamente en la nube. Trazabilidad completa de flujos elementales sin aproximaciones heur&iacute;sticas.
+                  </p>
+                </div>
+                <div class="palladio-acc-offers-section">
+                  <div class="palladio-acc-offers-label">CAPACIDADES DE C&Aacute;LCULO</div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Inversi&oacute;n matricial tecnol&oacute;gica s = A&#8315;&sup1; &middot; f</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>C&aacute;lculo de inventario de ciclo de vida g = B &middot; s</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Caracterizaci&oacute;n de impacto CML, ReCiPe e IPCC</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Tiempo de respuesta de c&oacute;mputo inferior a 50 ms</span>
+                  </div>
+                </div>
+              </div>
+              <div class="palladio-acc-art-col">
+                <img src="images/candidates/slate/cand_18_slate.jpg" alt="Balance Matricial" class="palladio-acc-art-img">
+              </div>
+            </div>
           </div>
-        </details>
+
+          <!-- CARD 003: INTEROPERABILIDAD UNIVERSAL -->
+          <div class="palladio-acc-card" data-index="3" onclick="openFaqCard(this)">
+            <div class="palladio-acc-rail">
+              <div class="palladio-acc-rail-num">003</div>
+              <div class="palladio-acc-rail-label-box">
+                <span class="palladio-acc-rail-label">Interoperabilidad</span>
+              </div>
+            </div>
+            <div class="palladio-acc-open-content">
+              <div class="palladio-acc-open-num-pill">003</div>
+              <div class="palladio-acc-text-col">
+                <div>
+                  <h3 class="palladio-acc-card-title">Compatible con openLCA, Brightway y ecoinvent 3.12.</h3>
+                  <p class="palladio-acc-card-desc">
+                    Exportaci&oacute;n e importaci&oacute;n en esquemas abiertos sin ataduras propietarias. Generaci&oacute;n de paquetes JSON-LD v2 deterministas, matrices NumPy y expedientes ILCD XML auditables.
+                  </p>
+                </div>
+                <div class="palladio-acc-offers-section">
+                  <div class="palladio-acc-offers-label">EST&Aacute;NDARES SOPORTADOS</div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Esquema nativo openLCA JSON-LD v2 (olca-schema)</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Cat&aacute;logo oficial de 26,533 procesos ecoinvent 3.12</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Integraci&oacute;n matricial con Brightway 2.5</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Exportaci&oacute;n certificable ILCD XML y SimaPro CSV</span>
+                  </div>
+                </div>
+              </div>
+              <div class="palladio-acc-art-col">
+                <img src="images/candidates/slate/cand_02_slate.jpg" alt="Interoperabilidad Universal" class="palladio-acc-art-img">
+              </div>
+            </div>
+          </div>
+
+          <!-- CARD 004: CICLO DE VIDA INDUSTRIAL -->
+          <div class="palladio-acc-card" data-index="4" onclick="openFaqCard(this)">
+            <div class="palladio-acc-rail">
+              <div class="palladio-acc-rail-num">004</div>
+              <div class="palladio-acc-rail-label-box">
+                <span class="palladio-acc-rail-label">Ciclo de Vida</span>
+              </div>
+            </div>
+            <div class="palladio-acc-open-content">
+              <div class="palladio-acc-open-num-pill">004</div>
+              <div class="palladio-acc-text-col">
+                <div>
+                  <h3 class="palladio-acc-card-title">Modelado nodal para manufactura y energ&iacute;a.</h3>
+                  <p class="palladio-acc-card-desc">
+                    Dise&ntilde;ado para procesos industriales complejos: inyecci&oacute;n de termopl&aacute;sticos, redes el&eacute;ctricas de alta tensi&oacute;n, generaci&oacute;n t&eacute;rmica y e&oacute;lica y cadenas de suministro intermodal.
+                  </p>
+                </div>
+                <div class="palladio-acc-offers-section">
+                  <div class="palladio-acc-offers-label">M&Oacute;DULOS DE PROCESO</div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Topolog&iacute;a nodal y &aacute;rbol de procesos en blanco</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Asistente sem&aacute;ntico de flujos elementales</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Modelado &lsquo;cradle-to-gate&rsquo; y &lsquo;cradle-to-grave&rsquo;</span>
+                  </div>
+                  <div class="palladio-acc-offer-item">
+                    <span class="palladio-acc-offer-bullet">&rarr;</span>
+                    <span>Balances de masa estequiom&eacute;tricos multi-escala</span>
+                  </div>
+                </div>
+              </div>
+              <div class="palladio-acc-art-col">
+                <img src="images/candidates/slate/cand_01_slate.jpg" alt="Ciclo de Vida Industrial" class="palladio-acc-art-img">
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="palladio-acc-footnote">
+          La combinaci&oacute;n de m&eacute;todos responde a la rigurosidad anal&iacute;tica de cada proyecto industrial.
+        </div>
+      </div>
+    </section>
+
+    <!-- PALLADIO 3-PROFILES: TRES ROLES, UNA SOLA VERDAD -->
+    <section class="palladio-profiles-wrapper" id="homeProfiles">
+      <div class="palladio-profiles-container">
+        <!-- Header -->
+        <div class="palladio-profiles-header">
+          <div>
+            <div class="palladio-profiles-tag">
+              <span class="tag-dot">+</span> PERFILES DE USUARIO
+            </div>
+            <h2 class="palladio-profiles-title">Tres roles, una sola verdad</h2>
+          </div>
+          <div>
+            <p class="palladio-profiles-lead">
+              Dise&ntilde;ado para alinear a los tres actores clave de la sostenibilidad industrial: el analista que modela, el auditor que certifica y el directivo que toma decisiones de inversi&oacute;n.
+            </p>
+          </div>
+        </div>
+
+        <!-- 3 Profiles Grid (Palladio Style) -->
+        <div class="palladio-profiles-grid">
+
+          <!-- PROFILE 1: ANALISTA DE CICLO DE VIDA -->
+          <a href="#viewStudio" class="palladio-profile-card" onclick="if(window.EconodeApp) window.EconodeApp.showView('studio')">
+            <div class="palladio-profile-thumb-wrap">
+              <img src="images/candidates/slate/cand_18_slate.jpg" alt="Analista de Ciclo de Vida" class="palladio-profile-thumb">
+              <div class="palladio-profile-badge">
+                <svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+                Modelado &amp; C&aacute;lculo
+              </div>
+            </div>
+            <div class="palladio-profile-body">
+              <div>
+                <h3 class="palladio-profile-name">Analista de Ciclo de Vida</h3>
+                <p class="palladio-profile-desc">
+                  Modela topolog&iacute;as nodales arrastrando procesos unitarios, resuelve matrices tecnol&oacute;gicas Leontief sobre 14,000 procesos de ecoinvent 3.12 y caracteriza impactos CML e IPCC sin latencia.
+                </p>
+              </div>
+              <div class="palladio-profile-footer">
+                <span class="palladio-profile-action-lbl">Ver flujo de an&aacute;lisis</span>
+                <div class="palladio-profile-circle-btn">&rarr;</div>
+              </div>
+            </div>
+          </a>
+
+          <!-- PROFILE 2: AUDITOR NORMATIVO & CERTIFICADOR -->
+          <a href="#viewStudio" class="palladio-profile-card" onclick="if(window.EconodeApp) window.EconodeApp.showView('studio')">
+            <div class="palladio-profile-thumb-wrap">
+              <img src="images/candidates/slate/cand_17_slate.jpg" alt="Auditor Normativo" class="palladio-profile-thumb">
+              <div class="palladio-profile-badge">
+                <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+                Auditor&iacute;a &amp; Sellado
+              </div>
+            </div>
+            <div class="palladio-profile-body">
+              <div>
+                <h3 class="palladio-profile-name">Auditor y Organismo de Certificaci&oacute;n</h3>
+                <p class="palladio-profile-desc">
+                  Examina balances de masa con trazabilidad forense, coteja evidencias documentales contra las 18 cl&aacute;usulas de NOM-070 e ISO 14044 y estampa firmas digitales HMAC-SHA256 para emisi&oacute;n de EPDs.
+                </p>
+              </div>
+              <div class="palladio-profile-footer">
+                <span class="palladio-profile-action-lbl">Ver protocolo de auditor&iacute;a</span>
+                <div class="palladio-profile-circle-btn">&rarr;</div>
+              </div>
+            </div>
+          </a>
+
+          <!-- PROFILE 3: LIDER INDUSTRIAL & DIRECCION -->
+          <a href="#viewStudio" class="palladio-profile-card" onclick="if(window.EconodeApp) window.EconodeApp.showView('studio')">
+            <div class="palladio-profile-thumb-wrap">
+              <img src="images/candidates/slate/cand_21_slate.jpg" alt="L&iacute;der Industrial" class="palladio-profile-thumb">
+              <div class="palladio-profile-badge">
+                <svg viewBox="0 0 24 24"><path d="M12 7V3H2v18h20V7H12zM6 19H4v-2h2v2zm0-4H4v-2h2v2zm0-4H4V9h2v2zm0-4H4V5h2v2zm4 12H8v-2h2v2zm0-4H8v-2h2v2zm0-4H8V9h2v2zm0-4H8V5h2v2zm10 12h-8v-2h2v-2h-2v-2h2v-2h-2V9h8v10zm-2-8h-2v2h2v-2zm0 4h-2v2h2v-2z"/></svg>
+                Estrategia &amp; Custodia
+              </div>
+            </div>
+            <div class="palladio-profile-body">
+              <div>
+                <h3 class="palladio-profile-name">L&iacute;der Industrial y Direcci&oacute;n</h3>
+                <p class="palladio-profile-desc">
+                  Monitorea la huella de carbono de cartera, aprueba proyectos de descarbonizaci&oacute;n con ROI transparente y custodia todas las facturas y expedientes de planta en su propio Google Drive corporativo.
+                </p>
+              </div>
+              <div class="palladio-profile-footer">
+                <span class="palladio-profile-action-lbl">Ver gesti&oacute;n ejecutiva</span>
+                <div class="palladio-profile-circle-btn">&rarr;</div>
+              </div>
+            </div>
+          </a>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- PALLADIO CASOS DE ESTUDIO (#homeCases) -->
+    <section class="palladio-cases-wrapper" id="homeCases">
+      <div class="palladio-cases-container">
+        <!-- Header -->
+        <div class="palladio-cases-header">
+          <div>
+            <div class="palladio-cases-tag">
+              <span class="tag-dot">+</span> CASOS DE ESTUDIO &middot; RIGOR APLICADO
+            </div>
+            <h2 class="palladio-cases-title">Ingenier&iacute;a probada en casos reales</h2>
+          </div>
+          <div>
+            <p class="palladio-cases-lead">
+              Modelos de ciclo de vida completos, balances de masa multi-escala y escenarios de eco-dise&ntilde;o documentados con trazabilidad forense bajo ISO 14044.
+            </p>
+          </div>
+        </div>
+
+        <!-- Featured Case Hero Card: Cafetera Domestica -->
+        <div class="palladio-featured-case-card">
+          <div class="palladio-featured-case-content">
+            <div class="palladio-case-badge-row">
+              <span class="palladio-case-pill-dark">Caso Insignia</span>
+              <span class="palladio-case-pill-green">-24.3% CO2 eq Validado</span>
+            </div>
+            <h3 class="palladio-featured-case-title">
+              Cafetera Dom&eacute;stica: Descarbonizaci&oacute;n Cradle-to-Grave
+            </h3>
+            <p class="palladio-featured-case-desc">
+              Modelado integral de 10 procesos unitarios con resoluci&oacute;n matricial Leontief sobre 26,533 procesos de ecoinvent 3.12. Descubrimiento del punto cr&iacute;tico en la fase de uso y simulaci&oacute;n de eco-dise&ntilde;o con 30% de polipropileno reciclado (rPP).
+            </p>
+            <div class="palladio-featured-stats-row">
+              <div class="palladio-feat-stat">
+                <span class="stat-num">84.2 kg</span>
+                <span class="stat-lbl">CO2 eq unitario</span>
+              </div>
+              <div class="palladio-feat-stat">
+                <span class="stat-num">10</span>
+                <span class="stat-lbl">Procesos nodales</span>
+              </div>
+              <div class="palladio-feat-stat">
+                <span class="stat-num">1,200</span>
+                <span class="stat-lbl">Ciclos de infusi&oacute;n</span>
+              </div>
+              <div class="palladio-feat-stat">
+                <span class="stat-num">18 / 18</span>
+                <span class="stat-lbl">Cl&aacute;usulas ISO 14044</span>
+              </div>
+            </div>
+            <div class="palladio-featured-action-row">
+              <a href="case_cafetera.html" class="palladio-btn-case-cta">
+                <span>Ver Caso de Estudio Completo</span>
+                <span class="btn-arrow">&rarr;</span>
+              </a>
+              <span class="palladio-case-hint">Incluye &aacute;rbol de ensamble y gr&aacute;ficas de impacto interactivas</span>
+            </div>
+          </div>
+          <div class="palladio-featured-case-media">
+            <img src="images/candidates/slate/cand_01_slate.jpg" alt="Manufactura de Cafetera" class="palladio-featured-case-img">
+          </div>
+        </div>
+
+        </div>
+    </section>
+
+    <!-- PALLADIO PLANES Y PRECIOS (#homePricing) -->
+    <section class="palladio-pricing-wrapper" id="homePricing">
+      <div class="palladio-pricing-container">
+        <!-- Header -->
+        <div class="palladio-pricing-header">
+          <div>
+            <div class="palladio-pricing-tag">
+              <span class="tag-dot">+</span> PLANES &middot; LICENCIAMIENTO TRANSPARENTE
+            </div>
+            <h2 class="palladio-pricing-title">Precios transparentes para decisiones reales</h2>
+          </div>
+          <div>
+            <p class="palladio-pricing-lead">
+              Tarifa fija, sin costos ocultos ni sorpresas en facturaci&oacute;n. Custodia soberana de tus datos directamente en tu propia cuenta de Google Drive desde el primer d&iacute;a.
+            </p>
+          </div>
+        </div>
+
+        <!-- Apple Segmented Control Billing Toggle -->
+        <div class="palladio-pricing-toggle-wrap">
+          <div class="apple-segmented-control" role="tablist" aria-label="Periodo de facturación">
+            <button class="segmented-btn active" id="btnBillMonthly" onclick="setHomeBilling('monthly')">Facturaci&oacute;n Mensual</button>
+            <button class="segmented-btn" id="btnBillYearly" onclick="setHomeBilling('yearly')">Facturaci&oacute;n Anual (2 meses gratis)</button>
+          </div>
+        </div>
+
+        <!-- 3 Plan Cards Grid -->
+        <div class="palladio-pricing-grid">
+
+          <!-- PLAN 1: STARTER -->
+          <div class="palladio-plan-card">
+            <div class="palladio-plan-header">
+              <div class="palladio-plan-name">Starter</div>
+              <p class="palladio-plan-desc">Para estudiantes, docentes y analistas independientes que inician en el modelado nodal.</p>
+              <div class="palladio-plan-price-row">
+                <span class="palladio-price-currency">$</span>
+                <span class="palladio-price-amount" id="priceStarterVal">0</span>
+                <span class="palladio-price-period">/ mes</span>
+              </div>
+              <div class="palladio-price-subtext">Gratuito para siempre</div>
+            </div>
+            <div class="palladio-plan-features">
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Hasta 3 sistemas producto activos</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Modelado en lienzo nodal drag &amp; drop</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Bases de datos de biosfera abiertas</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Exportaci&oacute;n de datos a CSV y JSON</span>
+              </div>
+            </div>
+            <div class="palladio-plan-cta">
+              <button class="palladio-plan-btn outline" onclick="window.EconodeApp && window.EconodeApp.showView('signup')">
+                Comenzar Gratis &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- PLAN 2: PROFESIONAL STUDIO (RECOMENDADO) -->
+          <div class="palladio-plan-card featured">
+            <div class="palladio-featured-pill">M&Aacute;S POPULAR</div>
+            <div class="palladio-plan-header">
+              <div class="palladio-plan-name">Profesional Studio</div>
+              <p class="palladio-plan-desc">Para consultores de sostenibilidad, ingenieros y empresas que requieren rigor normativo.</p>
+              <div class="palladio-plan-price-row">
+                <span class="palladio-price-currency">$</span>
+                <span class="palladio-price-amount" id="priceProVal">79</span>
+                <span class="palladio-price-period">USD / mes</span>
+              </div>
+              <div class="palladio-price-subtext" id="subtextProVal">Facturado mensualmente</div>
+            </div>
+            <div class="palladio-plan-features">
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Cat&aacute;logo oficial de 26,533 procesos ecoinvent 3.12</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Custodia soberana Bring Your Own Storage (BYOS)</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>C&aacute;lculo matricial Leontief ilimitado en milisegundos</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Exportaci&oacute;n openLCA v2, ILCD XML y SimaPro CSV</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Generaci&oacute;n autom&aacute;tica de informes ejecutivos EPD</span>
+              </div>
+            </div>
+            <div class="palladio-plan-cta">
+              <button class="palladio-plan-btn solid" onclick="window.EconodeApp && window.EconodeApp.showView('studio')">
+                Ingresar al Studio &rarr;
+              </button>
+            </div>
+          </div>
+
+          <!-- PLAN 3: ENTERPRISE & AUDITORIA -->
+          <div class="palladio-plan-card">
+            <div class="palladio-plan-header">
+              <div class="palladio-plan-name">Enterprise Industrial</div>
+              <p class="palladio-plan-desc">Para corporativos multi-planta y organismos certificadores de declaraciones ambientales.</p>
+              <div class="palladio-plan-price-row">
+                <span class="palladio-price-currency">$</span>
+                <span class="palladio-price-amount" id="priceEntVal">249</span>
+                <span class="palladio-price-period">USD / mes</span>
+              </div>
+              <div class="palladio-price-subtext" id="subtextEntVal">Facturado mensualmente</div>
+            </div>
+            <div class="palladio-plan-features">
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Todo lo incluido en Profesional Studio</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Auditor&iacute;a multi-rol RBAC (Analista, Auditor, Direcci&oacute;n)</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>18 cl&aacute;usulas auditables de NOM-070-SE e ISO 14044</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>Estampado de firma digital criptogr&aacute;fica HMAC-SHA256</span>
+              </div>
+              <div class="palladio-feature-item">
+                <span class="feat-check">&radic;</span>
+                <span>API REST dedicada, integraci&oacute;n ERP y SLA del 99.9%</span>
+              </div>
+            </div>
+            <div class="palladio-plan-cta">
+              <button class="palladio-plan-btn outline" onclick="window.location.href='mailto:contacto@econode.io?subject=Informacion%20Plan%20Enterprise'">
+                Contactar a Direcci&oacute;n &rarr;
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- BOTTOM HIGH-IMPACT CTA BANNER -->
+    <section class="strand-final-cta-section">
+      <div class="strand-final-cta-card">
+        <h2 class="strand-cta-title" data-i18n="home.cta_title">Comienza a modelar tu primer sistema de producto</h2>
+        <p class="strand-cta-desc" data-i18n="home.cta_subtitle">
+          Únete a los analistas de sostenibilidad y auditores que ya certifican declaraciones ambientales con rigor científico y trazabilidad total.
+        </p>
+        <div class="strand-cta-btns">
+          <button class="btn-strand-obsidian" onclick="window.EconodeApp.showView('signup')">
+            <span class="btn-strand-shine"></span>
+            <span data-i18n="home.cta_button">Crear Cuenta Gratuita</span>
+            <span class="btn-strand-icon-arrow">➔</span>
+          </button>
+          <button class="btn-strand-glass" onclick="window.EconodeApp.showView('login')">
+            <span>Iniciar Sesión en el Studio</span>
+            <span class="btn-strand-glass-arrow">↗</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -428,42 +834,39 @@
     <footer class="home-footer">
       <div class="home-footer-grid">
         <div>
-          <div class="brand-logo" style="margin-bottom: 8px;">
-            <span class="dot">●</span> ECONODE
+          <div style="font-weight: 800; font-size: 15px; color: var(--text-primary); margin-bottom: 8px;">
+            ECONODE <span style="font-weight: 400; color: var(--text-muted); font-size: 11px;">Studio Tier 1</span>
           </div>
-          <p style="font-size: 11px; color: var(--text-muted); line-height: 1.5;">
-            Cloud-native Life Cycle Assessment (LCA) platform. Accelerating scientific environmental transparency for global industry and certified auditors.
+          <p style="font-size: 11.5px; color: var(--text-muted); line-height: 1.6; max-width: 260px;">
+            Plataforma profesional de Análisis de Ciclo de Vida para analistas, auditores líderes y clientes industriales.
           </p>
-          <div style="margin-top: 10px;">
-            <span class="badge-pill badge-emerald">● ALL SYSTEMS OPERATIONAL (PORT 8081)</span>
-          </div>
         </div>
 
         <div>
-          <h4 style="font-size: 11.5px; font-weight: 700; margin-bottom: 8px;">Platform</h4>
+          <div class="footer-col-title">Plataforma</div>
           <ul class="footer-links">
-            <li><a href="#" onclick="window.EconodeApp.showView('canvas')">Visual Canvas</a></li>
-            <li><a href="#" onclick="window.EconodeApp.showView('catalog')">ecoinvent 3.12 Browser</a></li>
-            <li><a href="#" onclick="window.EconodeApp.showView('report')">Dynamic LCIA Report</a></li>
-            <li><a href="#" onclick="window.EconodeApp.showView('dashboard')">Project Portfolio</a></li>
+            <li><a href="#homeCapabilities">Capacidades</a></li>
+            <li><a href="#homeFeatures">ecoinvent 3.12</a></li>
+            <li><a href="#homeArchitecture">Auditoría NOM-070</a></li>
+            <li><a href="#homeFaq">Preguntas Frecuentes</a></li>
           </ul>
         </div>
 
         <div>
-          <h4 style="font-size: 11.5px; font-weight: 700; margin-bottom: 8px;">Compliance</h4>
+          <div class="footer-col-title">Estándares</div>
           <ul class="footer-links">
-            <li><a href="#" onclick="window.EconodeApp.showView('audit')">ISO 14040 / 14044</a></li>
-            <li><a href="#" onclick="window.EconodeApp.showView('audit')">NOM-070-SE-2024</a></li>
-            <li><a href="#" onclick="window.EconodeApp.showView('report')">EPD Generation ISO 14025</a></li>
-            <li><a href="#">HMAC-SHA256 Digital Seals</a></li>
+            <li><span>ISO 14040:2006</span></li>
+            <li><span>ISO 14044:2006</span></li>
+            <li><span>NOM-070-SE-2024</span></li>
+            <li><span>openLCA JSON-LD v2</span></li>
           </ul>
         </div>
 
         <div>
-          <h4 style="font-size: 11.5px; font-weight: 700; margin-bottom: 8px;">Soporte & Roles</h4>
+          <div class="footer-col-title">Recursos</div>
           <ul class="footer-links">
-            <li><a href="#" onclick="window.EconodeApp.showView('login')">Iniciar Sesión (Todos los Roles)</a></li>
-            <li><a href="#" onclick="window.EconodeApp.showView('signup')">Crear Nueva Cuenta</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('login')">Acceso al Studio</a></li>
+            <li><a href="#" onclick="window.EconodeApp.showView('signup')">Registro Analista</a></li>
             <li><a href="#" onclick="window.EconodeApp.openDocsModal()">Bóveda de Documentos</a></li>
           </ul>
         </div>
@@ -479,6 +882,7 @@
       </div>
     </footer>
   </main>
+
 
   <!-- ============================================================= -->
   <!-- 3. VISTA: LOGIN ÚNICAMENTE CON GOOGLE (#viewLogin) -->
@@ -1944,5 +2348,67 @@
   <script src="js/i18n.js?v=20261014_panels_toggle_v2"></script>
   <script src="js/drive_storage.js?v=20261028_byos_v1"></script>
   <script src="js/app.js?v=20261014_panels_toggle_v2"></script>
+<script>
+    if (window.location.hash) {
+      setTimeout(function() {
+        var el = document.querySelector(window.location.hash);
+        if (el) el.scrollIntoView({ behavior: 'instant' });
+      }, 50);
+    }
+  
+    function openFaqCard(el) {
+      if (el.classList.contains('active')) return;
+      document.querySelectorAll('.palladio-acc-card').forEach(function(c) { c.classList.remove('active'); });
+      el.classList.add('active');
+    }
+    
+  </script>
+
+  <script>
+    function setHomeBilling(type) {
+      var btnM = document.getElementById('btnBillMonthly');
+      var btnY = document.getElementById('btnBillYearly');
+      var pPro = document.getElementById('priceProVal');
+      var sPro = document.getElementById('subtextProVal');
+      var pEnt = document.getElementById('priceEntVal');
+      var sEnt = document.getElementById('subtextEntVal');
+      
+      if (type === 'yearly') {
+        if (btnM) btnM.classList.remove('active');
+        if (btnY) btnY.classList.add('active');
+        if (pPro) pPro.textContent = '65';
+        if (sPro) sPro.textContent = 'Facturado anualmente ($780/año - ahorras $168)';
+        if (pEnt) pEnt.textContent = '199';
+        if (sEnt) sEnt.textContent = 'Facturado anualmente ($2,388/año - ahorras $600)';
+      } else {
+        if (btnY) btnY.classList.remove('active');
+        if (btnM) btnM.classList.add('active');
+        if (pPro) pPro.textContent = '79';
+        if (sPro) sPro.textContent = 'Facturado mensualmente';
+        if (pEnt) pEnt.textContent = '249';
+        if (sEnt) sEnt.textContent = 'Facturado mensualmente';
+      }
+    }
+  </script>
+
+  <script>
+    // Smooth scrolling for all landing page anchors
+    document.addEventListener('DOMContentLoaded', function() {
+      document.querySelectorAll('a[href^="#home"]').forEach(function(anchor) {
+        anchor.addEventListener('click', function(e) {
+          var targetId = this.getAttribute('href').substring(1);
+          var targetEl = document.getElementById(targetId);
+          if (targetEl) {
+            e.preventDefault();
+            targetEl.scrollIntoView({ behavior: 'smooth' });
+            if (history.pushState) {
+              history.pushState(null, null, '#' + targetId);
+            }
+          }
+        });
+      });
+    });
+  </script>
+
 </body>
 </html>

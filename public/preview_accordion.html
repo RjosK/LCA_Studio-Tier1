@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview Acorde?n Interactivo &mdash; ECONODE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #F4F3EE;
+      color: #18232C;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      padding: 60px 24px 100px;
+    }
+
+    .accordion-section {
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .accordion-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 36px;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .accordion-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #18232C;
+      margin-bottom: 10px;
+    }
+
+    .accordion-tag .tag-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #18232C;
+      color: #F4F3EE;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .accordion-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 46px;
+      font-weight: 400;
+      color: #18232C;
+      line-height: 1.1;
+      letter-spacing: -0.01em;
+    }
+
+    .accordion-lead {
+      font-size: 15px;
+      color: #55606B;
+      max-width: 480px;
+      line-height: 1.55;
+    }
+
+    /* Horizontal Accordion Deck */
+    .accordion-deck {
+      display: flex;
+      gap: 12px;
+      height: 520px;
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .acc-card {
+      background: #FAF6ED;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 22px;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      cursor: pointer;
+      transition: flex 0.55s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, border-color 0.25s ease;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+    }
+
+    /* COLLAPSED STATE */
+    .acc-card:not(.active) {
+      flex: 0 0 76px;
+      width: 76px;
+    }
+
+    .acc-card:not(.active):hover {
+      background: #F1ECE0;
+      border-color: rgba(24, 35, 44, 0.2);
+    }
+
+    .acc-card:not(.active) .acc-open-content {
+      display: none;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .acc-rail {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      padding: 18px 0 32px 0;
+      user-select: none;
+    }
+
+    .acc-rail-num {
+      width: 38px;
+      height: 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: rgba(255, 255, 255, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #55606B;
+    }
+
+    .acc-rail-label-box {
+      flex: 1;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: 20px;
+    }
+
+    .acc-rail-label {
+      transform: rotate(-90deg);
+      transform-origin: center center;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 600;
+      color: #18232C;
+      letter-spacing: 0.01em;
+    }
+
+    /* EXPANDED (ACTIVE) STATE */
+    .acc-card.active {
+      flex: 1 1 0%;
+      min-width: 0;
+      cursor: default;
+      background: #FAF6ED;
+    }
+
+    .acc-card.active .acc-rail {
+      display: none;
+    }
+
+    .acc-open-content {
+      display: flex;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      animation: fadeInContent 0.4s ease forwards;
+    }
+
+    @keyframes fadeInContent {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Left Text Column inside Open Card */
+    .acc-text-col {
+      width: 52%;
+      height: 100%;
+      padding: 38px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 3;
+    }
+
+    .acc-card-title {
+      font-family: 'Instrument Serif', Georgia, serif;
+      font-size: 32px;
+      font-weight: 400;
+      color: #18232C;
+      line-height: 1.15;
+      margin-bottom: 14px;
+      letter-spacing: -0.01em;
+    }
+
+    .acc-card-desc {
+      font-size: 13.5px;
+      color: #55606B;
+      line-height: 1.55;
+      max-width: 440px;
+    }
+
+    .acc-offers-section {
+      margin-top: 24px;
+    }
+
+    .acc-offers-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #7A8793;
+      margin-bottom: 14px;
+    }
+
+    .acc-offer-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: #2D3E4F;
+      font-weight: 500;
+      line-height: 1.35;
+    }
+
+    .acc-offer-bullet {
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      border: 1px solid #7A8793;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      color: #18232C;
+      flex-shrink: 0;
+    }
+
+    /* Right Art Column with Linear Mask */
+    .acc-art-col {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 54%;
+      height: 100%;
+      overflow: hidden;
+      mask: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%);
+      -webkit-mask: linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 40%);
+      pointer-events: none;
+    }
+
+    .acc-art-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+    }
+
+    /* Top-Right Number Pill inside Open Card */
+    .acc-open-num-pill {
+      position: absolute;
+      top: 30px;
+      right: 32px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(0, 0, 0, 0.15);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(8px);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 600;
+      color: #18232C;
+      z-index: 4;
+    }
+
+    /* Bottom footnote bar */
+    .acc-footnote {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 13px;
+      color: #7A8793;
+      font-style: italic;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .accordion-deck {
+        flex-direction: column;
+        height: auto;
+      }
+      .acc-card:not(.active) {
+        flex: none;
+        width: 100%;
+        height: 56px;
+      }
+      .acc-rail {
+        flex-direction: row;
+        padding: 0 20px;
+      }
+      .acc-rail-label {
+        transform: none;
+      }
+      .acc-rail-label-box {
+        justify-content: flex-start;
+        padding-bottom: 0;
+        margin-left: 14px;
+      }
+      .acc-text-col {
+        width: 100%;
+      }
+      .acc-art-col {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <section class="accordion-section" id="secInteractiveQA">
+    <div class="accordion-header">
+      <div>
+        <div class="accordion-tag">
+          <span class="tag-dot">+</span> QU&Eacute; OFRECE EL SOFTWARE
+        </div>
+        <h2 class="accordion-title">Cuatro pilares de rigor t&eacute;cnico</h2>
+      </div>
+      <div>
+        <p class="accordion-lead">
+          Abre cada disciplina para conocer el m&eacute;todo y la arquitectura detr&aacute;s del software. Dise&ntilde;ado para responder con transparencia a comit&eacute;s y auditores externos.
+        </p>
+      </div>
+    </div>
+
+    <!-- The 5 Horizontal Accordion Cards -->
+    <div class="accordion-deck" id="accordionDeck">
+
+      <!-- CARD 001: SOBERAN?A BYOS (Active by default) -->
+      <div class="acc-card active" data-index="1" onclick="openCard(this)">
+        <div class="acc-rail">
+          <div class="acc-rail-num">001</div>
+          <div class="acc-rail-label-box">
+            <span class="acc-rail-label">Soberan&iacute;a BYOS</span>
+          </div>
+        </div>
+        <div class="acc-open-content">
+          <div class="acc-open-num-pill">001</div>
+          <div class="acc-text-col">
+            <div>
+              <h3 class="acc-card-title">Tus datos en tu Drive, nunca en nuestro servidor.</h3>
+              <p class="acc-card-desc">
+                Arquitectura Bring Your Own Storage (BYOS): balances Excel, facturas primarias de CFE y bases SQL se transmiten en streaming directo a tu Google Drive sin intermediarios ni almacenamiento de terceros.
+              </p>
+            </div>
+            <div class="acc-offers-section">
+              <div class="acc-offers-label">QU&Eacute; OFRECE LA ARQUITECTURA</div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Streaming RFC 2387 directo a Google Drive</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Sellos hash criptogr&aacute;ficos SHA-256 en cliente</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Cero retenci&oacute;n de evidencias en servidores de ECONODE</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Conformidad estricta con soberan&iacute;a de datos ISO 27001</span>
+              </div>
+            </div>
+          </div>
+          <div class="acc-art-col">
+            <img src="images/candidates/slate/cand_12_slate.jpg" alt="Custodia Soberana" class="acc-art-img">
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 002: BALANCE MATRICIAL LEONTIEF -->
+      <div class="acc-card" data-index="2" onclick="openCard(this)">
+        <div class="acc-rail">
+          <div class="acc-rail-num">002</div>
+          <div class="acc-rail-label-box">
+            <span class="acc-rail-label">Balance Leontief</span>
+          </div>
+        </div>
+        <div class="acc-open-content">
+          <div class="acc-open-num-pill">002</div>
+          <div class="acc-text-col">
+            <div>
+              <h3 class="acc-card-title">C&aacute;lculo matricial exacto con balance de masa &lt; 0.01%.</h3>
+              <p class="acc-card-desc">
+                Resoluci&oacute;n del sistema tecnol&oacute;gico A e intervenciones de biosfera B en milisegundos directamente en la nube. Trazabilidad completa de flujos elementales sin aproximaciones heur&iacute;sticas.
+              </p>
+            </div>
+            <div class="acc-offers-section">
+              <div class="acc-offers-label">CAPACIDADES DE C&Aacute;LCULO</div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Inversi&oacute;n matricial tecnol&oacute;gica s = A&#8315;&sup1; &middot; f</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>C&aacute;lculo de inventario de ciclo de vida g = B &middot; s</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Caracterizaci&oacute;n de impacto CML, ReCiPe e IPCC</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Tiempo de respuesta de c&oacute;mputo inferior a 50 ms</span>
+              </div>
+            </div>
+          </div>
+          <div class="acc-art-col">
+            <img src="images/candidates/slate/cand_18_slate.jpg" alt="Balance Matricial" class="acc-art-img">
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 003: INTEROPERABILIDAD UNIVERSAL -->
+      <div class="acc-card" data-index="3" onclick="openCard(this)">
+        <div class="acc-rail">
+          <div class="acc-rail-num">003</div>
+          <div class="acc-rail-label-box">
+            <span class="acc-rail-label">Interoperabilidad</span>
+          </div>
+        </div>
+        <div class="acc-open-content">
+          <div class="acc-open-num-pill">003</div>
+          <div class="acc-text-col">
+            <div>
+              <h3 class="acc-card-title">Compatible con openLCA, Brightway y ecoinvent 3.12.</h3>
+              <p class="acc-card-desc">
+                Exportaci&oacute;n e importaci&oacute;n en esquemas abiertos sin ataduras propietarias. Generaci&oacute;n de paquetes JSON-LD v2 deterministas, matrices NumPy y expedientes ILCD XML auditables.
+              </p>
+            </div>
+            <div class="acc-offers-section">
+              <div class="acc-offers-label">EST&Aacute;NDARES SOPORTADOS</div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Esquema nativo openLCA JSON-LD v2 (olca-schema)</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Cat&aacute;logo oficial de 26,533 procesos ecoinvent 3.12</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Integraci&oacute;n matricial con Brightway 2.5</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Exportaci&oacute;n certificable ILCD XML y SimaPro CSV</span>
+              </div>
+            </div>
+          </div>
+          <div class="acc-art-col">
+            <img src="images/candidates/slate/cand_02_slate.jpg" alt="Interoperabilidad Universal" class="acc-art-img">
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 004: CICLO DE VIDA INDUSTRIAL -->
+      <div class="acc-card" data-index="4" onclick="openCard(this)">
+        <div class="acc-rail">
+          <div class="acc-rail-num">004</div>
+          <div class="acc-rail-label-box">
+            <span class="acc-rail-label">Ciclo de Vida</span>
+          </div>
+        </div>
+        <div class="acc-open-content">
+          <div class="acc-open-num-pill">004</div>
+          <div class="acc-text-col">
+            <div>
+              <h3 class="acc-card-title">Modelado nodal para manufactura y energ&iacute;a.</h3>
+              <p class="acc-card-desc">
+                Dise&ntilde;ado para procesos industriales complejos: inyecci&oacute;n de termopl&aacute;sticos, redes el&eacute;ctricas de alta tensi&oacute;n, generaci&oacute;n t&eacute;rmica y e&oacute;lica y cadenas de suministro intermodal.
+              </p>
+            </div>
+            <div class="acc-offers-section">
+              <div class="acc-offers-label">M&Oacute;DULOS DE PROCESO</div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Topolog&iacute;a nodal y &aacute;rbol de procesos en blanco</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Asistente sem&aacute;ntico de flujos elementales</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Modelado &lsquo;cradle-to-gate&rsquo; y &lsquo;cradle-to-grave&rsquo;</span>
+              </div>
+              <div class="acc-offer-item">
+                <span class="acc-offer-bullet">&rarr;</span>
+                <span>Balances de masa estequiom&eacute;tricos multi-escala</span>
+              </div>
+            </div>
+          </div>
+          <div class="acc-art-col">
+            <img src="images/candidates/slate/cand_01_slate.jpg" alt="Ciclo de Vida Industrial" class="acc-art-img">
+          </div>
+        </div>
+      </div>
+
+          </div>
+
+    <div class="acc-footnote">
+      La combinaci&oacute;n de m&eacute;todos responde a la rigurosidad anal&iacute;tica de cada proyecto industrial.
+    </div>
+  </section>
+
+  <script>
+    function openCard(el) {
+      if (el.classList.contains('active')) return;
+      document.querySelectorAll('.acc-card').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+    }
+  </script>
+</body>
+</html>

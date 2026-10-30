@@ -1,0 +1,82 @@
+[
+  {
+    "id": "small_01",
+    "file": "small_01_watermill.jpg",
+    "title": "Molino Hidráulico y Acueducto (Palladio HD)",
+    "category": "Grabado Clásico Renacentista",
+    "desc": "El grabado original de Palladio en resolución nativa 1200x896. Representa el aprovechamiento histórico de energía mecánica e hidráulica.",
+    "type": "Clásico"
+  },
+  {
+    "id": "small_02",
+    "file": "small_02_architecture.jpg",
+    "title": "Villa & Tratado Andrea Palladio",
+    "category": "Arquitectura & Ingeniería Clásica",
+    "desc": "Estudio arquitectónico renacentista con ingenieros, constructores y medición de materiales.",
+    "type": "Clásico"
+  },
+  {
+    "id": "small_03",
+    "file": "small_03_landscape.jpg",
+    "title": "Sabios Analizando Planos y Cálculos",
+    "category": "Ciencia & Cálculo Matemático",
+    "desc": "Tres académicos examinando documentos, tablas numéricas y cartografía en mesa de trabajo.",
+    "type": "Clásico"
+  },
+  {
+    "id": "small_04",
+    "file": "small_04_press.jpg",
+    "title": "Prensa Mecánica y Laboratorio",
+    "category": "Mecánica & Medición Física",
+    "desc": "Investigadores con esferas armilares, balanzas e instrumental de precisión.",
+    "type": "Clásico"
+  },
+  {
+    "id": "small_05",
+    "file": "small_05_harbor.jpg",
+    "title": "Ingeniería Portuaria y Logística",
+    "category": "Infraestructura & Construcción",
+    "desc": "Maestros canteros levantando arcos y estructuras portuarias con andamiaje de madera.",
+    "type": "Clásico"
+  },
+  {
+    "id": "small_06",
+    "file": "small_06_civil.jpg",
+    "title": "Bóvedas y Obra Civil Histórica",
+    "category": "Infraestructura Pública",
+    "desc": "Complejo abovedado de piedra con galerías estructurales y estudio de cargas.",
+    "type": "Clásico"
+  },
+  {
+    "id": "small_07",
+    "file": "small_07_pet_production.jpg",
+    "title": "Lote de Preformas PET en Planta (Real)",
+    "category": "Manufactura Plástica & ACV",
+    "desc": "Fotografía industrial real de preformas transparentes recién inyectadas. Coincidencia literal con el caso de estudio.",
+    "type": "Industrial Real"
+  },
+  {
+    "id": "small_08",
+    "file": "small_08_pet_resin.jpg",
+    "title": "Granza de Resina Reciclada (rPET)",
+    "category": "Materia Prima & Circularidad",
+    "desc": "Pellets de polímero para inyección técnica y análisis de balance de masa en economía circular.",
+    "type": "Industrial Real"
+  },
+  {
+    "id": "small_09",
+    "file": "small_09_injection_mold.jpg",
+    "title": "Ingenieros en Célula de Manufactura",
+    "category": "Ingeniería de Procesos",
+    "desc": "Operadores técnicos verificando parámetros de maquinaria y tolerancia milimétrica.",
+    "type": "Industrial Real"
+  },
+  {
+    "id": "small_10",
+    "file": "small_10_wind_turbine.jpg",
+    "title": "Aerogenerador y Energía Limpia",
+    "category": "Descarbonización & Energía",
+    "desc": "Parque eólico sobre campo agrícola al atardecer, representando la transición energética industrial.",
+    "type": "Industrial Real"
+  }
+]

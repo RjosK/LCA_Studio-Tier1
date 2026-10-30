@@ -8089,7 +8089,151 @@
   // =========================================================================
   // 13. INICIALIZACIÓN GLOBAL & EVENT LISTENERS
   // =========================================================================
+
+  // =========================================================================
+  // FOLD TOOLBAR INTERACTION (Recent.design Dock Stage Controller)
+  // =========================================================================
+  function setupFoldToolbarHome() {
+    const dock = document.getElementById("heroFoldToolbar");
+    if (!dock) return;
+
+    const stageCatalog = {
+      injection: {
+        title: "Proceso 100001: Inyeccion de Preformas PET",
+        badge: "Loop Termodinamico: 0.18",
+        breadcrumb: "Lienzo ACV > Inyeccion",
+        gwp: "1.428 kg CO2-eq",
+        mass: "100.0% Conservado",
+        storage: "Google Drive BYOS (0 MB Servidor)",
+        norm: "ISO 14044 Acreditado",
+        color: "#059669"
+      },
+      blowmolding: {
+        title: "Proceso 100002: Soplado y Termoformado de Botellas",
+        badge: "Consumo CFE: 0.42 kWh/u",
+        breadcrumb: "Lienzo ACV > Soplado",
+        gwp: "1.890 kg CO2-eq",
+        mass: "99.8% Conservado",
+        storage: "Google Drive BYOS (0 MB Servidor)",
+        norm: "NOM-070 Conforme",
+        color: "#0284C7"
+      },
+      distribution: {
+        title: "Proceso 100003: Transporte y Distribucion Logistica",
+        badge: "Flete Diesel UBA: 120 km",
+        breadcrumb: "Lienzo ACV > Distribucion",
+        gwp: "2.140 kg CO2-eq",
+        mass: "100.0% Validado",
+        storage: "Google Drive BYOS (0 MB Servidor)",
+        norm: "Huella EPD Lista",
+        color: "#D97706"
+      },
+      vault: {
+        title: "Boveda Soberana de Evidencias (Google Drive BYOS)",
+        badge: "Cero Bytes en Vercel",
+        breadcrumb: "Boveda > Evidencias y Facturas",
+        gwp: "Dossier 42 MB",
+        mass: "Sello SHA-256 Activo",
+        storage: "Google Drive Personal (0 MB Servidor)",
+        norm: "GDPR / ISO 27001",
+        color: "#8B5CF6"
+      },
+      audit: {
+        title: "Auditoria Normativa y Conformidad NOM-070-SE-2024",
+        badge: "18 Cláusulas Verificadas",
+        breadcrumb: "Auditoria > NOM-070",
+        gwp: "100.0% Cumplimiento",
+        mass: "Snapshot Criptografico",
+        storage: "Google Drive BYOS (0 MB Servidor)",
+        norm: "Firma Digital HMAC",
+        color: "#10B981"
+      }
+    };
+
+    // Interactive CAD Nodes Click
+    const cadNodes = [
+      { id: "nodeResin", name: "Insumo LCI: Resina PET Virgen (1.020 kg ecoinvent)" },
+      { id: "nodeEnergy", name: "Suministro Red: CFE Red 230kV (0.420 kWh)" },
+      { id: "stageNodeCore", name: "Proceso Unitario: Inyeccion y Soplado de Envases" },
+      { id: "stageNodeGwp", name: "Emision Biosfera: Huella GWP 100a (1.428 kg CO2e)" },
+      { id: "stageNodeProduct", name: "Flujo de Referencia: Envase PET 1.0L (28.0 g)" }
+    ];
+    cadNodes.forEach(n => {
+      const el = document.getElementById(n.id);
+      if (el) {
+        el.addEventListener("click", () => {
+          const breadEl = document.getElementById("heroStageBreadcrumb");
+          if (breadEl) breadEl.textContent = `Lienzo ACV: ${n.name}`;
+          document.querySelectorAll(".cad-node").forEach(cn => cn.classList.remove("is-core-active"));
+          el.classList.add("is-core-active");
+        });
+      }
+    });
+
+    const items = dock.querySelectorAll(".fold-dock-item");
+    items.forEach((btn, idx) => {
+      btn.addEventListener("click", () => {
+        items.forEach(b => b.classList.remove("active"));
+        items.forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("active");
+        btn.classList.add("is-active");
+
+        const stage = btn.getAttribute("data-stage");
+        const data = stageCatalog[stage];
+        if (!data) return;
+
+        const titleEl = document.getElementById("stageNodeCoreTitle");
+        const badgeEl = document.getElementById("stageNodeCoreBadge");
+        const breadEl = document.getElementById("heroStageBreadcrumb");
+        const gwpEl = document.getElementById("stageGwpValText");
+        const massEl = document.getElementById("stageMassValText");
+        const storeEl = document.getElementById("stageStorageValText");
+        const normEl = document.getElementById("stageNormBadgeText");
+        const gwpValSvg = document.getElementById("stageNodeGwpVal");
+
+        if (titleEl) titleEl.textContent = data.title;
+        if (badgeEl) {
+          badgeEl.textContent = data.badge;
+          badgeEl.style.fill = data.color;
+        }
+        if (breadEl) breadEl.textContent = data.breadcrumb;
+        if (gwpEl) {
+          gwpEl.textContent = data.gwp;
+          gwpEl.style.color = data.color;
+        }
+        if (massEl) massEl.textContent = data.mass;
+        if (storeEl) storeEl.textContent = data.storage;
+        if (normEl) normEl.innerHTML = `<span class="stage-norm-pulse" style="background:${data.color};"></span><span>${data.norm}</span>`;
+        if (gwpValSvg) gwpValSvg.textContent = data.gwp;
+      });
+
+      // Navegación por teclado (Apple HIG Segmented Controls / Tab Bars)
+      btn.addEventListener("keydown", (e) => {
+        const btnList = Array.from(items);
+        let nextIdx = -1;
+        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+          e.preventDefault();
+          nextIdx = (idx + 1) % btnList.length;
+        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+          e.preventDefault();
+          nextIdx = (idx - 1 + btnList.length) % btnList.length;
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          nextIdx = 0;
+        } else if (e.key === "End") {
+          e.preventDefault();
+          nextIdx = btnList.length - 1;
+        }
+        if (nextIdx >= 0) {
+          btnList[nextIdx].focus();
+          btnList[nextIdx].click();
+        }
+      });
+    });
+  }
+
   async function initApp() {
+    setupFoldToolbarHome();
     // 1. Configurar Auth
     await initAuth();
 
@@ -8115,7 +8259,22 @@
     if (btnNavSignup) btnNavSignup.addEventListener("click", () => showView("signup"));
     if (btnNavEnter) btnNavEnter.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
     if (btnHomeEnter) btnHomeEnter.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
-    if (btnHomeEx) btnHomeEx.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
+
+    const handleHomeViewExamples = (e) => {
+      if (e) e.preventDefault();
+      const target = document.getElementById("homeCases") || document.getElementById("homePricing") || document.getElementById("homeArchitecture");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth" });
+      } else {
+        showView(state.isAuthenticated ? "dashboard" : "login");
+      }
+    };
+    if (btnHomeEx) btnHomeEx.addEventListener("click", handleHomeViewExamples);
+
+    const heroBtnIniciarACV = document.getElementById("heroBtnIniciarACV");
+    if (heroBtnIniciarACV) heroBtnIniciarACV.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
+    const heroBtnEjemplosNOM = document.getElementById("heroBtnEjemplosNOM");
+    if (heroBtnEjemplosNOM) heroBtnEjemplosNOM.addEventListener("click", handleHomeViewExamples);
 
     // Botón Cerrar Sesión
     const btnLogout = document.getElementById("btnNavbarLogout");

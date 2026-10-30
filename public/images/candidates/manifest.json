@@ -1,0 +1,155 @@
+[
+  {
+    "id": "cand_01",
+    "filename": "cand_01.jpg",
+    "slate_filename": "slate/cand_01_slate.jpg",
+    "title": "Ingeniería de Inyección y Termoplásticos",
+    "category": "Manufactura y Materiales",
+    "desc": "Línea industrial de inyección y moldeo de precisión en sala limpia con iluminación arquitectónica.",
+    "size_kb": 204
+  },
+  {
+    "id": "cand_02",
+    "filename": "cand_02.jpg",
+    "slate_filename": "slate/cand_02_slate.jpg",
+    "title": "Red Eléctrica de Alta Tensión (CFE/Grid)",
+    "category": "Infraestructura Energética",
+    "desc": "Torres de transmisión eléctrica de alta tensión en perspectiva geométrica bajo cielo crepuscular.",
+    "size_kb": 148
+  },
+  {
+    "id": "cand_04",
+    "filename": "cand_04.jpg",
+    "slate_filename": "slate/cand_04_slate.jpg",
+    "title": "Logística Portuaria e Intermodal",
+    "category": "Cadena de Suministro (Transporte)",
+    "desc": "Terminal de contenedores intermodales y grúas de carga para modelado de transporte de fondo.",
+    "size_kb": 327
+  },
+  {
+    "id": "cand_05",
+    "filename": "cand_05.jpg",
+    "slate_filename": "slate/cand_05_slate.jpg",
+    "title": "Molino de Viento y Energía Renovable",
+    "category": "Descarbonización",
+    "desc": "Pala de aerogenerador eólico en fabricación con escala humana y textura compuesta.",
+    "size_kb": 247
+  },
+  {
+    "id": "cand_07",
+    "filename": "cand_07.jpg",
+    "slate_filename": "slate/cand_07_slate.jpg",
+    "title": "Granza de Polímero y Resina Reciclada (PET)",
+    "category": "Materia Prima y Circularidad",
+    "desc": "Fotografía macro de pellets de resina termoplástica pura y reciclada para inyección de preformas.",
+    "size_kb": 97
+  },
+  {
+    "id": "cand_08",
+    "filename": "cand_08.jpg",
+    "slate_filename": "slate/cand_08_slate.jpg",
+    "title": "Silueta de Planta Siderúrgica y Vapor",
+    "category": "Industria Pesada y Emisiones",
+    "desc": "Estructuras de acero, torres de enfriamiento y condensación de vapor de agua a contraluz.",
+    "size_kb": 475
+  },
+  {
+    "id": "cand_10",
+    "filename": "cand_10.jpg",
+    "slate_filename": "slate/cand_10_slate.jpg",
+    "title": "Célula Robótica de Automatización",
+    "category": "Manufactura Avanzada",
+    "desc": "Brazo robótico de soldadura y ensamble en nave industrial de alta eficiencia energética.",
+    "size_kb": 231
+  },
+  {
+    "id": "cand_11",
+    "filename": "cand_11.jpg",
+    "slate_filename": "slate/cand_11_slate.jpg",
+    "title": "Estructura Arquitectónica Geodésica",
+    "category": "Arquitectura Industrial",
+    "desc": "Enrejado de acero y vidrio en bóveda estructural con sombras matemáticas proyectadas.",
+    "size_kb": 160
+  },
+  {
+    "id": "cand_12",
+    "filename": "cand_12.jpg",
+    "slate_filename": "slate/cand_12_slate.jpg",
+    "title": "Almacén Automatizado de Alta Densidad",
+    "category": "Logística y Trazabilidad",
+    "desc": "Pasillo de almacenamiento logístico vertical con iluminación lineal y código de barras físico.",
+    "size_kb": 525
+  },
+  {
+    "id": "cand_13",
+    "filename": "cand_13.jpg",
+    "slate_filename": "slate/cand_13_slate.jpg",
+    "title": "Turbina de Generación Hidroeléctrica",
+    "category": "Generación Eléctrica ecoinvent",
+    "desc": "Rotor de turbina Francis en taller de mecanizado con acabado metálico pulido de precisión.",
+    "size_kb": 362
+  },
+  {
+    "id": "cand_14",
+    "filename": "cand_14.jpg",
+    "slate_filename": "slate/cand_14_slate.jpg",
+    "title": "Observación Satelital de Cuenca y Territorio",
+    "category": "Geospatial & Impacto Regional",
+    "desc": "Fotografía espacial auténtica (NASA/Copernicus) de estuario costero y ordenamiento territorial.",
+    "size_kb": 195
+  },
+  {
+    "id": "cand_15",
+    "filename": "cand_15.jpg",
+    "slate_filename": "slate/cand_15_slate.jpg",
+    "title": "Laboratorio de Cromatografía y Espectrometría",
+    "category": "Análisis y Caracterización LCIA",
+    "desc": "Instrumentación de laboratorio químico para análisis de emisiones gaseosas y contaminantes.",
+    "size_kb": 269
+  },
+  {
+    "id": "cand_16",
+    "filename": "cand_16.jpg",
+    "slate_filename": "slate/cand_16_slate.jpg",
+    "title": "Manos y Brote Vegetal Vivo en Tierra Fértil",
+    "category": "Ciclo de Vida & Administración Ambiental",
+    "desc": "Fotografía auténtica de manos cuidando tierra y una plántula verde viva. Emblema de custodia ecológica.",
+    "size_kb": 223
+  },
+  {
+    "id": "cand_17",
+    "filename": "cand_17.jpg",
+    "slate_filename": "slate/cand_17_slate.jpg",
+    "title": "Ingeniería de Precisión en Sala Limpia",
+    "category": "Manufactura Avanzada",
+    "desc": "Técnico especialista operando maquinaria de precisión industrial con instrumental calibrado.",
+    "size_kb": 312
+  },
+  {
+    "id": "cand_18",
+    "filename": "cand_18.jpg",
+    "slate_filename": "slate/cand_18_slate.jpg",
+    "title": "Complejo Industrial de Tuberías y Válvulas",
+    "category": "Balance de Masa y Fluidos",
+    "desc": "Red de distribución de vapor y fluidos industriales de acero pulido en planta de ciclo cerrado.",
+    "size_kb": 256
+  },
+  {
+    "id": "cand_20",
+    "filename": "cand_20.jpg",
+    "slate_filename": "slate/cand_20_slate.jpg",
+    "title": "Reactor Químico y Proceso de Polimerización",
+    "category": "Síntesis de Materiales",
+    "desc": "Biorreactor industrial de acero inoxidable para síntesis química y control termodinámico.",
+    "size_kb": 319
+  },
+  {
+    "id": "cand_21",
+    "filename": "cand_21.jpg",
+    "slate_filename": "slate/cand_21_slate.jpg",
+    "title": "Fábrica y Parque Industrial al Atardecer",
+    "category": "Arquitectura Industrial",
+    "desc": "Complejo fabril y siluetas industriales bajo luz atmosférica crepuscular.",
+    "size_kb": 325
+  }
+]
