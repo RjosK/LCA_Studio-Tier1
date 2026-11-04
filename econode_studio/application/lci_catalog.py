@@ -33,13 +33,14 @@ def search_catalog_use_case(
     conn: Optional[sqlite3.Connection] = None,
     query: str = "",
     category_id: Optional[Any] = None,
-    limit: int = 50
+    limit: int = 50,
+    source: Optional[str] = "all"
 ) -> List[Dict[str, Any]]:
-    """Búsqueda optimizada de procesos de ciclo de vida en ecoinvent 3.12."""
+    """Búsqueda optimizada de procesos de ciclo de vida multifuente (ecoinvent, GLAD, OEKOBAUDAT, ADEME, Custom)."""
     if conn is None:
         with get_active_db_connection() as c:
-            return search_lci_processes(c, query=query, category_id=category_id, limit=limit)
-    return search_lci_processes(conn, query=query, category_id=category_id, limit=limit)
+            return search_lci_processes(c, query=query, category_id=category_id, limit=limit, source=source)
+    return search_lci_processes(conn, query=query, category_id=category_id, limit=limit, source=source)
 
 
 def get_process_sheet_use_case(

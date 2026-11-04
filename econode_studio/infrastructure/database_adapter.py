@@ -761,12 +761,94 @@ def _expand_search_terms(query: str) -> List[str]:
                     terms.append(syn)
     return terms
 
-def search_lci_processes(conn: sqlite3.Connection, query: str = "", category_id: Optional[Any] = None, limit: int = 50) -> List[Dict[str, Any]]:
-    """Búsqueda en catálogo de procesos con metadatos técnicos, sinónimos bilingües y soporte para sectores industriales."""
+def search_lci_processes(
+    conn: sqlite3.Connection,
+    query: str = "",
+    category_id: Optional[Any] = None,
+    limit: int = 50,
+    source: Optional[str] = "all"
+) -> List[Dict[str, Any]]:
+    """Búsqueda en catálogo de procesos con metadatos técnicos, sinónimos bilingües y soporte multifuente (ecoinvent, GLAD, OEKOBAUDAT, ADEME, Custom)."""
+    source_val = (source or "all").strip().lower()
+    items: List[Dict[str, Any]] = []
+
+    source_info_map = {
+        "all": ("Todas las BDs", "all"),
+        "ecoinvent_312": ("ecoinvent 3.12", "ecoinvent"),
+        "glad_network": ("GLAD (UNEP)", "glad"),
+        "oekobaudat": ("OEKOBAUDAT", "oekobaudat"),
+        "oekobaudat_de": ("OEKOBAUDAT", "oekobaudat"),
+        "ademe_base_carbone": ("Base Carbone", "ademe"),
+        "user_custom": ("Mis Procesos", "custom")
+    }
+
+    # 1. Catálogo Externo (GLAD, OEKOBAUDAT, ADEME)
+    if source_val in ("glad_network", "oekobaudat", "oekobaudat_de", "ademe_base_carbone") or source_val == "all":
+        target_src = "oekobaudat_de" if source_val in ("oekobaudat", "oekobaudat_de") else source_val
+        cat_sql = """
+            SELECT cp.id, cp.source_code, cp.original_uuid as code, cp.name, cp.location,
+                   1.0 as reference_amount, cp.activity_type as category_name,
+                   cp.reference_product as reference_flow_name, cp.unit as reference_unit
+            FROM catalog_processes cp
+            WHERE 1=1
+        """
+        cat_params = []
+        if target_src != "all":
+            cat_sql += " AND cp.source_code = ?"
+            cat_params.append(target_src)
+
+        if category_id is not None and str(category_id).strip().upper() != "ALL":
+            cat_sql += " AND cp.activity_type LIKE ?"
+            cat_params.append(f"%{category_id}%")
+
+        if query:
+            cat_sql += " AND (cp.name LIKE ? OR cp.reference_product LIKE ? OR cp.original_uuid LIKE ?)"
+            q_param = f"%{query}%"
+            cat_params.extend([q_param, q_param, q_param])
+
+        cat_sql += " ORDER BY cp.name LIMIT ?;"
+        cat_params.append(limit if source_val != "all" else min(25, limit))
+
+        cat_rows = conn.execute(cat_sql, cat_params).fetchall()
+        for r in cat_rows:
+            sc = r["source_code"]
+            slabel, sbadge = source_info_map.get(sc, ("Catálogo LCI", "all"))
+            item = dict(r)
+            item["id"] = f"cat_{r['id']}"
+            item["source_code"] = sc
+            item["source_label"] = slabel
+            item["source_badge"] = sbadge
+            items.append(item)
+
+        if source_val in ("glad_network", "oekobaudat", "oekobaudat_de", "ademe_base_carbone"):
+            return items
+
+    # 2. Procesos Propios / Custom
+    if source_val == "user_custom":
+        custom_sql = """
+            SELECT p.id, p.code, p.name, p.location, p.reference_amount,
+                   c.name as category_name,
+                   f.name as reference_flow_name, f.unit_symbol as reference_unit,
+                   'user_custom' as source_code, 'Mis Procesos' as source_label, 'custom' as source_badge
+            FROM processes p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN flows f ON p.reference_flow_id = f.id
+            WHERE p.category_id = 999999 OR p.code LIKE 'CUSTOM_%' OR p.code LIKE 'PROC_CUSTOM_%'
+        """
+        custom_params = []
+        if query:
+            custom_sql += " AND (p.name LIKE ? OR p.code LIKE ?)"
+            custom_params.extend([f"%{query}%", f"%{query}%"])
+        custom_sql += " ORDER BY p.name LIMIT ?;"
+        custom_params.append(limit)
+        return [dict(r) for r in conn.execute(custom_sql, custom_params).fetchall()]
+
+    # 3. ecoinvent 3.12 (procesos base)
     sql = """
         SELECT p.id, p.code, p.name, p.location, p.reference_amount,
                c.name as category_name,
-               f.name as reference_flow_name, f.unit_symbol as reference_unit
+               f.name as reference_flow_name, f.unit_symbol as reference_unit,
+               'ecoinvent_312' as source_code, 'ecoinvent 3.12' as source_label, 'ecoinvent' as source_badge
         FROM processes p
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN flows f ON p.reference_flow_id = f.id
@@ -799,14 +881,62 @@ def search_lci_processes(conn: sqlite3.Connection, query: str = "", category_id:
         if clauses:
             sql += f" AND ({' OR '.join(clauses)})"
 
+    remaining_limit = max(1, limit - len(items)) if source_val == "all" else limit
     sql += " ORDER BY p.name LIMIT ?;"
-    params.append(limit)
+    params.append(remaining_limit)
 
     rows = conn.execute(sql, params).fetchall()
-    return [dict(r) for r in rows]
+    ecoinvent_items = [dict(r) for r in rows]
 
-def get_process_technical_sheet(conn: sqlite3.Connection, process_id: int) -> Optional[Dict[str, Any]]:
-    """Obtiene la ficha técnica con todos sus intercambios tecnosféricos y elementales."""
+    if source_val == "all":
+        return items + ecoinvent_items
+    return ecoinvent_items
+
+def get_process_technical_sheet(conn: sqlite3.Connection, process_id: Any) -> Optional[Dict[str, Any]]:
+    """Obtiene la ficha técnica con todos sus intercambios tecnosféricos y elementales (soporta ecoinvent y catálogo externo)."""
+    str_pid = str(process_id).strip()
+
+    if str_pid.startswith("cat_") or "_" in str_pid:
+        raw_id_str = str_pid.split("_")[-1]
+        if raw_id_str.isdigit():
+            cp = conn.execute("SELECT * FROM catalog_processes WHERE id = ?", (int(raw_id_str),)).fetchone()
+            if cp:
+                ref_name = cp["reference_product"] or cp["name"]
+                ref_unit = cp["unit"] or "kg"
+                sc_str = str(cp["source_code"] or "").lower()
+                source_label = "GLAD (UNEP)" if "glad" in sc_str else ("OEKOBAUDAT" if "oeko" in sc_str else ("Base Carbone" if "ademe" in sc_str else "Catálogo LCI"))
+                sheet = {
+                    "id": str_pid,
+                    "code": cp["original_uuid"] or f"CAT-{cp['id']}",
+                    "name": cp["name"],
+                    "location": cp["location"] or "GLO",
+                    "category_name": cp["activity_type"] or "General",
+                    "ref_flow_name": ref_name,
+                    "ref_unit": ref_unit,
+                    "reference_amount": 1.0,
+                    "source_code": cp["source_code"],
+                    "provider": cp["provider_name"] or source_label,
+                    "technosphere_inputs": [],
+                    "biosphere_emissions": [],
+                    "waste_outputs": [],
+                    "inputs": [],
+                    "outputs": [{
+                        "id": f"out_{cp['id']}",
+                        "flow_id": None,
+                        "is_input": 0,
+                        "exchange_type": "production",
+                        "amount": 1.0,
+                        "unit_symbol": ref_unit,
+                        "flow_name": ref_name,
+                        "flow_type": "PRODUCT_FLOW"
+                    }],
+                    "dqi_score": "5/5 (Verificado)",
+                    "pedigree": { "reliability": 1, "completeness": 1, "temporal": 1, "geographic": 1, "technological": 1 }
+                }
+                sheet["process"] = dict(sheet)
+                return sheet
+
+    int_id = int(str_pid) if str_pid.isdigit() else 0
     proc = conn.execute("""
         SELECT p.*, c.name as category_name, 
                COALESCE(f.name, (SELECT description FROM exchanges WHERE process_id = p.id AND is_input = 0 AND exchange_type = 'production' LIMIT 1), p.name) as ref_flow_name, 
@@ -815,8 +945,11 @@ def get_process_technical_sheet(conn: sqlite3.Connection, process_id: int) -> Op
         LEFT JOIN categories c ON p.category_id = c.id
         LEFT JOIN flows f ON p.reference_flow_id = f.id
         WHERE p.id = ?;
-    """, (process_id,)).fetchone()
+    """, (int_id,)).fetchone()
     if not proc:
+        cp = conn.execute("SELECT * FROM catalog_processes WHERE id = ?", (int_id,)).fetchone()
+        if cp:
+            return get_process_technical_sheet(conn, f"cat_{int_id}")
         return None
 
     exchanges = conn.execute("""
@@ -827,7 +960,7 @@ def get_process_technical_sheet(conn: sqlite3.Connection, process_id: int) -> Op
         LEFT JOIN flows fl ON e.flow_id = fl.id
         WHERE e.process_id = ?
         ORDER BY e.is_input DESC, e.exchange_type, flow_name;
-    """, (process_id,)).fetchall()
+    """, (int_id,)).fetchall()
 
     inputs = [dict(x) for x in exchanges if x["is_input"] == 1]
     outputs = [dict(x) for x in exchanges if x["is_input"] == 0]

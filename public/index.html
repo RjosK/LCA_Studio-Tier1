@@ -1274,24 +1274,47 @@
   <!-- 7. VISTA: EXPLORADOR & CATÁLOGO LCI (#viewCatalog) -->
   <!-- ============================================================= -->
   <main class="view-container" id="viewCatalog">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 12px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 12px;">
       <div>
-        <h1 style="font-size: 20px; font-weight: 700;" data-i18n="catalog.title">Explorador de Procesos LCI (ecoinvent 3.12)</h1>
-        <p style="font-size: 11.5px; color: var(--text-muted);" data-i18n="catalog.subtitle">Catálogo oficial con 26,533 procesos unitarios clasificados por categorías ISIC / CPC</p>
+        <h1 style="font-size: 20px; font-weight: 700;" data-i18n="catalog.title">Explorador de Procesos LCI</h1>
+        <p style="font-size: 11.5px; color: var(--text-muted);" data-i18n="catalog.subtitle">Catálogo federado con 29,700+ procesos globales (ecoinvent, GLAD UNEP, OEKOBAUDAT, Base Carbone)</p>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <label for="selectCatalogCategory" style="font-size: 11px; font-weight: 600; color: var(--text-secondary);" data-i18n="editor.category_label">Sector / Categoría DB:</label>
         <select id="selectCatalogCategory" class="form-input" style="height: 32px; font-size: 11px; width: 280px; padding: 2px 8px;">
-          <option value="ALL">Todas las Categorías (26,533 procesos)</option>
-          <option value="999999" style="font-weight: 700; color: var(--accent-emerald);">⭐ Custom processes & flows</option>
-          <option value="3510">3510: Energía Eléctrica & Red (4,046)</option>
-          <option value="3821">3821: Residuos & Tratamiento (3,827)</option>
-          <option value="2011">2011: Químicos Básicos (2,826)</option>
-          <option value="2013">2013: Plásticos & Polímeros Primarios (337)</option>
-          <option value="2220">2220: Productos de Plástico & Moldeo (293)</option>
-          <option value="4923">4923: Transporte Carretero de Carga (256)</option>
+          <option value="ALL">Todas las Categorías</option>
         </select>
       </div>
+    </div>
+
+    <!-- CONTROL SEGMENTADO MULTIFUENTE (APPLE HIG) -->
+    <div class="catalog-sources-bar">
+      <nav class="apple-segmented-control" id="catalogSourceTabs" role="tablist">
+        <button class="segment-btn active" data-source="all" role="tab" type="button">
+          <span>Todas las BDs</span>
+          <span class="segment-count">30k+</span>
+        </button>
+        <button class="segment-btn" data-source="ecoinvent_312" role="tab" type="button">
+          <span>ecoinvent 3.12</span>
+          <span class="segment-count">26.5k</span>
+        </button>
+        <button class="segment-btn" data-source="glad_network" role="tab" type="button">
+          <span>GLAD (UNEP)</span>
+          <span class="segment-count">500</span>
+        </button>
+        <button class="segment-btn" data-source="oekobaudat_de" role="tab" type="button">
+          <span>OEKOBAUDAT</span>
+          <span class="segment-count">1,000</span>
+        </button>
+        <button class="segment-btn" data-source="ademe_base_carbone" role="tab" type="button">
+          <span>Base Carbone</span>
+          <span class="segment-count">1,000</span>
+        </button>
+        <button class="segment-btn" data-source="user_custom" role="tab" type="button">
+          <span>Mis Procesos</span>
+          <span class="segment-count">Custom</span>
+        </button>
+      </nav>
     </div>
 
     <div style="display: grid; grid-template-columns: 460px 1fr; gap: 18px;">
@@ -1313,10 +1336,10 @@
           </div>
           <div style="display: flex; gap: 8px; align-items: center;">
             <button class="btn btn-secondary" id="btnDeleteCatalogItem" style="display: none; color: #EF4444; border-color: rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.05); font-size: 11px; padding: 6px 12px;" title="Eliminar de la base de datos">
-              🗑️ Eliminar
+              Eliminar
             </button>
             <button class="btn btn-emerald" id="btnInsertToActiveCanvas" data-i18n="catalog.insert_btn">
-              Insertar en Sistema Activo ➔
+              Insertar en Sistema Activo
             </button>
           </div>
         </div>

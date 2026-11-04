@@ -144,8 +144,8 @@
     importCsv: (csvStr) => api.post("/api/systems/import-csv", { csv: csvStr }),
 
     // Catalog LCI
-    searchCatalog: (q = "", categoryId = null, limit = 50) => {
-      let url = `/api/processes?q=${encodeURIComponent(q)}&limit=${limit}`;
+    searchCatalog: (q = "", categoryId = null, limit = 50, source = "all") => {
+      let url = `/api/processes?q=${encodeURIComponent(q)}&limit=${limit}&source=${encodeURIComponent(source || "all")}`;
       if (categoryId && categoryId !== "ALL") url += `&category_id=${categoryId}`;
       return api.get(url);
     },
@@ -6075,7 +6075,8 @@
       const q = document.getElementById("inputCatalogSearch")?.value || "";
       const catSelect = document.getElementById("selectCatalogCategory");
       const catVal = catSelect ? catSelect.value : state.catalogFilter;
-      const res = await api.searchCatalog(q, catVal, 40);
+      const sourceVal = state.catalogSource || "all";
+      const res = await api.searchCatalog(q, catVal, 50, sourceVal);
       state.catalogProcesses = res.items || [];
 
       // Si la categoría seleccionada es "Custom processes & flows", cargamos solo los flujos creados por el usuario
@@ -6126,10 +6127,10 @@
         .map((proc) => {
           const isCustom = isCustomCat || proc.category_id === 999999 || String(proc.category_name || proc.category || "").toLowerCase().includes("propio") || String(proc.category_name || proc.category || "").toLowerCase().includes("custom");
           return `
-        <div class="catalog-proc-item" style="padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s ease;" onclick="window.EconodeApp.selectCatalogProcess(${proc.id})">
+        <div class="catalog-proc-item" style="padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s ease;" onclick="window.EconodeApp.selectCatalogProcess('${proc.id}')">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
-              <span class="mono" style="font-size: 8.5px; font-weight: 700; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(5, 150, 105, 0.25);">ID: #${proc.id}</span>
+              <span class="badge-source badge-source-${proc.source_badge || 'all'}">${proc.source_label || 'LCI'}</span>
               <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${proc.name}</div>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
@@ -8550,6 +8551,17 @@
         loadCatalog();
       });
     }
+
+    // Tabs de Selección de Bases de Datos LCI (Apple Segmented Control)
+    const sourceTabs = document.querySelectorAll("#catalogSourceTabs .segment-btn");
+    sourceTabs.forEach(btn => {
+      btn.addEventListener("click", () => {
+        sourceTabs.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.catalogSource = btn.dataset.source || "all";
+        loadCatalog();
+      });
+    });
 
     const inputCatSearch = document.getElementById("inputCatalogSearch");
     if (inputCatSearch) {

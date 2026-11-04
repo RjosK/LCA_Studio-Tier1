@@ -309,12 +309,26 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     cat = query.get("category_id", [None])[0] or query.get("category", [None])[0]
                     cat_param = cat if cat and cat != "ALL" else None
                     limit = int(query.get("limit", [50])[0])
-                    results = search_catalog_use_case(conn, query=q, category_id=cat_param, limit=limit)
+                    source = query.get("source", ["all"])[0].strip()
+                    results = search_catalog_use_case(conn, query=q, category_id=cat_param, limit=limit, source=source)
                     self._send_json({
                         "status": "success",
                         "count": len(results),
                         "items": results
                     })
+                    return
+
+                # Sources Endpoint
+                elif path in ("/api/sources", "/api/catalog/sources"):
+                    sources = [
+                        {"id": "all", "code": "all", "name": "Todas las BDs", "count": 29703, "badge": "all"},
+                        {"id": "ecoinvent_312", "code": "ecoinvent_312", "name": "ecoinvent 3.12", "count": 26533, "badge": "ecoinvent"},
+                        {"id": "glad_network", "code": "glad_network", "name": "GLAD (UNEP)", "count": 500, "badge": "glad"},
+                        {"id": "oekobaudat_de", "code": "oekobaudat_de", "name": "OEKOBAUDAT", "count": 1000, "badge": "oekobaudat"},
+                        {"id": "ademe_base_carbone", "code": "ademe_base_carbone", "name": "Base Carbone", "count": 1000, "badge": "ademe"},
+                        {"id": "user_custom", "code": "user_custom", "name": "Mis Procesos", "count": 3, "badge": "custom"}
+                    ]
+                    self._send_json({"status": "success", "sources": sources})
                     return
 
                 # LCI Categories
@@ -356,7 +370,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 # Process Technical Sheet
                 elif path.startswith("/api/processes/") and path.endswith("/sheet"):
-                    proc_id = int(path.split("/")[3])
+                    proc_id = path.split("/")[3]
                     sheet = get_process_sheet_use_case(conn, proc_id)
                     if not sheet:
                         self._send_error_json("Proceso no encontrado", 404)

@@ -54,6 +54,10 @@ class PostgresCursorProxy:
         if "INSERT OR REPLACE INTO" in cleaned_query.upper():
             cleaned_query = re.sub(r"INSERT\s+OR\s+REPLACE\s+INTO", "INSERT INTO", cleaned_query, flags=re.IGNORECASE)
 
+        # 3b. Convertir LIKE a ILIKE en PostgreSQL para busquedas case-insensitive
+        if " LIKE " in cleaned_query.upper():
+            cleaned_query = re.sub(r"\bLIKE\b", "ILIKE", cleaned_query, flags=re.IGNORECASE)
+
         # 4. Manejo de lastrowid para INSERTs sin RETURNING id
         is_insert = cleaned_query.upper().startswith("INSERT INTO")
         has_returning = "RETURNING" in cleaned_query.upper()
