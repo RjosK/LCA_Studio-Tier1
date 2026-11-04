@@ -537,22 +537,27 @@ USING (
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
-        -- Quitar tablas sensibles si estaban suscritas
-        BEGIN
-            ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS auth_users;
-            ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS invitations;
-            ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS documents;
-            ALTER PUBLICATION supabase_realtime DROP TABLE IF EXISTS audit_seals;
-        EXCEPTION WHEN OTHERS THEN
-            NULL;
-        END;
+        -- Quitar tablas sensibles solo si estan actualmente en la publicacion
+        IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'auth_users') THEN
+            ALTER PUBLICATION supabase_realtime DROP TABLE auth_users;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'invitations') THEN
+            ALTER PUBLICATION supabase_realtime DROP TABLE invitations;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'documents') THEN
+            ALTER PUBLICATION supabase_realtime DROP TABLE documents;
+        END IF;
+        IF EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'audit_seals') THEN
+            ALTER PUBLICATION supabase_realtime DROP TABLE audit_seals;
+        END IF;
 
-        -- Agregar únicamente tablas colaborativas
-        BEGIN
+        -- Agregar tablas colaborativas si no estan presentes
+        IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'audit_comments') THEN
             ALTER PUBLICATION supabase_realtime ADD TABLE audit_comments;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = 'checklist_states') THEN
             ALTER PUBLICATION supabase_realtime ADD TABLE checklist_states;
-        EXCEPTION WHEN OTHERS THEN
-            NULL;
-        END;
+        END IF;
     END IF;
 END $$;
+
