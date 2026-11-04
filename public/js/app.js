@@ -64,13 +64,40 @@
   // =========================================================================
   // 2. CLIENTE DE API REST
   // =========================================================================
+  function handleSessionExpired() {
+    state.activeUser = null;
+    state.isAuthenticated = false;
+    try {
+      localStorage.removeItem("econode_token");
+      localStorage.removeItem("econode_user_id");
+      localStorage.removeItem("econode_user");
+      sessionStorage.removeItem("econode_token");
+      sessionStorage.removeItem("econode_user_id");
+    } catch(e) {}
+    if (typeof updateUserUI === "function") updateUserUI();
+    if (typeof applyRolePermissions === "function") applyRolePermissions();
+    if (state.currentView !== "login" && state.currentView !== "signup" && state.currentView !== "home") {
+      showNotification("Tu sesión ha expirado o requiere autenticación. Por favor inicia sesión.");
+      showView("login");
+    }
+  }
+
+  function getAuthTokenQuery() {
+    const t = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+    return t ? `?token=${encodeURIComponent(t)}` : "";
+  }
+
   const api = {
     async get(endpoint) {
       try {
         const headers = {};
-        const token = sessionStorage.getItem("econode_token");
+        const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(endpoint, { headers });
+        if (res.status === 401) {
+          handleSessionExpired();
+          throw new Error("HTTP 401: Sesión no autorizada o expirada");
+        }
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         return await res.json();
       } catch (err) {
@@ -82,13 +109,17 @@
     async post(endpoint, data = {}) {
       try {
         const headers = { "Content-Type": "application/json" };
-        const token = sessionStorage.getItem("econode_token");
+        const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
         if (token) headers["Authorization"] = `Bearer ${token}`;
         const res = await fetch(endpoint, {
           method: "POST",
           headers,
           body: JSON.stringify(data)
         });
+        if (res.status === 401) {
+          handleSessionExpired();
+          throw new Error("HTTP 401: Sesión no autorizada o expirada");
+        }
         const text = await res.text();
         let json = null;
         try {
@@ -129,16 +160,7 @@
     verifyInviteToken: (tok) => api.get("/api/auth/invite/verify?token=" + encodeURIComponent(tok)),
 
     // Systems & Canvas
-    getSystems: () => {
-      const u = state.activeUser;
-      let url = "/api/systems";
-      if (u) {
-        const email = encodeURIComponent(u.email || "");
-        const uid = encodeURIComponent(u.id || "");
-        url += `?email=${email}&user_id=${uid}`;
-      }
-      return api.get(url);
-    },
+    getSystems: () => api.get("/api/systems"),
     getSystemCanvas: (sysId) => api.get(`/api/systems/${sysId}/canvas`),
     saveSystemCanvas: (sysId, payload) => api.post(`/api/systems/${sysId}/save`, payload),
     createSystem: (data) => {
@@ -433,31 +455,25 @@
   async function initAuth() {
     try {
       const cfg = await api.getAuthConfig();
-      if (cfg.accounts) {
-        state.allAccounts = cfg.accounts;
-      }
-
       const storedToken = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
-      const storedUserId = localStorage.getItem("econode_user_id") || sessionStorage.getItem("econode_user_id");
 
-      if (storedToken && storedUserId && cfg.accounts) {
-        const found = cfg.accounts.find(a => a.id === storedUserId || a.username === storedUserId || a.email === storedUserId);
-        if (found) {
-          state.activeUser = found;
-          state.isAuthenticated = true;
-          try {
-            localStorage.setItem("econode_token", storedToken);
-            localStorage.setItem("econode_user_id", found.id);
-            localStorage.setItem("econode_user", JSON.stringify(found));
-          } catch(e) {}
-          updateUserUI();
-          applyRolePermissions();
-          return;
-        }
+      if (storedToken && cfg && cfg.authenticated && cfg.user) {
+        state.activeUser = cfg.user;
+        state.isAuthenticated = true;
+        try {
+          localStorage.setItem("econode_token", storedToken);
+          localStorage.setItem("econode_user_id", cfg.user.id);
+          localStorage.setItem("econode_user", JSON.stringify(cfg.user));
+          sessionStorage.setItem("econode_token", storedToken);
+          sessionStorage.setItem("econode_user_id", cfg.user.id);
+        } catch(e) {}
+        updateUserUI();
+        applyRolePermissions();
+        return;
       }
 
-      // Si no hay token guardado
-      if (!storedToken) {
+      // Si no hay token guardado o el backend reporta no autenticado
+      if (!storedToken || (cfg && !cfg.authenticated)) {
         state.activeUser = null;
         state.isAuthenticated = false;
         try {
@@ -467,6 +483,8 @@
           sessionStorage.removeItem("econode_token");
           sessionStorage.removeItem("econode_user_id");
         } catch(e) {}
+        updateUserUI();
+        applyRolePermissions();
       }
     } catch (err) {
       console.warn("Inicialización de auth:", err);
@@ -1415,7 +1433,7 @@
             <span class="badge-pill badge-slate" style="font-size: 8px;">${node.category || "Process"}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 4px;">
-            ${(state.activeUser && state.activeUser.role === 'client') ? '' : `<button type="button" class="btn-node-comment" title="Add technical note to this process" style="background: none; border: 1px solid var(--border-color); border-radius: 3px; font-size: 9.5px; padding: 1px 4px; cursor: pointer; color: var(--text-secondary); background: #FFFFFF;">💬 +</button>`}
+            ${(state.activeUser && state.activeUser.role === 'client') ? '' : `<button type="button" class="btn-node-comment" title="Add technical note to this process" style="background: none; border: 1px solid var(--border-color); border-radius: 3px; font-size: 9.5px; padding: 1px 4px; cursor: pointer; color: var(--text-secondary); background: #FFFFFF;"> +</button>`}
             ${(state.activeUser && state.activeUser.role === 'client') ? '' : `<button type="button" class="btn-node-delete" title="Remove process from model" style="background: none; border: 1px solid var(--border-color); border-radius: 3px; font-size: 9.5px; padding: 1px 5px; cursor: pointer; color: #EF4444; background: #FFFFFF;" onclick="event.stopPropagation(); window.EconodeApp.removeNode('${node.id}');">✕</button>`}
             <span class="node-val mono" style="font-size: 10px; font-weight: 700; color: var(--accent-emerald);">${node.reference_flow ? `${node.reference_flow.amount} ${node.reference_flow.unit}` : `${node.amount || 1.0} ${node.unit || 'kg'}`}</span>
           </div>
@@ -2100,7 +2118,7 @@
       if (!isAuditor && !isClient) {
         actionButtonsHtml = `
           <button class="btn btn-primary btn-sm" style="width: 100%; margin-bottom: 6px;" onclick="window.EconodeApp.openProcessEditor('${node.id}')">
-            ${window.I18n.t("app.edit_proc_btn", "✏️ Edit Process (Inputs & Outputs)")}
+            ${window.I18n.t("app.edit_proc_btn", "Edit Process (Inputs & Outputs)")}
           </button>
           <button class="btn btn-secondary btn-sm" style="width: 100%; color: #EF4444;" onclick="window.EconodeApp.removeNode('${node.id}')">
             ${window.I18n.t("app.delete_node_btn", "Remove Node from Model")}
@@ -2108,8 +2126,8 @@
         `;
       } else if (isAuditor) {
         actionButtonsHtml = `
-          <button class="btn btn-secondary btn-sm" style="width: 100%;;" onclick="window.EconodeApp.commentOnNode('${node.name}')">
-            ${window.I18n.t("app.comment_proc_btn", "💬 Add Observation to Process")}
+          <button class="btn btn-secondary btn-sm" style="width: 100%;" onclick="window.EconodeApp.commentOnNode('${escape(node.name || '')}')">
+            ${window.I18n.t("app.comment_proc_btn", "Add Observation to Process")}
           </button>
         `;
       } else {
@@ -2340,9 +2358,9 @@
           </div>
         </div>
         <div style="display: flex; gap: 4px; align-items: center;">
-          <button class="btn btn-secondary btn-sm" title="Editar entradas y salidas" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.openProcessEditor('${p.id}')">✏️</button>
+          <button class="btn btn-secondary btn-sm" title="Editar entradas y salidas" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.openProcessEditor('${p.id}')"></button>
           <button class="btn btn-secondary btn-sm" title="Colocar en lienzo" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.addPaletteNode('${p.id}')">+</button>
-          <button class="btn btn-secondary btn-sm" title="Eliminar proceso del sistema" style="padding: 2px 6px; font-size: 10px; color: #EF4444;" onclick="window.EconodeApp.tableDeleteProcess('${p.id}')">🗑️</button>
+          <button class="btn btn-secondary btn-sm" title="Eliminar proceso del sistema" style="padding: 2px 6px; font-size: 10px; color: #EF4444;" onclick="window.EconodeApp.tableDeleteProcess('${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
         </div>
       </div>
     `;
@@ -2548,7 +2566,7 @@
       if ((state.editingInputs || []).length === 0) {
         inputsContainer.innerHTML = `
           <div style="text-align: center; padding: 32px 14px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: var(--radius-sm);">
-            <div style="font-size: 20px; margin-bottom: 6px;">⚙️</div>
+            <div style="font-size: 20px; margin-bottom: 6px;"></div>
             <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">No input flows (Inputs)</div>
             <div style="font-size: 10px; margin-top: 2px;">Click <strong>+ Add Flow</strong> to add consumed products or resources.</div>
           </div>
@@ -2558,14 +2576,14 @@
           <div class="proc-flow-card" draggable="true" data-idx="${idx}" data-type="input" style="border-left: 3px solid var(--accent-blue);">
             <div style="display: flex; justify-content: space-between; align-items: center;">
               <span class="badge-pill ${inp.is_unit ? 'badge-emerald' : 'badge-slate'}" style="font-size: 8.5px;">
-                ⚙️ Technosphere Flow (Input)
+                 Technosphere Flow (Input)
               </span>
               <button type="button" style="background: none; border: none; color: #EF4444; font-size: 11px; cursor: pointer;" onclick="window.EconodeApp.removeEditInput(${idx})" title="Remove Input">✕</button>
             </div>
 
             <!-- Nombre del flujo de base de datos (openLCA Flow) -->
             <div style="display: flex; align-items: center; justify-content: space-between; margin: 3px 0;">
-              <strong style="font-size: 11px; color: var(--text-primary); line-height: 1.2;">⚙️ ${inp.name}</strong>
+              <strong style="font-size: 11px; color: var(--text-primary); line-height: 1.2;"> ${inp.name}</strong>
               <span class="badge-pill badge-slate" style="font-size: 8px; margin-left: 4px;">Flow ID: ${inp.flow_id || 'ecoinvent'}</span>
             </div>
 
@@ -2607,7 +2625,7 @@
       if ((state.editingOutputs || []).length === 0) {
         outputsContainer.innerHTML = `
           <div style="text-align: center; padding: 32px 14px; color: var(--text-muted); border: 1px dashed var(--border-color); border-radius: var(--radius-sm);">
-            <div style="font-size: 20px; margin-bottom: 6px;">★</div>
+            <div style="font-size: 20px; margin-bottom: 6px;"></div>
             <div style="font-size: 11px; font-weight: 600; color: var(--text-secondary);">No output flows (Outputs)</div>
             <div style="font-size: 10px; margin-top: 2px;">Click <strong>+ Add Flow</strong> to add reference product, waste or emissions.</div>
           </div>
@@ -2615,15 +2633,15 @@
       } else {
         outputsContainer.innerHTML = (state.editingOutputs || []).map((out, idx) => {
           const isRef = Boolean(out.is_reference);
-          const flowIcon = isRef ? '★' : out.is_waste ? '🗑️' : out.is_elementary ? '🍃' : '⚙️';
+          const flowIcon = isRef ? '' : out.is_waste ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>' : out.is_elementary ? '' : '';
           const badgeClass = isRef ? 'badge-emerald' : 'badge-slate';
           const badgeLabel = isRef 
-            ? '★ Quantitative Reference' 
+            ? 'Quantitative Reference' 
             : out.is_waste 
-              ? '🗑️ Waste Flow' 
+              ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Waste Flow' 
               : out.is_elementary 
-                ? '🍃 Elementary Emission' 
-                : '⚙️ Product Output';
+                ? 'Elementary Emission' 
+                : 'Product Output';
           const borderStyle = isRef ? 'border-left: 3px solid var(--accent-emerald);' : out.is_waste ? 'border-left: 3px solid #D97706;' : 'border-left: 3px solid var(--border-color);';
 
           return `
@@ -2632,22 +2650,22 @@
                 <div>
                   ${isRef ? `
                     <span class="badge-pill badge-emerald" style="font-size: 8.5px;">
-                      ★ Quantitative Reference
+                      Quantitative Reference
                     </span>
                   ` : out.is_waste ? `
                     <span class="badge-pill badge-slate" style="font-size: 8.5px;">
-                      🗑️ Waste Flow
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Waste Flow
                     </span>
                   ` : out.is_elementary ? `
                     <span class="badge-pill badge-slate" style="font-size: 8.5px;">
-                      🍃 Elementary Emission
+                      Elementary Emission
                     </span>
                   ` : ''}
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px;">
                   ${!isRef ? `
                     <button type="button" class="btn btn-secondary btn-sm" style="padding: 2px 8px; font-size: 9px; height: 20px; color: var(--accent-emerald); font-weight: 600; border-color: rgba(5, 150, 105, 0.4);" onclick="window.EconodeApp.setAsQuantitativeReference(${idx})" title="Set as quantitative reference">
-                      ★ Set as Ref
+                      Set as Ref
                     </button>
                   ` : ''}
                   <button type="button" style="background: none; border: none; color: #EF4444; font-size: 11px; cursor: pointer; padding: 2px;" onclick="window.EconodeApp.removeEditOutput(${idx})" title="Remove Output">✕</button>
@@ -3013,11 +3031,11 @@
              onclick="window.EconodeApp.selectProviderForInput('${escape(p.name)} [${p.location || 'GLO'}]')">
           <div>
             <div style="display: flex; align-items: center; gap: 6px;">
-              <strong style="font-size: 11.5px; color: var(--text-primary);">${p.name}</strong>
-              <span class="badge-pill badge-emerald" style="font-size: 8.5px;">${p.location || 'GLO'}</span>
+              <strong style="font-size: 11.5px; color: var(--text-primary);">${escapeHtml(p.name || '')}</strong>
+              <span class="badge-pill badge-emerald" style="font-size: 8.5px;">${escapeHtml(p.location || 'GLO')}</span>
             </div>
             <div style="font-size: 9.5px; color: var(--text-muted); margin-top: 2px;">
-              Process ID: <span class="mono">${p.id}</span> · Reference Output: ${p.ref_flow_name || flowName} (${p.unit || 'kg'})
+              Process ID: <span class="mono">${escapeHtml(String(p.id || ''))}</span> · Reference Output: ${escapeHtml(p.ref_flow_name || flowName || '')} (${escapeHtml(p.unit || 'kg')})
             </div>
           </div>
           <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 8px;">Connect ➔</button>
@@ -4120,7 +4138,7 @@
                 providerText = `<span style="color: #6D28D9; font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
               }
             } else {
-              typeBadge = inp.is_unit ? `<span class="excel-badge-techno">⚙️ Tecnosfera</span>` : `<span class="excel-badge-techno">⚡ Auxiliar</span>`;
+              typeBadge = inp.is_unit ? `<span class="excel-badge-techno"> Tecnosfera</span>` : `<span class="excel-badge-techno">⚡ Auxiliar</span>`;
               providerPlain = inp.origin || "Mercado ecoinvent 3.12";
               if (otherNodes.length > 0) {
                 providerText = `
@@ -4249,8 +4267,8 @@
                       oninput="window.EconodeApp.excelAutocompleteQuery(this, 'process')"
                       onkeydown="window.EconodeApp.excelAutocompleteKeyDown(event);">
                     <span class="mono" style="font-size: 8.5px; font-weight: 700; color: #059669; background: rgba(5, 150, 105, 0.08); padding: 1px 4px; border-radius: 3px; flex-shrink: 0;">#${node.process_id || node.id}</span>
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 9px; border-radius: 3px; flex-shrink: 0;" onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Editar entradas y salidas en el editor visual")}">✏️</button>
-                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 9px; color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 3px; flex-shrink: 0;" onclick="window.EconodeApp.tableDeleteProcess('${node.id}')" title="Eliminar este proceso completo del sistema">🗑️</button>
+                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 9px; border-radius: 3px; flex-shrink: 0;" onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Editar entradas y salidas en el editor visual")}"></button>
+                    <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 9px; color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 3px; flex-shrink: 0;" onclick="window.EconodeApp.tableDeleteProcess('${node.id}')" title="Eliminar este proceso completo del sistema"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                   </div>
                 ` : `
                   <span style="color: var(--text-muted); opacity: 0.35;">↳</span>
@@ -4286,9 +4304,9 @@
                     onclick="window.EconodeApp.tableDeleteFlow('${node.id}', '${rowItem.flowKind}', ${rowItem.idx})" title="Eliminar fila">✕</button>
                 ` : (isFirstRowOfProcess ? `
                   <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px; border-radius: 3px; margin-right: 3px;" 
-                    onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Editar proceso en el editor visual")}">✏️ Editar</button>
+                    onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Editar proceso en el editor visual")}"> Editar</button>
                   <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px; color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 3px;" 
-                    onclick="window.EconodeApp.tableDeleteProcess('${node.id}')" title="Eliminar proceso completo del sistema">🗑️</button>
+                    onclick="window.EconodeApp.tableDeleteProcess('${node.id}')" title="Eliminar proceso completo del sistema"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                 ` : `
                   <span style="color: var(--text-muted); font-size: 9px;">—</span>
                 `)}
@@ -4340,7 +4358,7 @@
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; opacity: 0.8;"
                   onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-flow-name'); const kind=tr.querySelector('.excel-select-new-flow-kind')?.value || 'input'; if(n && n.value.trim()){ window.EconodeApp.tableCreateFlowInline('${node.id}', n.value.trim(), tr.querySelector('.excel-input-new-flow-amt')?.value, tr.querySelector('.excel-input-new-flow-unit')?.value, n.dataset?.upstreamSourceId ? 'Conexión Interna' : 'Mercado ecoinvent 3.12', n.dataset?.upstreamSourceId, n.dataset?.upstreamProcessId, kind); }" title="${t("canvas.enter_to_create", "↵ Enter")}">↵</button>
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px;" 
-                  onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Abrir editor visual completo")}">✏️</button>
+                  onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Abrir editor visual completo")}"></button>
               </div>
             </td>
           </tr>
@@ -6984,7 +7002,7 @@
               <span style="font-size: 10.5px; color: var(--text-secondary); line-height: 1.35;" id="clause_evidence_text_${item.clause_id}">${item.evidence || "Evidencia técnica requerida por la norma."}</span>
               ${!isClient ? `
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9.5px;" onclick="window.EconodeApp.editClauseEvidence('${item.clause_id}', '${escape(item.evidence || '')}')" title="Editar requerimiento de evidencia">
-                  ✏️
+                  
                 </button>
               ` : ''}
             </div>
@@ -7092,7 +7110,7 @@
       xls: "📊",
       csv: "📑",
       pdf: "📄",
-      json: "⚙️",
+      json: "",
       zip: "📦"
     };
 
@@ -7128,14 +7146,14 @@
             <div style="display: flex; gap: 4px; align-items: center;">
               ${doc.description && doc.description.includes("drive.google.com")
                 ? `<a href="${doc.description.match(/https:\/\/drive\.google\.com\S*/)?.[0] || doc.description.replace('Google Drive: ', '')}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" title="Abrir archivo en Google Drive">
-                     📁 Abrir en Drive
+                     Abrir en Drive
                    </a>`
-                : `<a href="/api/documents/${doc.id}/download" class="btn btn-secondary btn-sm" download="${doc.original_filename}" title="Descargar archivo">
-                     🡇 Descargar
+                : `<a href="/api/documents/${doc.id}/download${getAuthTokenQuery()}" class="btn btn-secondary btn-sm" download="${doc.original_filename}" title="Descargar archivo">
+                     Descargar
                    </a>`
               }
               <button type="button" class="btn btn-secondary btn-sm" style="padding: 3px 7px; color: #EF4444;" onclick="window.EconodeApp.deleteVaultDocument(${doc.id}, '${escape(doc.title)}')" title="Eliminar este archivo de la bóveda">
-                🗑️
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
               </button>
             </div>
           </td>
@@ -8722,35 +8740,35 @@
     if (btnExpOpenLca) {
       btnExpOpenLca.addEventListener("click", () => {
         if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/openlca`;
+        window.location.href = `/api/systems/${getSysId()}/export/openlca${getAuthTokenQuery()}`;
       });
     }
     if (btnReportExpOpenLca) {
       btnReportExpOpenLca.addEventListener("click", () => {
-        window.location.href = `/api/systems/${getSysId()}/export/openlca`;
+        window.location.href = `/api/systems/${getSysId()}/export/openlca${getAuthTokenQuery()}`;
       });
     }
     if (btnExpIlcd) {
       btnExpIlcd.addEventListener("click", () => {
         if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/ilcd`;
+        window.location.href = `/api/systems/${getSysId()}/export/ilcd${getAuthTokenQuery()}`;
       });
     }
     if (btnExpSimaPro) {
       btnExpSimaPro.addEventListener("click", () => {
         if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/simapro`;
+        window.location.href = `/api/systems/${getSysId()}/export/simapro${getAuthTokenQuery()}`;
       });
     }
     if (btnExpLciCsv) {
       btnExpLciCsv.addEventListener("click", () => {
         if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/csv`;
+        window.location.href = `/api/systems/${getSysId()}/export/csv${getAuthTokenQuery()}`;
       });
     }
     if (btnExpPdf) {
       btnExpPdf.addEventListener("click", () => {
-        window.location.href = `/api/systems/${getSysId()}/export/pdf`;
+        window.location.href = `/api/systems/${getSysId()}/export/pdf${getAuthTokenQuery()}`;
       });
     }
 

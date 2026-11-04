@@ -273,24 +273,18 @@ class AuthService:
         name = None
         picture = ""
 
-        # 1. Intentar validar el token oficial de Google (con soporte para pruebas locales)
-        if credential:
-            try:
-                if (credential.startswith("mock") or credential.startswith("test")) and fallback_email:
-                    email = fallback_email.strip().lower()
-                    name = email.split("@")[0].capitalize()
-                else:
-                    token_info = verify_google_id_token(credential)
-                    email = (token_info.get("email") or "").strip().lower()
-                    name = token_info.get("name")
-                    picture = token_info.get("picture", "")
-            except Exception:
-                pass
+        # 1. Validar el token criptográfico oficial de Google Identity Services
+        if not credential:
+            raise ValueError("Credencial de Google requerida.")
 
-        # Fallback para pruebas automatizadas o desarrollo local
-        if not email and fallback_email:
-            email = fallback_email.strip().lower()
+        if getattr(settings, "ENV", "production") in ("test", "testing") and (credential.startswith("mock") or credential.startswith("test")):
+            email = (fallback_email or "test.google.user@example.com").strip().lower()
             name = email.split("@")[0].capitalize()
+        else:
+            token_info = verify_google_id_token(credential)
+            email = (token_info.get("email") or "").strip().lower()
+            name = token_info.get("name")
+            picture = token_info.get("picture", "")
 
         if not email:
             raise ValueError("No se pudo obtener un correo electrónico válido de Google Identity Services.")

@@ -786,7 +786,7 @@ def search_lci_processes(
     if source_val in ("glad_network", "oekobaudat", "oekobaudat_de", "ademe_base_carbone") or source_val == "all":
         target_src = "oekobaudat_de" if source_val in ("oekobaudat", "oekobaudat_de") else source_val
         cat_sql = """
-            SELECT cp.id, cp.source_code, cp.original_uuid as code, cp.name, cp.location,
+            SELECT MIN(cp.id) as id, cp.source_code, cp.original_uuid as code, cp.name, cp.location,
                    1.0 as reference_amount, cp.activity_type as category_name,
                    cp.reference_product as reference_flow_name, cp.unit as reference_unit
             FROM catalog_processes cp
@@ -806,7 +806,7 @@ def search_lci_processes(
             q_param = f"%{query}%"
             cat_params.extend([q_param, q_param, q_param])
 
-        cat_sql += " ORDER BY cp.name LIMIT ?;"
+        cat_sql += " GROUP BY cp.source_code, cp.original_uuid, cp.name, cp.location, cp.activity_type, cp.reference_product, cp.unit ORDER BY cp.name LIMIT ?;"
         cat_params.append(limit if source_val != "all" else min(25, limit))
 
         cat_rows = conn.execute(cat_sql, cat_params).fetchall()

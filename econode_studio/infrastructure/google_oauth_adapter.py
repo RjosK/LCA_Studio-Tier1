@@ -6,7 +6,6 @@ Valida credenciales ID Token JWT contra Google sin dependencias externas.
 import urllib.request
 import urllib.parse
 import json
-import base64
 import os
 from typing import Dict, Any, Optional
 
@@ -24,20 +23,13 @@ def get_configured_client_id() -> str:
 
 def verify_google_id_token(credential: str) -> Dict[str, Any]:
     """
-    Valida un ID Token emitido por Google Identity Services.
-    Utiliza urllib.request estándar para máxima portabilidad y seguridad.
+    Valida criptográficamente un ID Token emitido por Google Identity Services.
+    Consulta el endpoint oficial de verificación de Google oauth2.googleapis.com/tokeninfo.
     """
-    if not credential:
-        raise ValueError("Credencial JWT vacía")
+    if not credential or not isinstance(credential, str):
+        raise ValueError("Credencial JWT vacía o inválida")
 
-    # Soporte para tokens mock en pruebas automatizadas o testing local
-    if credential.startswith("mock_") or credential.startswith("test_") or "mock" in credential:
-        return {
-            "email": "test.google.user@example.com",
-            "name": "Test Google User",
-            "iss": "accounts.google.com",
-            "sub": "mock_google_sub_123"
-        }
+    credential = credential.strip()
 
     verify_url = f"https://oauth2.googleapis.com/tokeninfo?id_token={urllib.parse.quote(credential)}"
     req = urllib.request.Request(
@@ -50,22 +42,25 @@ def verify_google_id_token(credential: str) -> Dict[str, Any]:
                 raise ValueError(f"HTTP {resp.status} al validar credencial con Google")
             token_info = json.loads(resp.read().decode("utf-8"))
     except Exception as e:
-        # Fallback para desarrollo sin conexión o tokens simulados con estructura JWT
-        try:
-            parts = credential.split(".")
-            if len(parts) >= 2:
-                payload = parts[1]
-                payload += "=" * ((4 - len(payload) % 4) % 4)
-                decoded = json.loads(base64.urlsafe_b64decode(payload).decode("utf-8"))
-                if "email" in decoded:
-                    return decoded
-        except Exception:
-            pass
         raise ValueError(f"Error al validar credencial con Google: {e}")
 
     iss = token_info.get("iss", "")
     if iss not in ("accounts.google.com", "https://accounts.google.com"):
         raise ValueError(f"Emisor de token de Google inválido: {iss}")
+
+    expected_client_id = get_configured_client_id()
+    if expected_client_id:
+        token_aud = token_info.get("aud", "")
+        if token_aud != expected_client_id:
+            raise ValueError("Audiencia del token de Google no coincide con el Client ID configurado.")
+
+    email_verified = token_info.get("email_verified")
+    if email_verified is not None and not (email_verified is True or str(email_verified).lower() == "true"):
+        raise ValueError("La dirección de correo de Google no está verificada.")
+
+    email = token_info.get("email")
+    if not email:
+        raise ValueError("El token de Google no contiene una dirección de correo válida.")
 
     return token_info
 

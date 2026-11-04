@@ -6,6 +6,7 @@ Compatible tanto con `python -m unittest discover` como con ejecución directa `
 
 import sys
 import os
+os.environ["ENV"] = "test" 
 import time
 import json
 import urllib.request

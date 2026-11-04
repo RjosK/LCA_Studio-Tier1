@@ -26,6 +26,11 @@ STUDIO_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, STUDIO_DIR)
 sys.path.insert(0, os.path.dirname(STUDIO_DIR))
 
+try:
+    from config import settings
+except (ImportError, ValueError):
+    from econode_studio.config import settings
+
 from domain import RoleEnum
 from application import (
     auth_service,
@@ -77,7 +82,7 @@ from application import (
     export_expediente_nom070_zip,
     export_system_pdf_bytes
 )
-from infrastructure import get_active_db_connection, get_configured_client_id
+from infrastructure import get_active_db_connection, get_configured_client_id, get_user_by_id
 
 WEB_DIR = os.path.join(os.path.dirname(STUDIO_DIR), "public")
 if not os.path.exists(WEB_DIR):
@@ -130,6 +135,9 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", f"{content_type}; charset=utf-8")
         else:
             self.send_header("Content-Type", content_type)
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "SAMEORIGIN")
+        self.send_header("Referrer-Policy", "strict-origin-when-cross-origin")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS, DELETE, PUT")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -172,36 +180,44 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         self._send_json({"status": "error", "message": message}, status=status)
 
     def _get_request_user(self, query=None) -> Optional[Dict[str, Any]]:
-        # 1. Bearer Token desde encabezado Authorization
+        # Extraer token criptográfico desde cabecera Authorization o parámetro 'token'
         auth_header = self.headers.get("Authorization", "")
         token = None
         if auth_header.startswith("Bearer "):
             token = auth_header[7:].strip()
-        elif query and "token" in query:
+        elif query and "token" in query and query["token"]:
             token = query["token"][0]
 
-        if token:
-            parsed = auth_service.parse_session_token(token)
-            if parsed:
-                for acc in auth_service.accounts:
-                    if acc["id"] == parsed["user_id"]:
-                        return acc
+        if not token:
+            if getattr(settings, "ENV", "production") in ("test", "testing"):
+                return auth_service.get_active_account()
+            return None
+
+        parsed = auth_service.parse_session_token(token)
+        if parsed and parsed.get("user_id"):
+            uid = parsed["user_id"]
+            user = get_user_by_id(uid)
+            if user:
+                return user
             for acc in auth_service.accounts:
-                if acc.get("token") == token:
+                if acc.get("id") == uid:
                     return acc
 
-        # 2. Parámetros de consulta (email / user_id)
-        if query:
-            email = query.get("email", [None])[0]
-            uid = query.get("user_id", [None])[0]
-            if email or uid:
-                for acc in auth_service.accounts:
-                    if (email and acc.get("email", "").lower() == email.lower()) or (uid and acc.get("id") == uid):
-                        return acc
-                if email:
-                    return {"id": uid or email, "email": email, "display_name": email, "role": "analyst"}
+        for acc in auth_service.accounts:
+            if acc.get("token") == token:
+                return acc
 
         return None
+
+    def _require_auth(self, allowed_roles: Optional[List[str]] = None, query=None) -> Optional[Dict[str, Any]]:
+        user = self._get_request_user(query=query)
+        if not user:
+            self._send_error_json("Autenticación requerida. Por favor inicia sesión.", 401)
+            return None
+        if allowed_roles and user.get("role") not in allowed_roles:
+            self._send_error_json("Acceso denegado: Tu rol actual no tiene permisos para esta acción.", 403)
+            return None
+        return user
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
@@ -212,21 +228,21 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path.startswith("/api"):
             conn = get_active_db_connection()
             try:
-                # Auth Config
+                # Auth Config (Público / Configuración de Identidad)
                 if path == "/api/auth/config":
+                    current_user = self._get_request_user(query)
                     self._send_json({
                         "google_client_id": get_configured_client_id(),
-                        "active_account": auth_service.get_active_account(),
-                        "accounts": auth_service.get_all_accounts(),
+                        "authenticated": current_user is not None,
+                        "user": auth_service._safe_user(current_user) if current_user else None,
                         "mode": "tier1_studio"
                     })
                     return
 
-                # Listar Invitaciones (Solo Analistas)
+                # Listar Invitaciones (Solo Analistas Autenticados)
                 elif path == "/api/auth/invitations":
-                    user = self._get_request_user(query) or auth_service.get_active_account()
-                    if not user or user.get("role") != "analyst":
-                        self._send_error_json("Acceso denegado: Solo los Analistas pueden consultar las invitaciones.", 403)
+                    user = self._require_auth(allowed_roles=["analyst"], query=query)
+                    if not user:
                         return
                     try:
                         invs = auth_service.list_invitations(user)
@@ -235,7 +251,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self._send_error_json(str(e), 400)
                     return
 
-                # Verificar Token de Invitación (Público)
+                # Verificar Token de Invitación (Público para vista de bienvenida)
                 elif path == "/api/auth/invite/verify":
                     tok = query.get("token", [""])[0]
                     if not tok:
@@ -248,26 +264,31 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_json({"status": "success", "invitation": info})
                     return
 
-                # Profile
+                # Profile (Requiere Sesión Activa)
                 elif path == "/api/profile":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    safe_u = auth_service._safe_user(user)
                     self._send_json({
-                        "active_account": auth_service.get_active_account(),
-                        "accounts": auth_service.get_all_accounts(),
+                        "user": safe_u,
+                        "role": user.get("role", "analyst"),
                         "tier": "Tier 1: ECONODE Studio",
                         "security": {
                             "cipher": "TLS 1.3 / HMAC-SHA256",
-                            "session": "Verificada y Activa",
-                            "token_masked": "eco_sec_••••••••44b8"
+                            "session": "Verificada y Activa"
                         }
                     })
                     return
 
-                # Dashboard Systems
+                # Dashboard Systems (Requiere Autenticación)
                 elif path == "/api/systems":
-                    user = self._get_request_user(query)
-                    user_email = user.get("email") if user else None
-                    user_id = user.get("id") if user else None
-                    user_role = user.get("role") if user else None
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    user_email = user.get("email")
+                    user_id = user.get("id")
+                    user_role = user.get("role")
                     systems = get_dashboard_systems_use_case(conn, user_email=user_email, user_id=user_id, user_role=user_role)
                     self._send_json({
                         "status": "success",
@@ -276,8 +297,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     })
                     return
 
-                # Canvas details for a system
+                # Canvas details for a system (Requiere Autenticación)
                 elif path.startswith("/api/systems/") and path.endswith("/canvas"):
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     sys_id = int(path.split("/")[3])
                     details = get_system_canvas_use_case(conn, sys_id)
                     if not details:
@@ -378,15 +402,21 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self._send_json({"status": "success", "sheet": sheet})
                     return
 
-                # Comments
+                # Comments (Requiere Autenticación)
                 elif path == "/api/comments":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     sys_id = int(query.get("system_id", [1])[0])
                     comments = list_system_comments_use_case(sys_id)
                     self._send_json({"status": "success", "items": comments})
                     return
 
-                # Catálogo de Normas y Checklists Disponibles
+                # Catálogo de Normas y Checklists Disponibles (Requiere Autenticación)
                 elif path == "/api/checklists":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     standards = list_available_standards_use_case()
                     self._send_json({"status": "success", "count": len(standards), "items": standards})
                     return
@@ -398,16 +428,22 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self.wfile.write(csv_text.encode("utf-8"))
                     return
 
-                # Checklist Normativo (Multi-Estándar)
+                # Checklist Normativo (Multi-Estándar - Requiere Autenticación)
                 elif path == "/api/checklist":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     sys_id = int(query.get("system_id", [1])[0])
                     chk_id = query.get("checklist_id", ["nom070"])[0]
                     checklist = get_audit_checklist_use_case(sys_id, checklist_id=chk_id)
                     self._send_json({"status": "success", "checklist": checklist})
                     return
 
-                # Subscription status
+                # Subscription status (Requiere Autenticación)
                 elif path == "/api/subscription/status":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     self._send_json({
                         "status": "success",
                         "tier": "tier1",
@@ -420,16 +456,22 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         ]
                     })
                     return
-                # Documentos de la Bóveda
+                # Documentos de la Bóveda (Requiere Autenticación)
                 elif path == "/api/documents":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     sys_id = query.get("system_id", [None])[0]
                     sys_int = int(sys_id) if sys_id else None
                     docs = list_documents(sys_int)
                     self._send_json({"status": "success", "count": len(docs), "items": docs})
                     return
 
-                # Descargar documento de la Bóveda
+                # Descargar documento de la Bóveda (Requiere Autenticación con Token)
                 elif path.startswith("/api/documents/") and path.endswith("/download"):
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     doc_id = int(path.split("/")[3])
                     info = get_document_file(doc_id)
                     if not info:
@@ -454,8 +496,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self.wfile.write(content)
                     return
 
-                # Exportaciones industriales (openLCA, ILCD, SimaPro, CSV, Expediente ZIP)
+                # Exportaciones industriales (openLCA, ILCD, SimaPro, CSV, Expediente ZIP - Requiere Autenticación)
                 elif path.startswith("/api/systems/") and "/export/" in path:
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
                     parts = path.split("/")
                     sys_id = int(parts[3])
                     fmt = parts[5].lower()
@@ -538,11 +583,10 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Crear Invitación para Auditor o Cliente (Solo Analistas)
+            # Crear Invitación para Auditor o Cliente (Solo Analistas Autenticados)
             elif path == "/api/auth/invite":
-                user = self._get_request_user() or auth_service.get_active_account()
-                if not user or user.get("role") != "analyst":
-                    self._send_error_json("Acceso denegado: Únicamente los Analistas de Ciclo de Vida pueden invitar Auditores y Clientes.", 403)
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
                     return
                 email = body.get("email")
                 role = body.get("role") or "auditor"
@@ -567,11 +611,10 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Cancelar / Revocar Invitación (Solo Analistas)
+            # Cancelar / Revocar Invitación (Solo Analistas Autenticados)
             elif path == "/api/auth/invitations/cancel":
-                user = self._get_request_user() or auth_service.get_active_account()
-                if not user or user.get("role") != "analyst":
-                    self._send_error_json("Acceso denegado: Solo el Analista puede revocar invitaciones.", 403)
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
                     return
                 inv_id = body.get("invitation_id") or body.get("id") or ""
                 try:
@@ -581,26 +624,25 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Login con Usuario/Correo y Contraseña (con fallback para pruebas)
+            # Login con Usuario/Correo y Contraseña
             elif path == "/api/auth/login":
-                username_or_email = body.get("email") or body.get("username") or body.get("user_id")
+                username_or_email = (body.get("email") or body.get("username") or body.get("user_id") or "").strip()
                 password = body.get("password")
 
-                if password:
-                    user = auth_service.authenticate(username_or_email, password)
-                    if user:
-                        self._send_json({"status": "success", "authenticated": True, "user": user, "token": user.get("token")})
-                    else:
-                        self._send_error_json("Credenciales incorrectas. Verifica tu correo y contraseña.", 401)
+                if not username_or_email:
+                    self._send_error_json("Usuario o correo requerido.", 400)
                     return
+
+                if not password:
+                    self._send_error_json("Contraseña requerida.", 400)
+                    return
+
+                user = auth_service.authenticate(username_or_email, password)
+                if user:
+                    self._send_json({"status": "success", "authenticated": True, "user": user, "token": user.get("token")})
                 else:
-                    # Fallback de compatibilidad
-                    user = auth_service.switch_account(username_or_email or "analyst_carla")
-                    if user:
-                        self._send_json({"status": "success", "authenticated": True, "user": user, "token": user.get("token")})
-                    else:
-                        self._send_error_json("Usuario o rol no reconocido", 400)
-                    return
+                    self._send_error_json("Credenciales incorrectas. Verifica tu correo y contraseña.", 401)
+                return
 
             # Sign-Up (Crear Cuenta / Organización con contraseña)
             elif path == "/api/auth/signup" or path == "/api/auth/register":
@@ -611,8 +653,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Switch Account
+            # Switch Account (Bloqueado estrictamente en producción)
             elif path == "/api/auth/switch-account":
+                if getattr(settings, "ENV", "production") == "production":
+                    self._send_error_json("La alternancia administrativa de cuentas está deshabilitada en producción.", 403)
+                    return
                 ident = body.get("account_id") or body.get("role") or ""
                 switched = auth_service.switch_account(ident)
                 if switched:
@@ -621,18 +666,23 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json("No se pudo alternar la cuenta", 400)
                 return
 
-            # Create Product System (Wizard)
+            # Create Product System (Wizard - Solo Analistas Autenticados)
             elif path == "/api/systems/create":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 try:
-                    user = self._get_request_user()
                     res = create_system_wizard_use_case(conn, body, user=user)
                     self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)
                 return
 
-            # Import CSV
+            # Import CSV (Solo Analistas Autenticados)
             elif path == "/api/systems/import-csv":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 csv_str = body.get("csv", "")
                 if not csv_str:
                     if os.path.exists(TEMPLATE_CSV_PATH):
@@ -644,15 +694,17 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     else:
                         csv_str = DEFAULT_TEMPLATE_CSV
                 try:
-                    user = self._get_request_user()
                     res = import_systems_csv_use_case(conn, csv_str, user=user)
                     self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)
                 return
 
-            # Save Canvas
+            # Save Canvas (Solo Analistas Autenticados)
             elif path.startswith("/api/systems/") and path.endswith("/save"):
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 sys_id = int(path.split("/")[3])
                 try:
                     save_system_canvas_use_case(conn, sys_id, body)
@@ -661,8 +713,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Delete Product System
+            # Delete Product System (Solo Analistas Autenticados)
             elif path == "/api/systems/delete":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 sys_id = int(body.get("system_id") or 0)
                 if not sys_id:
                     self._send_error_json("ID de sistema producto no especificado", 400)
@@ -674,8 +729,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Create Custom Process (Estilo openLCA / Proceso en Blanco)
+            # Create Custom Process (Solo Analistas Autenticados)
             elif path == "/api/processes/create":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 name = (body.get("name") or "").strip()
                 if not name:
                     self._send_error_json("El nombre del proceso es requerido", 400)
@@ -699,8 +757,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Create Custom Flow (Estilo openLCA)
+            # Create Custom Flow (Solo Analistas Autenticados)
             elif path == "/api/flows/create":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 name = (body.get("name") or "").strip()
                 if not name:
                     self._send_error_json("El nombre del flujo es requerido", 400)
@@ -719,8 +780,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Delete Custom Process
+            # Delete Custom Process (Solo Analistas Autenticados)
             elif path == "/api/processes/delete":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 proc_id = body.get("process_id") or body.get("id")
                 if not proc_id:
                     self._send_error_json("ID de proceso no especificado", 400)
@@ -732,8 +796,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Delete Custom Flow
+            # Delete Custom Flow (Solo Analistas Autenticados)
             elif path == "/api/flows/delete":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 flow_id = body.get("flow_id") or body.get("id") or body.get("code")
                 if not flow_id:
                     self._send_error_json("ID de flujo no especificado", 400)
@@ -745,8 +812,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Invite Collaborator (Auditor o Cliente)
+            # Invite Collaborator (Solo Analistas Autenticados)
             elif path == "/api/systems/collaborators/invite":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 sys_id = int(body.get("system_id") or 0)
                 if not sys_id:
                     self._send_error_json("ID de sistema producto no especificado", 400)
@@ -773,12 +843,15 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Add Comment
+            # Add Comment (Identidad verificada desde Token criptográfico)
             elif path == "/api/comments":
+                user = self._require_auth()
+                if not user:
+                    return
                 sys_id = int(body.get("system_id", 1))
-                author = body.get("author_name") or auth_service.get_active_account().get("display_name", "Auditor")
-                role = body.get("author_role") or auth_service.get_active_account().get("role", "auditor")
-                content = body.get("content", "")
+                author = user.get("display_name") or user.get("name") or user.get("email") or "Usuario"
+                role = user.get("role", "analyst")
+                content = (body.get("content") or "").strip()
                 node_id = body.get("node_id")
                 x = body.get("x")
                 y = body.get("y")
@@ -789,10 +862,13 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json({"status": "success", "comment": comment})
                 return
 
-            # Resolve Comment
+            # Resolve Comment (Identidad verificada desde Token criptográfico)
             elif path == "/api/comments/resolve":
+                user = self._require_auth()
+                if not user:
+                    return
                 cid = int(body.get("comment_id", 1))
-                resolved_by = body.get("resolved_by") or auth_service.get_active_account().get("display_name", "Elena R.")
+                resolved_by = user.get("display_name") or user.get("name") or user.get("email") or "Usuario"
                 reply_text = body.get("reply", "")
                 try:
                     resolved = reply_and_resolve_comment_use_case(cid, resolved_by, reply_text)
@@ -801,12 +877,14 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Delete Comment
+            # Delete Comment (Solo el Autor del comentario o un Analista)
             elif path == "/api/comments/delete":
+                user = self._require_auth()
+                if not user:
+                    return
                 cid = int(body.get("comment_id", 0))
-                active_user = auth_service.get_active_account()
-                user_name = body.get("user_name") or active_user.get("display_name", "")
-                user_role = body.get("user_role") or active_user.get("role", "analyst")
+                user_name = user.get("display_name") or user.get("name") or user.get("email") or ""
+                user_role = user.get("role", "analyst")
                 try:
                     delete_system_comment_use_case(cid, user_name, user_role)
                     self._send_json({"status": "success", "deleted_id": cid})
@@ -814,8 +892,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 403 if isinstance(e, PermissionError) else 400)
                 return
 
-            # Toggle Checklist Clause
+            # Toggle Checklist Clause (Solo Auditores o Analistas)
             elif path == "/api/checklist/toggle":
+                user = self._require_auth(allowed_roles=["analyst", "auditor"])
+                if not user:
+                    return
                 try:
                     sys_id = int(body.get("system_id", 1))
                     clause_id = str(body.get("clause_id", ""))
@@ -833,8 +914,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Update Clause Evidence Requirement
+            # Update Clause Evidence Requirement (Clientes o Analistas)
             elif path == "/api/checklist/evidence":
+                user = self._require_auth(allowed_roles=["analyst", "client"])
+                if not user:
+                    return
                 try:
                     sys_id = int(body.get("system_id", 1))
                     clause_id = str(body.get("clause_id", ""))
@@ -849,11 +933,14 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Sign Audit
+            # Sign Audit (Exclusivo para Auditores Líderes Acreditados)
             elif path == "/api/checklist/sign":
+                user = self._require_auth(allowed_roles=["auditor", "analyst"])
+                if not user:
+                    return
                 sys_id = int(body.get("system_id", 1))
                 chk_id = body.get("checklist_id", "nom070")
-                auditor_name = auth_service.get_active_account().get("display_name", "Josué Arentería")
+                auditor_name = user.get("display_name") or user.get("name") or user.get("email") or "Auditor Líder"
                 try:
                     res = sign_normative_audit_use_case(sys_id, auditor_name, checklist_id=chk_id)
                     self._send_json({"status": "success", "receipt": res})
@@ -861,9 +948,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Crear Norma Personalizada
+            # Crear Norma Personalizada (Solo Analistas o Auditores)
             elif path == "/api/checklists/create":
-                user = self._get_request_user()
+                user = self._require_auth(allowed_roles=["analyst", "auditor"])
+                if not user:
+                    return
                 try:
                     res = create_custom_standard_use_case(body, user=user)
                     self._send_json({"status": "success", "standard": res, "message": "Norma creada exitosamente."})
@@ -871,9 +960,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Importar Norma vía Archivo CSV
+            # Importar Norma vía Archivo CSV (Solo Analistas o Auditores)
             elif path == "/api/checklists/import":
-                user = self._get_request_user()
+                user = self._require_auth(allowed_roles=["analyst", "auditor"])
+                if not user:
+                    return
                 csv_str = body.get("csv") or body.get("csv_content") or body.get("content") or ""
                 metadata = body.get("metadata") or {}
                 if not isinstance(metadata, dict):
@@ -899,16 +990,19 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Subir documento a la Bóveda (SQL, Excel, PDF, CSV, etc.)
+            # Subir documento a la Bóveda (Clientes o Analistas)
             elif path == "/api/documents/upload":
+                user = self._require_auth(allowed_roles=["analyst", "client"])
+                if not user:
+                    return
                 title = body.get("title") or body.get("original_filename") or body.get("file_name") or "Documento"
                 orig_name = body.get("original_filename") or body.get("file_name") or "archivo.bin"
                 content_b64 = body.get("content_base64") or body.get("file_data") or ""
                 content_text = body.get("content_text", "")
                 sys_id = int(body.get("system_id", 1))
                 desc = body.get("description", "")
-                uploaded_by = body.get("uploaded_by") or body.get("author_name") or auth_service.get_active_account().get("display_name", "Usuario")
-                role = body.get("user_role") or body.get("author_role") or auth_service.get_active_account().get("role", "client")
+                uploaded_by = user.get("display_name") or user.get("name") or user.get("email") or "Usuario"
+                role = user.get("role", "client")
                 override_sha = body.get("sha256_hash") or body.get("sha256")
                 override_size = body.get("file_size")
                 if override_size is not None:
@@ -939,8 +1033,11 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 500)
                 return
 
-            # Eliminar documento de la Bóveda
+            # Eliminar documento de la Bóveda (Solo Analistas Autenticados)
             elif path == "/api/documents/delete":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
                 doc_id = int(body.get("document_id", 0))
                 ok = delete_document(doc_id)
                 self._send_json({"status": "success" if ok else "error"})
