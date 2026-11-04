@@ -1,3 +1,4 @@
+import time
 """
 econode_studio/infrastructure/auth_adapter.py - Adaptador de Persistencia de Autenticación, RBAC e Invitaciones
 Compatible dual: Supabase PostgreSQL (Cloud / Vercel Serverless) y SQLite Local (Offline).
@@ -25,8 +26,23 @@ def get_auth_db_connection() -> Any:
     return get_db_connection(AUTH_DB_PATH)
 
 
+
+_auth_tables_ensured = False
+_USERS_CACHE = None
+_USERS_CACHE_TIME = 0.0
+_USERS_CACHE_TTL = 60.0
+
+def invalidate_users_cache():
+    global _USERS_CACHE, _USERS_CACHE_TIME
+    _USERS_CACHE = None
+    _USERS_CACHE_TIME = 0.0
+
 def ensure_auth_tables() -> None:
     """Garantiza la creación independiente y resiliente de tablas e índices para SQLite y Supabase PostgreSQL."""
+    global _auth_tables_ensured
+    if _auth_tables_ensured or getattr(settings, "IS_POSTGRES", False):
+        return
+    _auth_tables_ensured = True
     # 1. Tabla de invitaciones (aislada para que nunca sea abortada por errores en otras tablas)
     try:
         with get_auth_db_connection() as conn:
@@ -137,17 +153,27 @@ def _row_to_invitation_dict(row: Any) -> Dict[str, Any]:
 
 
 def get_all_users() -> List[Dict[str, Any]]:
-    """Recupera la lista completa de usuarios registrados."""
+    """Recupera la lista completa de usuarios registrados (con caché de alta velocidad)."""
+    global _USERS_CACHE, _USERS_CACHE_TIME
+    now = time.time()
+    if _USERS_CACHE is not None and (now - _USERS_CACHE_TIME) < _USERS_CACHE_TTL:
+        return _USERS_CACHE
+
     ensure_auth_tables()
+    rows = None
     try:
         with get_auth_db_connection() as conn:
-            rows = conn.execute("SELECT * FROM auth_users ORDER BY created_at ASC;").fetchall()
-            return [_row_to_user_dict(r) for r in rows]
+            try:
+                rows = conn.execute("SELECT * FROM auth_users ORDER BY created_at ASC;").fetchall()
+            except Exception:
+                rows = conn.execute("SELECT * FROM users ORDER BY created_at ASC;").fetchall()
     except Exception:
-        with get_auth_db_connection() as conn:
-            rows = conn.execute("SELECT * FROM users ORDER BY created_at ASC;").fetchall()
-            return [_row_to_user_dict(r) for r in rows]
+        rows = []
 
+    res = [_row_to_user_dict(r) for r in (rows or [])]
+    _USERS_CACHE = res
+    _USERS_CACHE_TIME = now
+    return res
 
 def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
     """Busca un usuario por su identificador único."""

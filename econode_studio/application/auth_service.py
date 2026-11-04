@@ -107,12 +107,12 @@ class AuthService:
     def accounts(self) -> List[Dict[str, Any]]:
         return get_all_users()
 
-    def get_active_account(self) -> Dict[str, Any]:
+    def get_active_account(self, all_accounts: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
         if self.active_account_id:
             user = get_user_by_id(self.active_account_id)
             if user:
                 return self._safe_user(user)
-        all_u = get_all_users()
+        all_u = all_accounts if all_accounts is not None else get_all_users()
         return self._safe_user(all_u[0]) if all_u else {}
 
     def get_all_accounts(self) -> List[Dict[str, Any]]:

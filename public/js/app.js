@@ -7,9 +7,21 @@
   // =========================================================================
   // 1. ESTADO GLOBAL REACTIVO
   // =========================================================================
+  // Restauración síncrona inmediata de sesión desde localStorage (0ms)
+  let initialUser = null;
+  let initialAuth = false;
+  try {
+    const cachedToken = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+    const cachedUser = localStorage.getItem("econode_user") || sessionStorage.getItem("econode_user");
+    if (cachedToken && cachedUser) {
+      initialUser = JSON.parse(cachedUser);
+      initialAuth = true;
+    }
+  } catch(e) {}
+
   const state = {
-    activeUser: null,
-    isAuthenticated: false,
+    activeUser: initialUser,
+    isAuthenticated: initialAuth,
     allAccounts: [],
     activeSystem: null,
     systems: [],
@@ -230,6 +242,9 @@
   };
 
   function showView(viewName) {
+    if (viewName === "studio") {
+      viewName = state.isAuthenticated ? "dashboard" : "login";
+    }
     if (!views[viewName]) return;
 
     // Protección de rutas: si intenta entrar a Studio sin autenticación, enviar a login
@@ -422,32 +437,41 @@
         state.allAccounts = cfg.accounts;
       }
 
-      // Solo restaurar sesión si el usuario ya inició sesión explícitamente en esta sesión del navegador
-      const storedToken = sessionStorage.getItem("econode_token");
-      const storedUserId = sessionStorage.getItem("econode_user_id");
+      const storedToken = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+      const storedUserId = localStorage.getItem("econode_user_id") || sessionStorage.getItem("econode_user_id");
 
       if (storedToken && storedUserId && cfg.accounts) {
         const found = cfg.accounts.find(a => a.id === storedUserId || a.username === storedUserId || a.email === storedUserId);
         if (found) {
           state.activeUser = found;
           state.isAuthenticated = true;
+          try {
+            localStorage.setItem("econode_token", storedToken);
+            localStorage.setItem("econode_user_id", found.id);
+            localStorage.setItem("econode_user", JSON.stringify(found));
+          } catch(e) {}
           updateUserUI();
+          applyRolePermissions();
           return;
         }
       }
 
-      // Si no hay token en sessionStorage, el usuario arranca como NO autenticado
-      state.activeUser = null;
-      state.isAuthenticated = false;
-      sessionStorage.removeItem("econode_token");
-      sessionStorage.removeItem("econode_user_id");
+      // Si no hay token guardado
+      if (!storedToken) {
+        state.activeUser = null;
+        state.isAuthenticated = false;
+        try {
+          localStorage.removeItem("econode_token");
+          localStorage.removeItem("econode_user_id");
+          localStorage.removeItem("econode_user");
+          sessionStorage.removeItem("econode_token");
+          sessionStorage.removeItem("econode_user_id");
+        } catch(e) {}
+      }
     } catch (err) {
       console.warn("Inicialización de auth:", err);
-      state.activeUser = null;
-      state.isAuthenticated = false;
     }
   }
-
   function updateUserUI() {
     const user = state.activeUser;
     if (!user) return;
@@ -523,6 +547,10 @@
     sessionStorage.removeItem("econode_token");
     sessionStorage.removeItem("econode_user_id");
     try {
+      localStorage.removeItem("econode_token");
+      localStorage.removeItem("econode_user_id");
+      localStorage.removeItem("econode_user");
+      localStorage.removeItem("econode_cached_systems");
       localStorage.removeItem("econode_active_system_id");
       localStorage.removeItem("econode_active_view");
     } catch (e) {}
@@ -552,8 +580,17 @@
       if (res.user) {
         state.activeUser = res.user;
         state.isAuthenticated = true;
-        if (res.user.token) sessionStorage.setItem("econode_token", res.user.token);
-        if (res.user.id) sessionStorage.setItem("econode_user_id", res.user.id);
+        try {
+          if (res.user.token) {
+            sessionStorage.setItem("econode_token", res.user.token);
+            localStorage.setItem("econode_token", res.user.token);
+          }
+          if (res.user.id) {
+            sessionStorage.setItem("econode_user_id", res.user.id);
+            localStorage.setItem("econode_user_id", res.user.id);
+          }
+          localStorage.setItem("econode_user", JSON.stringify(res.user));
+        } catch(e) {}
         updateUserUI();
         applyRolePermissions();
         const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
@@ -644,8 +681,25 @@
   // =========================================================================
   async function loadDashboard() {
     try {
+      // 1. Renderizado instantáneo desde caché local si existe (0ms)
+      const cached = localStorage.getItem("econode_cached_systems");
+      if (cached && (!state.systems || state.systems.length === 0)) {
+        try {
+          state.systems = JSON.parse(cached);
+          renderDashboardTable();
+          renderDashboardKpis();
+        } catch(e) {}
+      } else if (!state.systems || state.systems.length === 0) {
+        const tbody = document.getElementById("tableSystemsBody");
+        if (tbody) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted); font-size: 11.5px;">Cargando portafolio de proyectos...</td></tr>`;
+        }
+      }
+
+      // 2. Traer versión fresca del servidor
       const res = await api.getSystems();
       state.systems = res.items || [];
+      try { localStorage.setItem("econode_cached_systems", JSON.stringify(state.systems)); } catch(e) {}
 
       // Si no hay un sistema activo seleccionado explícitamente, mantener el título neutral
       const navTitle = document.getElementById("navProjectTitle");
@@ -8233,8 +8287,8 @@
 
   async function initApp() {
     setupFoldToolbarHome();
-    // 1. Configurar Auth
-    await initAuth();
+    // 1. Configurar Auth en segundo plano sin bloquear listeners de UI
+    initAuth().catch(err => console.warn("Background auth error:", err));
 
     // 2. Navegación Top Navbar
     document.querySelectorAll(".nav-btn[data-view]").forEach((btn) => {
@@ -8322,8 +8376,17 @@
               if (res.user) {
                 state.activeUser = res.user;
                 state.isAuthenticated = true;
-                if (res.user.token) sessionStorage.setItem("econode_token", res.user.token);
-        if (res.user.id) sessionStorage.setItem("econode_user_id", res.user.id);
+                try {
+          if (res.user.token) {
+            sessionStorage.setItem("econode_token", res.user.token);
+            localStorage.setItem("econode_token", res.user.token);
+          }
+          if (res.user.id) {
+            sessionStorage.setItem("econode_user_id", res.user.id);
+            localStorage.setItem("econode_user_id", res.user.id);
+          }
+          localStorage.setItem("econode_user", JSON.stringify(res.user));
+        } catch(e) {}
                 updateUserUI();
                 applyRolePermissions();
                 const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
