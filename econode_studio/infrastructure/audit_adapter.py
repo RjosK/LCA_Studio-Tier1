@@ -33,6 +33,16 @@ except (ImportError, ValueError):
 
 from .db_connection import get_db_connection
 
+# Caché en memoria para evitar consultas redundantes y DDL en cada petición
+_audit_db_initialized = False
+_STANDARDS_LIST_CACHE: Optional[List[Dict[str, Any]]] = None
+_TEMPLATE_CACHE: Dict[str, Dict[str, Any]] = {}
+
+def _invalidate_audit_caches() -> None:
+    global _STANDARDS_LIST_CACHE, _TEMPLATE_CACHE
+    _STANDARDS_LIST_CACHE = None
+    _TEMPLATE_CACHE.clear()
+
 def get_audit_db_connection() -> Any:
     """Crea una conexión con soporte dual para Supabase PostgreSQL y SQLite."""
     return get_db_connection(AUDIT_DB_PATH)
@@ -40,7 +50,11 @@ def get_audit_db_connection() -> Any:
 
 def init_audit_db() -> None:
     """Crea las tablas, índices e inicializa los estándares oficiales si no existen."""
+    global _audit_db_initialized
+    if _audit_db_initialized:
+        return
     if getattr(settings, "IS_POSTGRES", False):
+        _audit_db_initialized = True
         return
     with get_audit_db_connection() as conn:
         # 1. Comentarios
@@ -105,6 +119,8 @@ def init_audit_db() -> None:
             );
         """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_checklist_states_system ON checklist_states(system_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_checklist_states_sys_chk ON checklist_states(system_id, checklist_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_checklist_clauses_chk_order ON checklist_template_clauses(checklist_id, display_order);")
 
         # Migración segura: agregar checklist_id si la tabla existía previamente sin ella
         try:
@@ -158,6 +174,8 @@ def init_audit_db() -> None:
                         evidence_required = excluded.evidence_required,
                         display_order = excluded.display_order;
                 """, (std.id, cl.clause_id, cl.section, cl.title, cl.criterion, cl.evidence_required, idx))
+
+    _audit_db_initialized = True
 
 
 # =============================================================================
@@ -280,6 +298,10 @@ def delete_comment(
 
 def list_all_checklist_templates(user_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Retorna la lista de todas las normas oficiales y personalizadas disponibles."""
+    global _STANDARDS_LIST_CACHE
+    if _STANDARDS_LIST_CACHE is not None:
+        return _STANDARDS_LIST_CACHE
+
     init_audit_db()
     with get_audit_db_connection() as conn:
         sql = """
@@ -290,7 +312,7 @@ def list_all_checklist_templates(user_id: Optional[str] = None) -> List[Dict[str
             ORDER BY t.is_official DESC, t.name ASC;
         """
         rows = conn.execute(sql).fetchall()
-        return [{
+        result = [{
             "id": r["id"],
             "name": r["name"],
             "code": r["code"],
@@ -301,12 +323,18 @@ def list_all_checklist_templates(user_id: Optional[str] = None) -> List[Dict[str
             "created_by": r["created_by"],
             "total_clauses": r["total_clauses"]
         } for r in rows]
+        _STANDARDS_LIST_CACHE = result
+        return result
 
 
 def get_checklist_template(checklist_id: str) -> Optional[Dict[str, Any]]:
     """Obtiene una norma con todas sus cláusulas ordenadas."""
-    init_audit_db()
     clean_id = (checklist_id or "nom070").strip().lower()
+    if clean_id in _TEMPLATE_CACHE:
+        cached = _TEMPLATE_CACHE[clean_id]
+        return {**cached, "clauses": [dict(c) for c in cached["clauses"]]}
+
+    init_audit_db()
     with get_audit_db_connection() as conn:
         t_row = conn.execute("SELECT * FROM checklist_templates WHERE id = ?;", (clean_id,)).fetchone()
         if not t_row:
@@ -315,6 +343,9 @@ def get_checklist_template(checklist_id: str) -> Optional[Dict[str, Any]]:
             if not t_row:
                 return None
             clean_id = "nom070"
+            if clean_id in _TEMPLATE_CACHE:
+                cached = _TEMPLATE_CACHE[clean_id]
+                return {**cached, "clauses": [dict(c) for c in cached["clauses"]]}
 
         c_rows = conn.execute("""
             SELECT * FROM checklist_template_clauses
@@ -331,7 +362,7 @@ def get_checklist_template(checklist_id: str) -> Optional[Dict[str, Any]]:
             "is_compliant": True
         } for c in c_rows]
 
-        return {
+        template_dict = {
             "id": t_row["id"],
             "name": t_row["name"],
             "code": t_row["code"],
@@ -343,6 +374,8 @@ def get_checklist_template(checklist_id: str) -> Optional[Dict[str, Any]]:
             "total_clauses": len(clauses),
             "clauses": clauses
         }
+        _TEMPLATE_CACHE[clean_id] = template_dict
+        return {**template_dict, "clauses": [dict(c) for c in template_dict["clauses"]]}
 
 
 def save_custom_checklist_template(template_data: Dict[str, Any], user_id: str = "auditor") -> Dict[str, Any]:
@@ -389,6 +422,7 @@ def save_custom_checklist_template(template_data: Dict[str, Any], user_id: str =
                 VALUES (?, ?, ?, ?, ?, ?, ?);
             """, (t_id, cl_id, sec, title, crit, ev, idx))
 
+    _invalidate_audit_caches()
     return get_checklist_template(t_id)
 
 
@@ -452,6 +486,7 @@ def delete_custom_checklist_template(checklist_id: str, user_role: str = "") -> 
 
         conn.execute("DELETE FROM checklist_template_clauses WHERE checklist_id = ?;", (checklist_id,))
         conn.execute("DELETE FROM checklist_templates WHERE id = ?;", (checklist_id,))
+        _invalidate_audit_caches()
         return True
 
 
@@ -465,6 +500,7 @@ def update_clause_evidence(checklist_id: str, clause_id: str, new_evidence: str)
             SET evidence_required = ?
             WHERE checklist_id = ? AND clause_id = ?;
         """, (new_evidence, clean_id, clause_id))
+        _invalidate_audit_caches()
         return cur.rowcount > 0
 
 

@@ -418,7 +418,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     if not user:
                         return
                     standards = list_available_standards_use_case()
-                    self._send_json({"status": "success", "count": len(standards), "items": standards})
+                    self._send_json({"status": "success", "count": len(standards), "items": standards, "standards": standards})
                     return
 
                 # Descargar Plantilla CSV para Checklists

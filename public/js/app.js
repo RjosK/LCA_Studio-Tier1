@@ -6862,25 +6862,38 @@
   // 9. CHECKLIST NORMATIVO MULTI-NORMA (NOM-070, ISO 14044, ISO 14067, GHG Protocol & Custom)
   // =========================================================================
   async function loadAvailableStandards() {
+    if (state.availableStandards && state.availableStandards.length > 0) {
+      renderStandardsSelect();
+      return state.availableStandards;
+    }
     try {
       const res = await api.getStandards();
-      state.availableStandards = res.standards || [];
-      const select = document.getElementById("selectAuditStandard");
-      if (select && state.availableStandards.length > 0) {
-        const isOfficialSys = state.activeSystem && (state.activeSystem.id === 21 || state.activeSystem.code === "SYS-PET-CIRCULAR-01");
-        const currentVal = state.activeStandard || (isOfficialSys ? "nom070" : "");
-        const placeholderOption = `<option value="" ${!currentVal ? 'selected' : ''}>-- Seleccionar Norma de Auditoría --</option>`;
-        select.innerHTML = placeholderOption + state.availableStandards
-          .map((std) => `<option value="${std.id}" ${std.id === currentVal ? 'selected' : ''}>${std.name} (${std.clauses_count || std.clauses?.length || 0} cl.)</option>`)
-          .join("");
-        select.value = currentVal;
-      }
+      state.availableStandards = res.standards || res.items || [];
+      renderStandardsSelect();
+      return state.availableStandards;
     } catch (err) {
-      console.warn("No se pudieron cargar estándares dinámicos:", err);
+      console.warn("No se pudieron cargar estandares dinamicos:", err);
+      return [];
+    }
+  }
+
+  function renderStandardsSelect() {
+    const select = document.getElementById("selectAuditStandard");
+    if (!select || !state.availableStandards || state.availableStandards.length === 0) return;
+    const isOfficialSys = state.activeSystem && (state.activeSystem.id === 21 || state.activeSystem.code === "SYS-PET-CIRCULAR-01");
+    const currentVal = state.activeStandard || (isOfficialSys ? "nom070" : "");
+    const placeholderOption = `<option value="" ${!currentVal ? 'selected' : ''}>-- Seleccionar Norma de Auditoria --</option>`;
+    const optionsHtml = placeholderOption + state.availableStandards
+      .map((std) => `<option value="${std.id}" ${std.id === currentVal ? 'selected' : ''}>${std.name} (${std.clauses_count || (std.clauses && std.clauses.length) || std.total_clauses || 0} cl.)</option>`)
+      .join("");
+    if (select.innerHTML !== optionsHtml) {
+      select.innerHTML = optionsHtml;
+      select.value = currentVal;
     }
   }
 
   async function loadAuditChecklist(selectedStandard = null) {
+    state.auditCache = state.auditCache || {};
     const sysId = state.activeSystem ? state.activeSystem.id : 21;
     const isOfficialSys = state.activeSystem && (state.activeSystem.id === 21 || state.activeSystem.code === "SYS-PET-CIRCULAR-01");
 
@@ -6891,9 +6904,6 @@
     }
     const standardId = state.activeStandard;
 
-    // Asegurar que la lista de estándares en el select esté al día
-    await loadAvailableStandards();
-
     const badge = document.getElementById("auditActiveStandardBadge");
     const label = document.getElementById("auditComplianceLabel");
     const bar = document.getElementById("auditProgressBar");
@@ -6903,16 +6913,15 @@
       state.checklist = [];
       state.checklistMeta = null;
       if (badge) badge.textContent = "Ninguna Norma Seleccionada";
-      if (label) label.textContent = "● Pendiente de Selección de Norma por el Auditor";
+      if (label) label.textContent = "Pendiente de Seleccion de Norma por el Auditor";
       if (bar) bar.style.width = "0%";
       if (tbody) {
         tbody.innerHTML = `
           <tr>
             <td colspan="6" style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
-              <div style="font-size: 28px; margin-bottom: 8px;">📋</div>
-              <div style="font-size: 13.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Selecciona una Norma de Auditoría</div>
+              <div style="font-size: 13.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Selecciona una Norma de Auditoria</div>
               <div style="font-size: 11px; max-width: 440px; margin: 0 auto 12px auto; line-height: 1.45;">
-                Elige en el selector superior la norma oficial (NOM-070, ISO 14044, ISO 14067, GHG Protocol) o sube un checklist propio desde CSV para comenzar la auditoría técnica.
+                Elige en el selector superior la norma oficial (NOM-070, ISO 14044, ISO 14067, GHG Protocol) o sube un checklist propio desde CSV para comenzar la auditoria tecnica.
               </div>
             </td>
           </tr>
@@ -6921,13 +6930,54 @@
       return;
     }
 
+    const cacheKey = `${sysId}_${standardId}`;
+    const cached = state.auditCache[cacheKey];
+
+    // 1. HIDRATACION INSTANTANEA DESDE CACHE CLIENTE (0 ms de latencia percibida)
+    if (cached) {
+      state.checklist = cached.clauses || [];
+      state.checklistMeta = cached.meta || null;
+      if (badge) {
+        const currentStd = (state.availableStandards || []).find((s) => s.id === standardId);
+        badge.textContent = currentStd ? currentStd.name : standardId.toUpperCase();
+      }
+      renderChecklistTable();
+      renderChecklistProgress();
+    } else if (tbody && (!state.checklist || state.checklist.length === 0)) {
+      // Skeleton loader elegante estilo Apple HIG si no hay cache previa
+      tbody.innerHTML = [1, 2, 3, 4, 5].map(i => `
+        <tr style="opacity: ${1 - i * 0.12};">
+          <td style="padding: 12px;"><div style="height: 12px; width: 55px; background: var(--bg-muted); border-radius: 4px; animation: pulse 1.2s infinite ease-in-out;"></div></td>
+          <td style="padding: 12px;"><div style="height: 12px; width: 75%; background: var(--bg-muted); border-radius: 4px; margin-bottom: 6px; animation: pulse 1.2s infinite ease-in-out;"></div><div style="height: 9px; width: 45%; background: var(--bg-muted); border-radius: 3px; opacity: 0.6;"></div></td>
+          <td style="padding: 12px;"><div style="height: 11px; width: 85%; background: var(--bg-muted); border-radius: 4px; animation: pulse 1.2s infinite ease-in-out;"></div></td>
+          <td style="padding: 12px;"><div style="height: 18px; width: 68px; background: var(--bg-muted); border-radius: 12px;"></div></td>
+          <td style="padding: 12px;"><div style="height: 11px; width: 90px; background: var(--bg-muted); border-radius: 4px;"></div></td>
+          <td style="padding: 12px;"><div style="height: 22px; width: 120px; background: var(--bg-muted); border-radius: 6px;"></div></td>
+        </tr>
+      `).join("");
+    }
+
+    // 2. CARGA Y REVALIDACION PARALELA SIN BLOQUEO EN CASCADA
+    const standardsPromise = (state.availableStandards && state.availableStandards.length > 0)
+      ? Promise.resolve(state.availableStandards)
+      : loadAvailableStandards();
+
     try {
-      const res = await api.getChecklist(sysId, standardId);
+      const [_, res] = await Promise.all([
+        standardsPromise,
+        api.getChecklist(sysId, standardId)
+      ]);
+
       const data = res.checklist || {};
       state.checklist = Array.isArray(data) ? data : (data.clauses || []);
       state.checklistMeta = typeof data === "object" && !Array.isArray(data) ? data : null;
 
-      // Actualizar badge superior de norma activa
+      // Guardar en cache cliente
+      state.auditCache[cacheKey] = {
+        clauses: state.checklist,
+        meta: state.checklistMeta
+      };
+
       if (badge) {
         const currentStd = (state.availableStandards || []).find((s) => s.id === standardId);
         badge.textContent = currentStd ? currentStd.name : standardId.toUpperCase();
@@ -6937,12 +6987,15 @@
       renderChecklistProgress();
     } catch (err) {
       console.error("Error al cargar checklist:", err);
+      if (!cached && tbody) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">Error al cargar checklist normativo: ${escapeHtml(err.message || "Error de conexion")}</td></tr>`;
+      }
     }
   }
 
   function renderChecklistProgress() {
-    const total = state.checklist.length || 0;
-    const compliantCount = state.checklist.filter((c) => c.is_compliant === true || c.status === "COMPLIANT").length;
+    const total = state.checklist ? state.checklist.length : 0;
+    const compliantCount = (state.checklist || []).filter((c) => c.is_compliant === true || c.status === "COMPLIANT").length;
     const pct = total > 0 ? ((compliantCount / total) * 100).toFixed(1) : "0.0";
 
     const label = document.getElementById("auditComplianceLabel");
@@ -6950,9 +7003,9 @@
 
     if (label) {
       if (compliantCount === 0) {
-        label.textContent = `● 0.0% Conforme (Todas las ${total} Cláusulas Pendientes de Verificación)`;
+        label.textContent = `0.0% Conforme (Todas las ${total} Clausulas Pendientes de Verificacion)`;
       } else {
-        label.textContent = `● ${pct}% Conforme (${compliantCount} de ${total} Cláusulas Verificadas)`;
+        label.textContent = `${pct}% Conforme (${compliantCount} de ${total} Clausulas Verificadas)`;
       }
     }
     if (bar) {
@@ -6971,7 +7024,7 @@
       tbody.innerHTML = `
         <tr>
           <td colspan="6" style="text-align: center; padding: 32px; color: var(--text-muted);">
-            Selecciona una norma en el menú superior para desplegar las cláusulas de auditoría.
+            Selecciona una norma en el menu superior para desplegar las clausulas de auditoria.
           </td>
         </tr>
       `;
@@ -6979,40 +7032,44 @@
     }
 
     if (!state.checklist || state.checklist.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">No hay cláusulas registradas para esta norma.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-muted);">No hay clausulas registradas para esta norma.</td></tr>`;
       return;
     }
+
+    const compliantLabel = window.I18n ? window.I18n.t("app.compliant_btn", "Conforme") : "Conforme";
+    const pendingLabel = window.I18n ? window.I18n.t("app.pending_btn", "Pendiente") : "Pendiente";
+    const readOnlyLabel = window.I18n ? window.I18n.t("app.readonly_mode", "Solo lectura") : "Solo lectura";
 
     tbody.innerHTML = state.checklist
       .map((item) => {
         const isOk = item.is_compliant === true || item.status === "COMPLIANT";
-        const compliantLabel = window.I18n.t("app.compliant_btn", "✓ Conforme");
-        const pendingLabel = window.I18n.t("app.pending_btn", "⚠️ Pendiente");
-        const readOnlyLabel = window.I18n.t("app.readonly_mode", "Solo lectura");
+        const titleSafe = escapeHtml(item.title || "");
+        const critSafe = escapeHtml(item.criterion || "");
+        const evidSafe = escapeHtml(item.evidence || "Evidencia tecnica requerida por la norma.");
 
         return `
         <tr>
-          <td><strong class="mono" style="font-size: 11px;">${item.clause_id}</strong></td>
+          <td><strong class="mono" style="font-size: 11px;">${escapeHtml(item.clause_id || "")}</strong></td>
           <td>
-            <div style="font-weight: 600;">${item.title}</div>
-            <div style="font-size: 10px; color: var(--text-muted);">${item.criterion}</div>
+            <div style="font-weight: 600;">${titleSafe}</div>
+            <div style="font-size: 10px; color: var(--text-muted);">${critSafe}</div>
           </td>
           <td>
             <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
-              <span style="font-size: 10.5px; color: var(--text-secondary); line-height: 1.35;" id="clause_evidence_text_${item.clause_id}">${item.evidence || "Evidencia técnica requerida por la norma."}</span>
+              <span style="font-size: 10.5px; color: var(--text-secondary); line-height: 1.35;" id="clause_evidence_text_${item.clause_id}">${evidSafe}</span>
               ${!isClient ? `
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9.5px;" onclick="window.EconodeApp.editClauseEvidence('${item.clause_id}', '${escape(item.evidence || '')}')" title="Editar requerimiento de evidencia">
-                  
+                  Editar
                 </button>
               ` : ''}
             </div>
           </td>
           <td>
             <span class="badge-pill ${isOk ? "badge-emerald" : "badge-slate"}">
-              ${isOk ? compliantLabel : "○ " + pendingLabel.replace("⚠️ ", "")}
+              ${isOk ? compliantLabel : pendingLabel}
             </span>
           </td>
-          <td><span style="font-size: 10.5px; color: var(--text-muted);">${item.verified_by || item.verifier || "Josué Arentería (Auditor Líder)"}</span></td>
+          <td><span style="font-size: 10.5px; color: var(--text-muted);">${escapeHtml(item.verified_by || item.verifier || "Josue Renteria (Auditor Lider)")}</span></td>
           <td>
             ${isClient ? `<span style="font-size: 10px; color: var(--text-muted);">${readOnlyLabel}</span>` : `
             <div style="display: flex; gap: 4px;">
@@ -7033,16 +7090,43 @@
   async function toggleClause(clauseId, isCompliant) {
     const sysId = state.activeSystem ? state.activeSystem.id : 21;
     const stdId = state.activeStandard || "nom070";
+    const cacheKey = `${sysId}_${stdId}`;
+
+    // 1. ACTUALIZACION OPTIMISTA INMEDIATA (<16ms, respuesta instantanea)
+    const prevClause = (state.checklist || []).find((c) => c.clause_id === clauseId);
+    const prevCompliant = prevClause ? prevClause.is_compliant : !isCompliant;
+
+    if (prevClause) {
+      prevClause.is_compliant = isCompliant;
+      prevClause.status = isCompliant ? "COMPLIANT" : "PENDING";
+      prevClause.status_badge = isCompliant ? "Conforme" : "Obs. Pendiente";
+      prevClause.status_color = isCompliant ? "#059669" : "#D97706";
+    }
+    renderChecklistTable();
+    renderChecklistProgress();
+
     try {
       const res = await api.toggleClause(sysId, clauseId, isCompliant, stdId);
       const data = res.checklist || {};
       state.checklist = Array.isArray(data) ? data : (data.clauses || []);
       state.checklistMeta = typeof data === "object" && !Array.isArray(data) ? data : null;
+
+      if (state.auditCache) {
+        state.auditCache[cacheKey] = {
+          clauses: state.checklist,
+          meta: state.checklistMeta
+        };
+      }
       renderChecklistTable();
       renderChecklistProgress();
-      showNotification(`Cláusula ${clauseId} (${stdId.toUpperCase()}) actualizada.`);
+      showNotification(`Clausula ${clauseId} (${stdId.toUpperCase()}) actualizada.`);
     } catch (err) {
-      alert("Error al actualizar cláusula: " + err.message);
+      if (prevClause) {
+        prevClause.is_compliant = prevCompliant;
+        renderChecklistTable();
+        renderChecklistProgress();
+      }
+      alert("Error al actualizar clausula: " + err.message);
     }
   }
 
@@ -7056,14 +7140,21 @@
         if (sealEl) {
           sealEl.textContent = `Sello SHA-256: ${res.receipt.digital_seal}`;
         }
+        if (state.auditCache && state.auditCache[`${sysId}_${stdId}`]) {
+          state.auditCache[`${sysId}_${stdId}`].meta = {
+            ...(state.auditCache[`${sysId}_${stdId}`].meta || {}),
+            digital_seal: res.receipt.digital_seal,
+            signed_at: res.receipt.timestamp
+          };
+        }
         alert(
-          `✓ DICTAMEN DE CONFORMIDAD NORMATIVA EMITIDO CON ÉXITO\n\n` +
-          `• Sistema Producto: ${state.activeSystem ? state.activeSystem.name : 'Envase PET Circular 500ml'}\n` +
-          `• Norma / Estándar: ${stdId.toUpperCase()}\n` +
-          `• Auditor Verificador: ${res.receipt.auditor}\n` +
-          `• Cláusulas Validadas: ${res.receipt.compliant_clauses} de ${res.receipt.total_clauses}\n` +
-          `• Sello HMAC-SHA256: ${res.receipt.digital_seal}\n` +
-          `• Marca de Tiempo: ${res.receipt.timestamp}`
+          `DICTAMEN DE CONFORMIDAD NORMATIVA EMITIDO CON EXITO\n\n` +
+          `* Sistema Producto: ${state.activeSystem ? state.activeSystem.name : 'Envase PET Circular 500ml'}\n` +
+          `* Norma / Estandar: ${stdId.toUpperCase()}\n` +
+          `* Auditor Verificador: ${res.receipt.auditor}\n` +
+          `* Clausulas Validadas: ${res.receipt.compliant_clauses} de ${res.receipt.total_clauses}\n` +
+          `* Sello HMAC-SHA256: ${res.receipt.digital_seal}\n` +
+          `* Marca de Tiempo: ${res.receipt.timestamp}`
         );
       }
     } catch (err) {
@@ -8822,6 +8913,8 @@
             });
 
             showNotification(res.message || "Checklist importado exitosamente.");
+            state.availableStandards = null;
+            if (state.auditCache) state.auditCache = {};
             await loadAuditChecklist(res.standard_id || "nom070");
           } catch (err) {
             alert("Error al importar checklist: " + err.message);
@@ -9099,6 +9192,12 @@
         const data = res.checklist || {};
         state.checklist = Array.isArray(data) ? data : (data.clauses || []);
         state.checklistMeta = typeof data === "object" && !Array.isArray(data) ? data : null;
+        if (state.auditCache) {
+          state.auditCache[`${sysId}_${stdId}`] = {
+            clauses: state.checklist,
+            meta: state.checklistMeta
+          };
+        }
         renderChecklistTable();
         showNotification(`Evidencia de cláusula ${clauseId} actualizada exitosamente.`);
       } catch (err) {
