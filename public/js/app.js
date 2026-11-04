@@ -1420,7 +1420,7 @@
             <span class="node-val mono" style="font-size: 10px; font-weight: 700; color: var(--accent-emerald);">${node.reference_flow ? `${node.reference_flow.amount} ${node.reference_flow.unit}` : `${node.amount || 1.0} ${node.unit || 'kg'}`}</span>
           </div>
         </div>
-        <div class="node-title" style="font-size: 11.5px; font-weight: 700; margin: 4px 0 2px;">${node.name}</div>
+        <div class="node-title" style="font-size: 11.5px; font-weight: 700; margin: 4px 0 2px;" title="${escapeHtml(node.name || '')}">${escapeHtml(node.name || '')}</div>
         <div style="font-size: 9.5px; color: var(--text-dim);">● ${inCount} Inputs (1 Unit) · ${outCount} Outputs (1 Waste)</div>
         ${sankeyBadgeHtml}
 
@@ -2120,14 +2120,14 @@
 
       inspDetails.innerHTML = `
         <div style="margin-bottom: 14px;">
-          <h3 style="font-size: 13.5px; font-weight: 700;">${node.name}</h3>
-          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">ID: <span class="mono">${node.id}</span> · ecoinvent 3.12 Cutoff</div>
+          <h3 style="font-size: 13.5px; font-weight: 700;">${escapeHtml(node.name || '')}</h3>
+          <div style="font-size: 10px; color: var(--text-muted); margin-top: 2px;">ID: <span class="mono">${escapeHtml(String(node.id || ''))}</span> · ecoinvent 3.12 Cutoff</div>
         </div>
 
         <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-bottom: 14px;">
           <div style="font-size: 10.5px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px;">${window.I18n.t("app.ref_flow_badge", "QUANTITATIVE REFERENCE FLOW (UF)")}</div>
           <div class="mono" style="font-size: 16px; font-weight: 700; color: var(--accent-emerald);">
-            ${node.reference_flow ? `${Number(node.reference_flow.amount).toFixed(3)} ${node.reference_flow.unit} ${node.reference_flow.name}` : `${Number(node.amount || 1).toFixed(3)} ${node.unit || 'kg'}`}
+            ${node.reference_flow ? `${Number(node.reference_flow.amount).toFixed(3)} ${escapeHtml(node.reference_flow.unit || 'kg')} ${escapeHtml(node.reference_flow.name || '')}` : `${Number(node.amount || 1).toFixed(3)} ${escapeHtml(node.unit || 'kg')}`}
           </div>
         </div>
 
@@ -2136,8 +2136,8 @@
           <div style="display: flex; flex-direction: column; gap: 4px;">
             ${inputs.map(inp => `
               <div style="font-size: 10px; padding: 4px 6px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; display: flex; justify-content: space-between;">
-                <span>${inp.name} ${inp.is_unit ? '<span class="badge-pill badge-emerald" style="font-size: 7.5px;">UNIT</span>' : ''}</span>
-                <span class="mono" style="font-weight: 700;">${Number(inp.amount).toFixed(3)} ${inp.unit}</span>
+                <span>${escapeHtml(inp.name || '')} ${inp.is_unit ? '<span class="badge-pill badge-emerald" style="font-size: 7.5px;">UNIT</span>' : ''}</span>
+                <span class="mono" style="font-weight: 700;">${Number(inp.amount).toFixed(3)} ${escapeHtml(inp.unit || 'kg')}</span>
               </div>
             `).join('')}
           </div>
@@ -2148,8 +2148,8 @@
           <div style="display: flex; flex-direction: column; gap: 4px;">
             ${outputs.map(out => `
               <div style="font-size: 10px; padding: 4px 6px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; display: flex; justify-content: space-between;">
-                <span>${out.name} ${out.is_waste ? '<span class="badge-pill badge-slate" style="font-size: 7.5px;">WASTE</span>' : out.is_elementary ? '<span class="badge-pill badge-slate" style="font-size: 7.5px;">EMISSION</span>' : '<span class="badge-pill badge-emerald" style="font-size: 7.5px;">REF</span>'}</span>
-                <span class="mono" style="font-weight: 700;">${Number(out.amount).toFixed(4)} ${out.unit}</span>
+                <span>${escapeHtml(out.name || '')} ${out.is_waste ? '<span class="badge-pill badge-slate" style="font-size: 7.5px;">WASTE</span>' : out.is_elementary ? '<span class="badge-pill badge-slate" style="font-size: 7.5px;">EMISSION</span>' : '<span class="badge-pill badge-emerald" style="font-size: 7.5px;">REF</span>'}</span>
+                <span class="mono" style="font-weight: 700;">${Number(out.amount).toFixed(4)} ${escapeHtml(out.unit || 'kg')}</span>
               </div>
             `).join('')}
           </div>
@@ -6222,26 +6222,26 @@
         .map((proc) => {
           const isCustom = isCustomCat || proc.category_id === 999999 || String(proc.category_name || proc.category || "").toLowerCase().includes("propio") || String(proc.category_name || proc.category || "").toLowerCase().includes("custom");
           return `
-        <div class="catalog-proc-item" style="padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s ease;" onclick="window.EconodeApp.selectCatalogProcess('${proc.id}')">
+        <div class="catalog-proc-item" style="padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s ease;" onclick="window.EconodeApp.selectCatalogProcess('${escapeHtml(String(proc.id))}')">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
-              <span class="badge-source badge-source-${proc.source_badge || 'all'}">${proc.source_label || 'LCI'}</span>
-              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${proc.name}</div>
+              <span class="badge-source badge-source-${escapeHtml(proc.source_badge || 'all')}">${escapeHtml(proc.source_label || (proc.database ? proc.database.toUpperCase() : 'LCI'))}</span>
+              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="${escapeHtml(proc.name || '')}">${escapeHtml(proc.name || '')}</div>
             </div>
             <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
-              <span class="badge-pill badge-slate">${proc.location || proc.geography || "GLO"}</span>
+              <span class="badge-pill badge-slate">${escapeHtml(proc.location || proc.geography || "GLO")}</span>
               ${isCustom ? `
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 10px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3);"
                         title="${window.I18n.t('catalog.delete_process_btn', 'Delete Process')}"
-                        onclick="event.stopPropagation(); window.EconodeApp.deleteCatalogProcess(${proc.id}, '${escape(proc.name)}')">
-                  🗑️
+                        onclick="event.stopPropagation(); window.EconodeApp.deleteCatalogProcess('${escapeHtml(String(proc.id))}', '${escape(proc.name || '')}')">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                 </button>
               ` : ''}
             </div>
           </div>
           <div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: var(--text-muted);">
-            <span>${proc.category_name || proc.category || "Custom processes & flows"}</span>
-            <span class="mono">${Number(proc.reference_amount || 1).toFixed(2)} ${proc.reference_unit || "kg"}</span>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 70%;">${escapeHtml(proc.category_name || proc.category || "Custom processes & flows")}</span>
+            <span class="mono">${Number(proc.reference_amount || 1).toFixed(2)} ${escapeHtml(proc.reference_unit || "kg")}</span>
           </div>
         </div>
       `;
@@ -6265,20 +6265,20 @@
                  onclick="window.EconodeApp.selectCatalogFlow('${escape(JSON.stringify(flow))}')">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
-                  <strong style="font-size: 11px; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">${flow.name}</strong>
-                  <span class="mono badge-pill badge-emerald" style="font-size: 8.5px;">${flow.unit_symbol || 'kg'}</span>
+                  <strong style="font-size: 11px; color: var(--text-primary); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;" title="${escapeHtml(flow.name || '')}">${escapeHtml(flow.name || '')}</strong>
+                  <span class="mono badge-pill badge-emerald" style="font-size: 8.5px;">${escapeHtml(flow.unit_symbol || 'kg')}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 6px; margin-left: 8px;">
                   <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 10px; color: #EF4444; border-color: rgba(239, 68, 68, 0.3);"
                           title="${window.I18n.t('catalog.delete_flow_btn', 'Delete Flow')}"
-                          onclick="event.stopPropagation(); window.EconodeApp.deleteCatalogFlow('${flow.id || flow.code}', '${escape(flow.name)}')">
-                    🗑️
+                          onclick="event.stopPropagation(); window.EconodeApp.deleteCatalogFlow('${escapeHtml(String(flow.id || flow.code || ""))}', '${escape(flow.name || '')}')">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                   </button>
                 </div>
               </div>
               <div style="display: flex; justify-content: space-between; margin-top: 2px; font-size: 9px; color: var(--text-muted);">
                 <span>${flow.flow_type === 'PRODUCT_FLOW' ? 'Product Flow (Input)' : flow.flow_type === 'WASTE_FLOW' ? 'Waste Flow' : 'Biospheric Emission'}</span>
-                <span class="mono">ID: ${flow.id}</span>
+                <span class="mono">ID: ${escapeHtml(String(flow.id || ''))}</span>
               </div>
             </div>
           `).join("")}
@@ -6309,7 +6309,7 @@
       }
 
       if (titleEl) {
-        titleEl.innerHTML = `<span class="mono" style="font-size: 11px; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(5, 150, 105, 0.25); margin-right: 6px;">DB FLOW: #${flow.id}</span>${flow.name}`;
+        titleEl.innerHTML = `<span class="mono" style="font-size: 11px; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(5, 150, 105, 0.25); margin-right: 6px;">DB FLOW: #${escapeHtml(String(flow.id || ''))}</span>${escapeHtml(flow.name || '')}`;
       }
       if (subEl) {
         const typeLabel = flow.flow_type === 'PRODUCT_FLOW' ? 'Product / Technosphere Flow' : flow.flow_type === 'WASTE_FLOW' ? 'Waste Flow' : 'Elementary Biospheric Emission';
@@ -6319,15 +6319,15 @@
         inputsTable.innerHTML = `
           <tr>
             <td><strong>Código / Identificador</strong></td>
-            <td class="mono" colspan="2">${flow.id}</td>
+            <td class="mono" colspan="2">${escapeHtml(String(flow.id || ''))}</td>
           </tr>
           <tr>
             <td><strong>Tipo de Flujo en openLCA</strong></td>
-            <td class="mono" colspan="2">${flow.flow_type}</td>
+            <td class="mono" colspan="2">${escapeHtml(String(flow.flow_type || ''))}</td>
           </tr>
           <tr>
             <td><strong>Unidad de Referencia</strong></td>
-            <td class="mono" colspan="2">${flow.unit_symbol || 'kg'}</td>
+            <td class="mono" colspan="2">${escapeHtml(flow.unit_symbol || 'kg')}</td>
           </tr>
         `;
       }
@@ -6335,7 +6335,7 @@
         outputsTable.innerHTML = `
           <tr>
             <td><strong>Descripción / Procedencia Técnica</strong></td>
-            <td class="mono" colspan="2">${flow.description || 'Custom flow created by analyst in ECONODE Studio'}</td>
+            <td class="mono" colspan="2">${escapeHtml(flow.description || 'Custom flow created by analyst in ECONODE Studio')}</td>
           </tr>
         `;
       }
@@ -6384,9 +6384,16 @@
       }
     }
 
-    if (titleEl) titleEl.innerHTML = `<span class="mono" style="font-size: 11px; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(5, 150, 105, 0.25); margin-right: 6px;">ID: #${p.id}</span>${p.name} [${p.location || "GLO"}]`;
+    const safePName = escapeHtml(p.name || "");
+    const safePLoc = escapeHtml(p.location || p.geography || "GLO");
+    const safePId = escapeHtml(String(p.id || ""));
+    const safeCat = p.category_name || p.category || "General";
+    const safeUnit = p.ref_unit || p.reference_unit || "kg";
+    const dbLabel = p.database ? p.database.toUpperCase() : "ecoinvent 3.12 Cutoff";
+
+    if (titleEl) titleEl.innerHTML = `<span class="mono" style="font-size: 11px; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(5, 150, 105, 0.25); margin-right: 6px;">ID: #${safePId}</span>${safePName} [${safePLoc}]`;
     if (subEl) {
-      subEl.textContent = `ecoinvent 3.12 Cutoff · Categoría: ${p.category_name || "Polímeros"} · UF: ${p.reference_amount || 1.0} ${p.ref_unit || "kg"}`;
+      subEl.textContent = `${dbLabel} · Categoría: ${safeCat} · UF: ${p.reference_amount || 1.0} ${safeUnit}`;
     }
 
     // Tabla Insumos
@@ -6399,9 +6406,9 @@
           .map(
             (inp) => `
           <tr>
-            <td><strong>${inp.flow_name || inp.name}</strong></td>
+            <td><strong>${escapeHtml(inp.flow_name || inp.name || "")}</strong></td>
             <td class="mono">${Number(inp.amount || 0).toFixed(4)}</td>
-            <td class="mono">${inp.unit_symbol || inp.unit || "kg"}</td>
+            <td class="mono">${escapeHtml(inp.unit_symbol || inp.unit || "kg")}</td>
           </tr>
         `
           )
@@ -6419,9 +6426,9 @@
           .map(
             (out) => `
           <tr>
-            <td><strong>${out.flow_name || out.name}</strong></td>
+            <td><strong>${escapeHtml(out.flow_name || out.name || "")}</strong></td>
             <td class="mono">${Number(out.amount || 0).toFixed(4)}</td>
-            <td class="mono">${out.unit_symbol || out.unit || "kg"}</td>
+            <td class="mono">${escapeHtml(out.unit_symbol || out.unit || "kg")}</td>
           </tr>
         `
           )
