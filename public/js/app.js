@@ -6108,9 +6108,9 @@
 
         let html = `<option value="ALL">All Categories (26,533 processes)</option>`;
         if (ownCat) {
-          html += `<option value="${ownCat.id}" style="font-weight: 700; color: var(--accent-emerald);">⭐ ${ownCat.name} (${ownCat.process_count || 0})</option>`;
+          html += `<option value="${ownCat.id}" style="font-weight: 700; color: var(--accent-emerald);">${ownCat.name} (${ownCat.process_count || 0})</option>`;
         } else {
-          html += `<option value="999999" style="font-weight: 700; color: var(--accent-emerald);">⭐ Custom processes & flows</option>`;
+          html += `<option value="999999" style="font-weight: 700; color: var(--accent-emerald);">Custom processes & flows</option>`;
         }
         html += otherCats.map(c => `
           <option value="${c.id || c.category_id}">${c.name || c.category_name} (${c.process_count || 0})</option>
@@ -6125,13 +6125,54 @@
 
   async function loadCatalog() {
     try {
-      await loadCatalogCategories();
       const q = document.getElementById("inputCatalogSearch")?.value || "";
       const catSelect = document.getElementById("selectCatalogCategory");
       const catVal = catSelect ? catSelect.value : state.catalogFilter;
       const sourceVal = state.catalogSource || "all";
-      const res = await api.searchCatalog(q, catVal, 50, sourceVal);
+      const cacheKey = `${sourceVal}_${catVal || 'ALL'}_${q}`;
+
+      state.catalogCache = state.catalogCache || {};
+
+      // 1. Renderizado instantáneo si está en memoria (cambio entre bases de datos en 0ms)
+      if (state.catalogCache[cacheKey]) {
+        state.catalogProcesses = state.catalogCache[cacheKey];
+        renderCatalogList();
+        if (state.catalogProcesses.length > 0 && !state.selectedCatalogProcess) {
+          selectCatalogProcess(state.catalogProcesses[0].id);
+        }
+      } else if (sourceVal === "all" && !q && (!catVal || catVal === "ALL")) {
+        // 2. Primera carga desde localStorage (0ms)
+        try {
+          const cached = localStorage.getItem("econode_cached_catalog_all");
+          if (cached && (!state.catalogProcesses || state.catalogProcesses.length === 0)) {
+            state.catalogProcesses = JSON.parse(cached);
+            renderCatalogList();
+            if (state.catalogProcesses.length > 0 && !state.selectedCatalogProcess) {
+              selectCatalogProcess(state.catalogProcesses[0].id);
+            }
+          }
+        } catch(e) {}
+      }
+
+      // Si aún no hay tarjetas renderizadas, mostrar estado de carga inmediato
+      if (!state.catalogProcesses || state.catalogProcesses.length === 0) {
+        const container = document.getElementById("catalogProcessList");
+        if (container) {
+          container.innerHTML = `<div style="padding: 28px; text-align: center; color: var(--text-muted); font-size: 11.5px;">Cargando procesos del catálogo LCI...</div>`;
+        }
+      }
+
+      // 3. Ejecutar categorías y búsqueda de procesos en PARALELO
+      const catPromise = loadCatalogCategories();
+      const searchPromise = api.searchCatalog(q, catVal, 50, sourceVal);
+
+      const [_, res] = await Promise.all([catPromise, searchPromise]);
       state.catalogProcesses = res.items || [];
+      state.catalogCache[cacheKey] = state.catalogProcesses;
+
+      if (sourceVal === "all" && !q && (!catVal || catVal === "ALL")) {
+        try { localStorage.setItem("econode_cached_catalog_all", JSON.stringify(state.catalogProcesses)); } catch(e) {}
+      }
 
       // Si la categoría seleccionada es "Custom processes & flows", cargamos solo los flujos creados por el usuario
       if (String(catVal) === "999999") {
@@ -6139,11 +6180,9 @@
           const flowRes = await api.getDbFlows(q, "ALL", 100, "999999");
           state.catalogCustomFlows = (flowRes.items || []).filter(f => {
             const fid = String(f.id || f.code || "");
-            // Solo flujos explícitamente creados por el usuario (FL_CUSTOM_)
             return fid.startsWith("FL_CUSTOM_");
           });
         } catch (fErr) {
-          console.warn("Error fetching custom flows for catalog:", fErr);
           state.catalogCustomFlows = [];
         }
       } else {
@@ -6152,14 +6191,16 @@
 
       renderCatalogList();
 
-      if (state.catalogProcesses.length > 0 && !state.selectedCatalogProcess) {
-        selectCatalogProcess(state.catalogProcesses[0].id);
+      if (state.catalogProcesses.length > 0) {
+        const hasSelected = state.selectedCatalogProcess && state.catalogProcesses.some(p => String(p.id) === String(state.selectedCatalogProcess.id));
+        if (!hasSelected) {
+          selectCatalogProcess(state.catalogProcesses[0].id);
+        }
       }
     } catch (err) {
       console.error("Error al cargar catálogo:", err);
     }
   }
-
   function renderCatalogList() {
     const container = document.getElementById("catalogProcessList");
     if (!container) return;
@@ -6305,17 +6346,22 @@
 
   async function selectCatalogProcess(procId) {
     try {
+      // 1. Si el proceso ya está en la lista en memoria, actualizar la ficha en 0ms
+      const preview = state.catalogProcesses ? state.catalogProcesses.find(p => String(p.id) === String(procId)) : null;
+      if (preview) {
+        renderProcessSheet(preview, true);
+      }
+
       const res = await api.getProcessSheet(procId);
       if (res && res.sheet) {
         state.selectedCatalogProcess = res.sheet;
         state.selectedCatalogFlow = null;
-        renderProcessSheet(res.sheet);
+        renderProcessSheet(res.sheet, false);
       }
     } catch (err) {
       console.error("Error al obtener ficha de proceso:", err);
     }
   }
-
   function renderProcessSheet(sheet) {
     const titleEl = document.getElementById("catalogDetailTitle");
     const subEl = document.getElementById("catalogDetailSub");

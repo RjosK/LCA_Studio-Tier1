@@ -844,16 +844,28 @@ def search_lci_processes(
         return [dict(r) for r in conn.execute(custom_sql, custom_params).fetchall()]
 
     # 3. ecoinvent 3.12 (procesos base)
-    sql = """
-        SELECT p.id, p.code, p.name, p.location, p.reference_amount,
-               c.name as category_name,
-               f.name as reference_flow_name, f.unit_symbol as reference_unit,
-               'ecoinvent_312' as source_code, 'ecoinvent 3.12' as source_label, 'ecoinvent' as source_badge
-        FROM processes p
-        LEFT JOIN categories c ON p.category_id = c.id
-        LEFT JOIN flows f ON p.reference_flow_id = f.id
-        WHERE 1=1
-    """
+    is_pg = getattr(settings, "IS_POSTGRES", False)
+    if is_pg:
+        sql = """
+            SELECT p.id, p.code, p.name, p.location, p.reference_amount,
+                   coalesce(p.category_name, 'General') as category_name,
+                   coalesce(p.reference_flow_name, p.name) as reference_flow_name,
+                   coalesce(p.reference_unit, 'kg') as reference_unit,
+                   'ecoinvent_312' as source_code, 'ecoinvent 3.12' as source_label, 'ecoinvent' as source_badge
+            FROM lci_processes p
+            WHERE 1=1
+        """
+    else:
+        sql = """
+            SELECT p.id, p.code, p.name, p.location, p.reference_amount,
+                   c.name as category_name,
+                   f.name as reference_flow_name, f.unit_symbol as reference_unit,
+                   'ecoinvent_312' as source_code, 'ecoinvent 3.12' as source_label, 'ecoinvent' as source_badge
+            FROM processes p
+            LEFT JOIN categories c ON p.category_id = c.id
+            LEFT JOIN flows f ON p.reference_flow_id = f.id
+            WHERE 1=1
+        """
     params = []
     if category_id is not None and str(category_id).strip().upper() != "ALL":
         cat_str = str(category_id).strip()
@@ -869,7 +881,8 @@ def search_lci_processes(
             elif any(k in cat_lower for k in ("transp", "logist", "flete", "freight", "road", "rail")):
                 sql += " AND (c.name LIKE '%transport%' OR c.name LIKE '%freight%' OR p.name LIKE '%transport%')"
             else:
-                sql += " AND c.name LIKE ?"
+                col = "p.category_name" if is_pg else "c.name"
+                sql += f" AND {col} LIKE ?"
                 params.append(f"%{cat_str}%")
 
     if query:
@@ -978,6 +991,18 @@ def get_process_technical_sheet(conn: sqlite3.Connection, process_id: Any) -> Op
 
 def get_top_lci_categories(conn: sqlite3.Connection, limit: int = 50) -> List[Dict[str, Any]]:
     """Obtiene las categorías oficiales reales de ecoinvent 3.12 y Propios con conteo de procesos."""
+    if getattr(settings, "IS_POSTGRES", False):
+        sql = """
+            SELECT c.id, c.name, count(p.id) as process_count
+            FROM lci_categories c
+            JOIN lci_processes p ON p.category_id = c.id
+            GROUP BY c.id, c.name
+            ORDER BY process_count DESC
+            LIMIT ?;
+        """
+        rows = conn.execute(sql, (limit,)).fetchall()
+        return [{"id": r[0], "name": r[1], "process_count": r[2]} for r in rows]
+
     sql = """
         SELECT id, name, process_count FROM (
             SELECT c.id, c.name, count(p.id) as process_count
