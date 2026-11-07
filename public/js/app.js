@@ -58,7 +58,13 @@
     canvasZoom: 1.0, // Nivel de zoom del lienzo (0.5 a 1.75, 1.0 por defecto)
     pendingInviteToken: null, // Token de invitación recibido vía URL (?invite=...)
     pendingInviteEmail: null,
-    pendingInviteInfo: null
+    pendingInviteInfo: null,
+    systemParameters: [], // Parámetros dinámicos del modelo
+    paramScopeFilter: "all", // "all" | "global" | "local" | "proc_<id>"
+    paramGroupFilter: "all", // "all" | "<group_name>"
+    paramTypeFilter: "all", // "all" | "independent" | "dependent"
+    paramSearchQuery: "", // Filtro de búsqueda en tiempo real
+    editingParameter: null // Parámetro en edición activa
   };
 
   // =========================================================================
@@ -163,6 +169,9 @@
     getSystems: () => api.get("/api/systems"),
     getSystemCanvas: (sysId) => api.get(`/api/systems/${sysId}/canvas`),
     saveSystemCanvas: (sysId, payload) => api.post(`/api/systems/${sysId}/save`, payload),
+    getSystemParameters: (sysId) => api.get(`/api/systems/${sysId}/parameters`),
+    saveSystemParameter: (sysId, payload) => api.post(`/api/systems/${sysId}/parameters`, payload),
+    deleteSystemParameter: (sysId, paramId) => api.post(`/api/systems/${sysId}/parameters/${paramId}/delete`, {}),
     createSystem: (data) => {
       const u = state.activeUser;
       const payload = {
@@ -957,6 +966,7 @@
           };
         });
         state.canvasEdges = res.system.edges || [];
+        state.systemParameters = res.system.parameters || [];
 
         // Actualizar títulos
         const navTitle = document.getElementById("navProjectTitle");
@@ -2172,6 +2182,35 @@
             `).join('')}
           </div>
         </div>
+
+        <!-- Parámetros Locales del Proceso -->
+        ${(() => {
+          const allParams = state.systemParameters || [];
+          const cleanProcId = String(node.process_id || node.id || "").replace("node_", "");
+          const localCount = allParams.filter(p => {
+            if (p.scope !== "local") return false;
+            const pidStr = String(p.process_id || "").replace("node_", "");
+            return pidStr === cleanProcId || p.process_name === node.name;
+          }).length;
+          return `
+            <div style="margin-bottom: 14px; border-top: 1px solid var(--border-color); padding-top: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); display: flex; align-items: center; gap: 5px;">
+                  <span>PARÁMETROS LOCALES</span>
+                  <span class="badge-pill badge-outline" style="font-size: 8px; padding: 1px 5px;" id="inspParamsCountBadge">${localCount}</span>
+                </div>
+                ${(!isAuditor && !isClient) ? `
+                  <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 7px;" onclick="window.EconodeApp.openParameterModal(null, '${node.id}')">
+                    + Añadir
+                  </button>
+                ` : ''}
+              </div>
+              <div id="inspProcessParamsList" style="display: flex; flex-direction: column; gap: 4px;">
+                ${renderProcessParametersInInspector(node)}
+              </div>
+            </div>
+          `;
+        })()}
 
         <div style="margin-top: 14px;">
           ${actionButtonsHtml}
@@ -3653,7 +3692,7 @@
     const canvasWrapper = document.getElementById("canvasWrapper");
     if (!canvasWrapper) return;
 
-    const isTable = state.canvasViewMode === "table";
+    const isTable = state.canvasViewMode === "table" || state.canvasViewMode === "parameters";
     const hideLeft = state.leftPanelVisible === false;
     // En modo tabla, el inspector está estrictamente deshabilitado y cerrado
     const hideRight = isTable ? true : (state.rightPanelVisible === false);
@@ -3801,8 +3840,10 @@
     state.canvasViewMode = mode;
     const visualContainer = document.getElementById("canvasVisualStageContainer");
     const tableContainer = document.getElementById("canvasTableStageContainer");
+    const paramsContainer = document.getElementById("canvasParamsStageContainer");
     const btnVisual = document.getElementById("btnCanvasViewVisual");
     const btnTable = document.getElementById("btnCanvasViewTable");
+    const btnParams = document.getElementById("btnCanvasViewParams");
     const zoomTbGroup = document.getElementById("canvasZoomToolbarGroup");
     const sankeyTbGroup = document.getElementById("canvasSankeyToolbarGroup");
 
@@ -3810,23 +3851,46 @@
 
     if (btnVisual) btnVisual.classList.toggle("active", mode === "visual");
     if (btnTable) btnTable.classList.toggle("active", mode === "table");
-    if (zoomTbGroup) zoomTbGroup.style.display = mode === "table" ? "none" : "flex";
-    if (sankeyTbGroup) sankeyTbGroup.style.display = mode === "table" ? "none" : "flex";
+    if (btnParams) btnParams.classList.toggle("active", mode === "parameters");
+    if (zoomTbGroup) zoomTbGroup.style.display = (mode === "table" || mode === "parameters") ? "none" : "flex";
+    if (sankeyTbGroup) sankeyTbGroup.style.display = (mode === "table" || mode === "parameters") ? "none" : "flex";
 
     if (mode === "table") {
       if (visualContainer) {
         visualContainer.style.display = "none";
         visualContainer.classList.remove("active");
       }
+      if (paramsContainer) {
+        paramsContainer.style.display = "none";
+        paramsContainer.classList.remove("active");
+      }
       if (tableContainer) {
         tableContainer.style.display = "flex";
         tableContainer.classList.add("active");
       }
       renderCanvasTableView();
+    } else if (mode === "parameters") {
+      if (visualContainer) {
+        visualContainer.style.display = "none";
+        visualContainer.classList.remove("active");
+      }
+      if (tableContainer) {
+        tableContainer.style.display = "none";
+        tableContainer.classList.remove("active");
+      }
+      if (paramsContainer) {
+        paramsContainer.style.display = "flex";
+        paramsContainer.classList.add("active");
+      }
+      renderSystemParametersTable();
     } else {
       if (tableContainer) {
         tableContainer.style.display = "none";
         tableContainer.classList.remove("active");
+      }
+      if (paramsContainer) {
+        paramsContainer.style.display = "none";
+        paramsContainer.classList.remove("active");
       }
       if (visualContainer) {
         visualContainer.style.display = "flex";
@@ -4654,6 +4718,558 @@
     URL.revokeObjectURL(url);
 
     showNotification(window.I18n ? window.I18n.t("canvas.csv_exported_ok", "Hoja de cálculo exportada en CSV compatible con Excel.") : "Hoja de cálculo exportada en CSV.");
+  }
+
+  // =========================================================================
+  // GESTOR DE PARÁMETROS DINÁMICOS DEL MODELO
+  // =========================================================================
+
+  async function loadSystemParameters(sysId) {
+    if (!sysId) return;
+    try {
+      const res = await api.getSystemParameters(sysId);
+      if (res && res.status === "success" && Array.isArray(res.items)) {
+        state.systemParameters = res.items;
+        if (state.canvasViewMode === "parameters") {
+          renderSystemParametersTable();
+        }
+        if (state.selectedNode) {
+          inspectNode(state.selectedNode);
+        }
+      }
+    } catch (err) {
+      console.warn("No se pudieron cargar los parámetros del sistema:", err);
+    }
+  }
+
+  function updateParamScopeOptions() {
+    const scopeSel = document.getElementById("selectParamScopeFilter");
+    if (!scopeSel) return;
+    const currentVal = state.paramScopeFilter || "all";
+    
+    let html = `
+      <option value="all">Todos los Ámbitos (Globales + Procesos)</option>
+      <option value="global">Solo Globales</option>
+      <option value="local">Solo Procesos Locales</option>
+    `;
+
+    const nodes = state.canvasNodes || [];
+    if (nodes.length > 0) {
+      html += `<optgroup label="Procesos Unitarios del Sistema">`;
+      nodes.forEach(node => {
+        const pId = node.process_id || node.id;
+        html += `<option value="proc_${pId}">Proceso: ${escapeHtml(node.name || 'Proceso')}</option>`;
+      });
+      html += `</optgroup>`;
+    }
+    scopeSel.innerHTML = html;
+    scopeSel.value = currentVal;
+    if (scopeSel.value !== currentVal) {
+      scopeSel.value = "all";
+      state.paramScopeFilter = "all";
+    }
+  }
+
+  function updateParamGroupOptions() {
+    const groupSel = document.getElementById("selectParamGroupFilter");
+    if (!groupSel) return;
+
+    const currentVal = state.paramGroupFilter || "all";
+    const scope = state.paramScopeFilter || "all";
+    const allParams = state.systemParameters || [];
+
+    const inScopeParams = allParams.filter(p => {
+      if (scope === "all") return true;
+      if (scope === "global") return p.scope === "global";
+      if (scope === "local") return p.scope === "local";
+      if (scope.startsWith("proc_")) {
+        const targetId = scope.replace("proc_", "");
+        return p.scope === "local" && (String(p.process_id) === targetId || String(p.process_id) === targetId.replace("node_", ""));
+      }
+      return true;
+    });
+
+    const groupCounts = {};
+    inScopeParams.forEach(p => {
+      const g = p.group ? p.group.trim() : "General";
+      groupCounts[g] = (groupCounts[g] || 0) + 1;
+    });
+
+    const uniqueGroups = Object.keys(groupCounts).sort();
+
+    let html = `<option value="all">Todos los Grupos (${inScopeParams.length})</option>`;
+    uniqueGroups.forEach(g => {
+      html += `<option value="${escapeHtml(g)}">${escapeHtml(g)} (${groupCounts[g]})</option>`;
+    });
+
+    groupSel.innerHTML = html;
+    if (uniqueGroups.includes(currentVal)) {
+      groupSel.value = currentVal;
+    } else {
+      groupSel.value = "all";
+      state.paramGroupFilter = "all";
+    }
+  }
+
+  function renderSystemParametersTable() {
+    updateParamScopeOptions();
+    updateParamGroupOptions();
+
+    const scrollArea = document.getElementById("canvasParamsScrollArea");
+    if (!scrollArea) return;
+
+    const allParams = state.systemParameters || [];
+    const scope = state.paramScopeFilter || "all";
+    const group = state.paramGroupFilter || "all";
+    const type = state.paramTypeFilter || "all";
+    const query = (state.paramSearchQuery || "").trim().toLowerCase();
+
+    const filtered = allParams.filter(p => {
+      if (scope === "global" && p.scope !== "global") return false;
+      if (scope === "local" && p.scope !== "local") return false;
+      if (scope.startsWith("proc_")) {
+        const targetId = scope.replace("proc_", "");
+        if (p.scope !== "local") return false;
+        if (String(p.process_id) !== targetId && String(p.process_id) !== targetId.replace("node_", "")) return false;
+      }
+
+      if (group !== "all") {
+        const pGroup = p.group ? p.group.trim() : "General";
+        if (pGroup !== group) return false;
+      }
+
+      if (type !== "all" && p.param_type !== type) return false;
+
+      if (query) {
+        const matchName = (p.name || "").toLowerCase().includes(query);
+        const matchGroup = (p.group || "").toLowerCase().includes(query);
+        const matchFormula = (p.formula || "").toLowerCase().includes(query);
+        const matchDesc = (p.description || "").toLowerCase().includes(query);
+        const matchProc = (p.process_name || "").toLowerCase().includes(query);
+        if (!matchName && !matchGroup && !matchFormula && !matchDesc && !matchProc) return false;
+      }
+
+      return true;
+    });
+
+    const statCount = document.getElementById("statParamsCount");
+    const statIndep = document.getElementById("statParamsIndep");
+    const statDep = document.getElementById("statParamsDep");
+    const badgeCount = document.getElementById("badgeParamsCount");
+
+    const totalIndep = filtered.filter(p => p.param_type === "independent").length;
+    const totalDep = filtered.filter(p => p.param_type === "dependent").length;
+
+    if (statCount) statCount.textContent = `Parámetros: ${filtered.length}`;
+    if (statIndep) statIndep.textContent = `Independientes: ${totalIndep}`;
+    if (statDep) statDep.textContent = `Dependientes: ${totalDep}`;
+    if (badgeCount) badgeCount.textContent = `${allParams.length} Parámetros`;
+
+    if (filtered.length === 0) {
+      scrollArea.innerHTML = `
+        <div style="padding: 48px 20px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 13.5px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px;">No se encontraron parámetros</div>
+          <div style="font-size: 11px; max-width: 440px; margin: 0 auto 16px; line-height: 1.5;">
+            No hay variables que coincidan con los filtros seleccionados (Ámbito: ${escapeHtml(scope)}, Grupo: ${escapeHtml(group)}).
+          </div>
+          <button type="button" class="btn btn-primary btn-sm" onclick="window.EconodeApp.openParameterModal()">
+            + Definir Nuevo Parámetro
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    let tableHtml = `
+      <table class="table-v2" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+        <thead>
+          <tr style="background: var(--bg-subtle); border-bottom: 1px solid var(--border-color); text-align: left;">
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); width: 190px;">Variable / Identificador</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); width: 170px;">Ámbito</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); width: 150px;">Grupo</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); width: 110px;">Tipo</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); min-width: 200px;">Valor / Fórmula Matemática</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); width: 85px;">Unidad</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary);">Descripción Metodológica</th>
+            <th style="padding: 9px 12px; font-weight: 700; color: var(--text-secondary); text-align: right; width: 125px;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    filtered.forEach((p, idx) => {
+      const isDep = p.param_type === "dependent";
+      const isGlobal = p.scope === "global";
+      const scopeBadge = isGlobal
+        ? `<span class="badge-pill badge-primary" style="font-size: 9px; padding: 1px 6px;">Global</span>`
+        : `<span class="badge-pill badge-emerald" style="font-size: 9px; padding: 1px 6px;" title="Asociado a ${escapeHtml(p.process_name || 'Proceso')}">Local: ${escapeHtml(p.process_name || 'Proceso')}</span>`;
+
+      const typeBadge = isDep
+        ? `<span class="badge-pill" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9px; padding: 1px 6px;">Dependiente</span>`
+        : `<span class="badge-pill badge-slate" style="font-size: 9px; padding: 1px 6px;">Independiente</span>`;
+
+      const valDisplay = isDep
+        ? `<div class="mono" style="font-weight: 600; color: #7C3AED; font-size: 11px;">f(x) = ${escapeHtml(p.formula || '')}</div>`
+        : `<div class="mono" style="font-weight: 700; color: var(--text-primary); font-size: 11px;">${Number(p.value).toLocaleString("es-MX", { maximumFractionDigits: 4 })}</div>`;
+
+      tableHtml += `
+        <tr style="border-bottom: 1px solid var(--border-color); background: ${idx % 2 === 0 ? 'var(--bg-card)' : 'var(--bg-subtle)'};">
+          <td style="padding: 8px 12px;">
+            <span class="mono" style="font-weight: 700; color: var(--accent-primary); font-size: 11.5px;">${escapeHtml(p.name)}</span>
+          </td>
+          <td style="padding: 8px 12px;">
+            ${scopeBadge}
+          </td>
+          <td style="padding: 8px 12px;">
+            <span class="badge-pill badge-outline" style="font-size: 9px; font-weight: 600;">${escapeHtml(p.group || 'General')}</span>
+          </td>
+          <td style="padding: 8px 12px;">
+            ${typeBadge}
+          </td>
+          <td style="padding: 8px 12px;">
+            ${valDisplay}
+          </td>
+          <td style="padding: 8px 12px;">
+            <span class="mono" style="font-weight: 600; color: var(--text-secondary);">${escapeHtml(p.unit || '')}</span>
+          </td>
+          <td style="padding: 8px 12px; max-width: 280px;">
+            <span style="font-size: 10.5px; color: var(--text-secondary); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(p.description || '')}">
+              ${escapeHtml(p.description || '-')}
+            </span>
+          </td>
+          <td style="padding: 8px 12px; text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 7px; margin-right: 4px;" onclick="window.EconodeApp.editParameterById('${p.id}')">
+              Editar
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; padding: 2px 7px; color: #EF4444;" onclick="window.EconodeApp.deleteParameter('${p.id}')">
+              Eliminar
+            </button>
+          </td>
+        </tr>
+      `;
+    });
+
+    tableHtml += `
+        </tbody>
+      </table>
+    `;
+
+    scrollArea.innerHTML = tableHtml;
+  }
+
+  function renderProcessParametersInInspector(node) {
+    if (!node) return "";
+    const allParams = state.systemParameters || [];
+    const procId = node.process_id || node.id;
+    const cleanProcId = String(procId).replace("node_", "");
+
+    const localParams = allParams.filter(p => {
+      if (p.scope !== "local") return false;
+      const pidStr = String(p.process_id || "").replace("node_", "");
+      return pidStr === cleanProcId || p.process_name === node.name;
+    });
+
+    const countBadge = document.getElementById("inspParamsCountBadge");
+    if (countBadge) countBadge.textContent = String(localParams.length);
+
+    if (localParams.length === 0) {
+      return `
+        <div style="font-size: 10px; color: var(--text-muted); font-style: italic; padding: 6px; background: var(--bg-subtle); border-radius: 4px; text-align: center;">
+          Sin parámetros locales asignados a este proceso.
+        </div>
+      `;
+    }
+
+    return localParams.map(p => {
+      const isDep = p.param_type === "dependent";
+      return `
+        <div style="font-size: 10px; padding: 6px 8px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 4px; display: flex; flex-direction: column; gap: 2px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span class="mono" style="font-weight: 700; color: var(--accent-primary); font-size: 10.5px;">${escapeHtml(p.name)}</span>
+            <span class="badge-pill badge-outline" style="font-size: 8px; padding: 1px 4px;">${escapeHtml(p.group || 'General')}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 2px;">
+            <span style="font-size: 9.5px; color: var(--text-muted);">
+              ${isDep ? 'Fórmula' : 'Valor'}: <strong class="mono" style="color: var(--text-primary);">${isDep ? escapeHtml(p.formula) : Number(p.value).toLocaleString('es-MX', { maximumFractionDigits: 3 })} ${escapeHtml(p.unit)}</strong>
+            </span>
+            <button type="button" style="background: transparent; border: none; color: var(--accent-primary); cursor: pointer; font-size: 9.5px; padding: 0 3px;" onclick="window.EconodeApp.editParameterById('${p.id}')">
+              Editar
+            </button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function openParameterModal(paramToEdit = null, prefillNodeOrId = null) {
+    const modal = document.getElementById("modalParamForm");
+    if (!modal) return;
+
+    const procSel = document.getElementById("paramFormProcessSelect");
+    if (procSel) {
+      const nodes = state.canvasNodes || [];
+      procSel.innerHTML = nodes.map(n => {
+        const pid = n.process_id || n.id;
+        return `<option value="${pid}">${escapeHtml(n.name)} (#${pid})</option>`;
+      }).join('');
+    }
+
+    const titleEl = document.getElementById("modalParamFormTitle");
+    const idInput = document.getElementById("paramFormId");
+    const nameInput = document.getElementById("paramFormName");
+    const unitInput = document.getElementById("paramFormUnit");
+    const scopeSel = document.getElementById("paramFormScope");
+    const procWrap = document.getElementById("paramFormProcessWrapper");
+    const groupInput = document.getElementById("paramFormGroup");
+    const typeHidden = document.getElementById("paramFormType");
+    const btnIndep = document.getElementById("btnParamTypeIndep");
+    const btnDep = document.getElementById("btnParamTypeDep");
+    const valWrap = document.getElementById("paramFormValueWrapper");
+    const valInput = document.getElementById("paramFormValue");
+    const formWrap = document.getElementById("paramFormFormulaWrapper");
+    const formInput = document.getElementById("paramFormFormula");
+    const descInput = document.getElementById("paramFormDesc");
+
+    state.editingParameter = paramToEdit;
+
+    if (paramToEdit) {
+      if (titleEl) titleEl.textContent = `Editar Parámetro: ${paramToEdit.name}`;
+      if (idInput) idInput.value = paramToEdit.id || "";
+      if (nameInput) nameInput.value = paramToEdit.name || "";
+      if (unitInput) unitInput.value = paramToEdit.unit || "";
+      if (scopeSel) scopeSel.value = paramToEdit.scope || "global";
+      if (procWrap) procWrap.style.display = paramToEdit.scope === "local" ? "block" : "none";
+      if (procSel && paramToEdit.process_id) procSel.value = String(paramToEdit.process_id);
+      if (groupInput) groupInput.value = paramToEdit.group || "General";
+      
+      const isDep = paramToEdit.param_type === "dependent";
+      if (typeHidden) typeHidden.value = paramToEdit.param_type || "independent";
+      if (btnIndep) btnIndep.classList.toggle("active", !isDep);
+      if (btnDep) btnDep.classList.toggle("active", isDep);
+      if (valWrap) valWrap.style.display = isDep ? "none" : "block";
+      if (valInput) valInput.value = paramToEdit.value !== undefined ? paramToEdit.value : 0;
+      if (formWrap) formWrap.style.display = isDep ? "block" : "none";
+      if (formInput) formInput.value = paramToEdit.formula || "";
+      if (descInput) descInput.value = paramToEdit.description || "";
+    } else {
+      if (titleEl) titleEl.textContent = "Definir Parámetro del Modelo";
+      if (idInput) idInput.value = "";
+      if (nameInput) nameInput.value = "";
+      if (unitInput) unitInput.value = "kg";
+      
+      let targetNode = null;
+      if (prefillNodeOrId) {
+        if (typeof prefillNodeOrId === "object") {
+          targetNode = prefillNodeOrId;
+        } else {
+          targetNode = (state.canvasNodes || []).find(n => String(n.id) === String(prefillNodeOrId) || String(n.process_id) === String(prefillNodeOrId));
+        }
+      }
+
+      if (targetNode) {
+        if (scopeSel) scopeSel.value = "local";
+        if (procWrap) procWrap.style.display = "block";
+        if (procSel) procSel.value = String(targetNode.process_id || targetNode.id);
+        if (groupInput) groupInput.value = "Eficiencias y Mermas";
+      } else {
+        const curScope = state.paramScopeFilter || "all";
+        if (curScope === "local") {
+          if (scopeSel) scopeSel.value = "local";
+          if (procWrap) procWrap.style.display = "block";
+        } else if (curScope.startsWith("proc_")) {
+          const targetId = curScope.replace("proc_", "");
+          if (scopeSel) scopeSel.value = "local";
+          if (procWrap) procWrap.style.display = "block";
+          if (procSel) procSel.value = targetId;
+        } else {
+          if (scopeSel) scopeSel.value = "global";
+          if (procWrap) procWrap.style.display = "none";
+        }
+        const curGroup = state.paramGroupFilter || "all";
+        if (groupInput) groupInput.value = (curGroup !== "all") ? curGroup : "Materias Primas";
+      }
+
+      if (typeHidden) typeHidden.value = "independent";
+      if (btnIndep) btnIndep.classList.add("active");
+      if (btnDep) btnDep.classList.remove("active");
+      if (valWrap) valWrap.style.display = "block";
+      if (valInput) valInput.value = "";
+      if (formWrap) formWrap.style.display = "none";
+      if (formInput) formInput.value = "";
+      if (descInput) descInput.value = "";
+    }
+
+    modal.style.display = "flex";
+    modal.classList.add("active");
+    setTimeout(() => {
+      if (nameInput) nameInput.focus();
+    }, 100);
+  }
+
+  function closeParameterModal() {
+    const modal = document.getElementById("modalParamForm");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+    state.editingParameter = null;
+  }
+
+  async function saveParameterFromModal() {
+    const sys = state.activeSystem;
+    if (!sys || !sys.id) {
+      alert("No hay un sistema producto activo para asociar el parámetro.");
+      return;
+    }
+
+    const idInput = document.getElementById("paramFormId");
+    const nameInput = document.getElementById("paramFormName");
+    const unitInput = document.getElementById("paramFormUnit");
+    const scopeSel = document.getElementById("paramFormScope");
+    const procSel = document.getElementById("paramFormProcessSelect");
+    const groupInput = document.getElementById("paramFormGroup");
+    const typeHidden = document.getElementById("paramFormType");
+    const valInput = document.getElementById("paramFormValue");
+    const formInput = document.getElementById("paramFormFormula");
+    const descInput = document.getElementById("paramFormDesc");
+
+    const rawName = (nameInput ? nameInput.value : "").trim();
+    if (!rawName) {
+      alert("Por favor ingresa un nombre para la variable.");
+      if (nameInput) nameInput.focus();
+      return;
+    }
+
+    const cleanName = rawName.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+    const scope = scopeSel ? scopeSel.value : "global";
+    let procId = null;
+    let procName = "Global / Sistema Completo";
+
+    if (scope === "local" && procSel) {
+      procId = procSel.value;
+      const opt = procSel.options[procSel.selectedIndex];
+      if (opt) procName = opt.textContent.split(" (#")[0];
+    }
+
+    const group = (groupInput && groupInput.value.trim()) ? groupInput.value.trim() : "General";
+    const paramType = typeHidden ? typeHidden.value : "independent";
+    const unit = unitInput ? unitInput.value.trim() : "kg";
+    const val = (valInput && valInput.value !== "") ? parseFloat(valInput.value) : 0.0;
+    const formula = formInput ? formInput.value.trim() : "";
+    const desc = descInput ? descInput.value.trim() : "";
+
+    const payload = {
+      id: (idInput && idInput.value) ? idInput.value : undefined,
+      name: cleanName,
+      scope: scope,
+      process_id: procId,
+      process_name: procName,
+      group: group,
+      param_type: paramType,
+      value: val,
+      formula: formula,
+      unit: unit,
+      description: desc
+    };
+
+    try {
+      const res = await api.saveSystemParameter(sys.id, payload);
+      if (res && res.status === "success" && res.parameter) {
+        const saved = res.parameter;
+        const idx = (state.systemParameters || []).findIndex(p => p.id === saved.id);
+        if (idx >= 0) {
+          state.systemParameters[idx] = saved;
+        } else {
+          state.systemParameters.push(saved);
+        }
+
+        renderSystemParametersTable();
+        if (state.selectedNode) {
+          inspectNode(state.selectedNode);
+        }
+
+        closeParameterModal();
+        showNotification("Parámetro guardado exitosamente.");
+      } else {
+        alert(res?.error || "Error al guardar el parámetro.");
+      }
+    } catch (err) {
+      alert("Error en la solicitud: " + err.message);
+    }
+  }
+
+  async function deleteParameter(paramId) {
+    if (!paramId) return;
+    const sys = state.activeSystem;
+    if (!sys || !sys.id) return;
+
+    const p = (state.systemParameters || []).find(item => item.id === paramId);
+    const pName = p ? p.name : paramId;
+
+    if (!confirm(`¿Deseas eliminar el parámetro "${pName}" del modelo?`)) {
+      return;
+    }
+
+    try {
+      const res = await api.deleteSystemParameter(sys.id, paramId);
+      if (res && res.status === "success") {
+        state.systemParameters = (state.systemParameters || []).filter(item => item.id !== paramId);
+        renderSystemParametersTable();
+        if (state.selectedNode) {
+          inspectNode(state.selectedNode);
+        }
+        showNotification("Parámetro eliminado.");
+      } else {
+        alert(res?.error || "Error al eliminar el parámetro.");
+      }
+    } catch (err) {
+      alert("Error en la solicitud: " + err.message);
+    }
+  }
+
+  function editParameterById(paramId) {
+    const p = (state.systemParameters || []).find(item => item.id === paramId);
+    if (p) {
+      openParameterModal(p);
+    }
+  }
+
+  function exportParametersCsv() {
+    const sys = state.activeSystem;
+    const sysName = (sys && sys.name) ? sys.name : "Sistema_Producto";
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const filename = `Parametros_${sysName.replace(/[^a-zA-Z0-9_\-]/g, "_")}_${dateStr}.csv`;
+
+    let csv = "\uFEFF";
+    csv += "ID,Nombre,Ambito,Proceso,Grupo,Tipo,Valor,Formula,Unidad,Descripcion\\n";
+
+    (state.systemParameters || []).forEach(p => {
+      const row = [
+        `"${(p.id || '').replace(/"/g, '""')}"`,
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        `"${(p.scope || '').replace(/"/g, '""')}"`,
+        `"${(p.process_name || '').replace(/"/g, '""')}"`,
+        `"${(p.group || 'General').replace(/"/g, '""')}"`,
+        `"${(p.param_type || 'independent').replace(/"/g, '""')}"`,
+        p.value !== undefined ? p.value : 0,
+        `"${(p.formula || '').replace(/"/g, '""')}"`,
+        `"${(p.unit || '').replace(/"/g, '""')}"`,
+        `"${(p.description || '').replace(/"/g, '""')}"`
+      ];
+      csv += row.join(",") + "\n";
+    });
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showNotification("Parámetros exportados en CSV.");
   }
 
   function openTableConnectModal() {
@@ -8752,6 +9368,98 @@
     if (btnSankeyMass) btnSankeyMass.addEventListener("click", () => setSankeyMode("mass"));
     if (btnSankeyEnergy) btnSankeyEnergy.addEventListener("click", () => setSankeyMode("energy"));
 
+    // Sub-vista de Parámetros del Modelo y Modal
+    const btnParamsView = document.getElementById("btnCanvasViewParams");
+    if (btnParamsView) btnParamsView.addEventListener("click", () => switchCanvasViewMode("parameters"));
+
+    const btnParamsToVisual = document.getElementById("btnParamsToVisualView");
+    if (btnParamsToVisual) btnParamsToVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
+
+    const tabSheetParams = document.getElementById("tabSheetParameters");
+    if (tabSheetParams) tabSheetParams.addEventListener("click", () => switchCanvasViewMode("parameters"));
+
+    const btnOpenNewParam = document.getElementById("btnOpenNewParamModal");
+    if (btnOpenNewParam) btnOpenNewParam.addEventListener("click", () => openParameterModal());
+
+    const btnExportParams = document.getElementById("btnExportParamsCsv");
+    if (btnExportParams) btnExportParams.addEventListener("click", exportParametersCsv);
+
+    const selParamScope = document.getElementById("selectParamScopeFilter");
+    if (selParamScope) {
+      selParamScope.addEventListener("change", (e) => {
+        state.paramScopeFilter = e.target.value;
+        state.paramGroupFilter = "all";
+        renderSystemParametersTable();
+      });
+    }
+
+    const selParamGroup = document.getElementById("selectParamGroupFilter");
+    if (selParamGroup) {
+      selParamGroup.addEventListener("change", (e) => {
+        state.paramGroupFilter = e.target.value;
+        renderSystemParametersTable();
+      });
+    }
+
+    const selParamType = document.getElementById("selectParamTypeFilter");
+    if (selParamType) {
+      selParamType.addEventListener("change", (e) => {
+        state.paramTypeFilter = e.target.value;
+        renderSystemParametersTable();
+      });
+    }
+
+    const inParamFilter = document.getElementById("inputParamFilter");
+    if (inParamFilter) {
+      inParamFilter.addEventListener("input", (e) => {
+        state.paramSearchQuery = e.target.value;
+        renderSystemParametersTable();
+      });
+    }
+
+    // Modal de Parámetros: Interacciones y Guardado
+    const btnCloseParam = document.getElementById("btnCloseParamModal");
+    if (btnCloseParam) btnCloseParam.addEventListener("click", closeParameterModal);
+
+    const btnCancelParam = document.getElementById("btnCancelParamModal");
+    if (btnCancelParam) btnCancelParam.addEventListener("click", closeParameterModal);
+
+    const btnSaveParam = document.getElementById("btnSaveParamModal");
+    if (btnSaveParam) btnSaveParam.addEventListener("click", saveParameterFromModal);
+
+    const btnParamIndep = document.getElementById("btnParamTypeIndep");
+    const btnParamDep = document.getElementById("btnParamTypeDep");
+    const paramTypeHidden = document.getElementById("paramFormType");
+    const paramValWrap = document.getElementById("paramFormValueWrapper");
+    const paramFormWrap = document.getElementById("paramFormFormulaWrapper");
+
+    if (btnParamIndep && btnParamDep) {
+      btnParamIndep.addEventListener("click", () => {
+        btnParamIndep.classList.add("active");
+        btnParamDep.classList.remove("active");
+        if (paramTypeHidden) paramTypeHidden.value = "independent";
+        if (paramValWrap) paramValWrap.style.display = "block";
+        if (paramFormWrap) paramFormWrap.style.display = "none";
+      });
+      btnParamDep.addEventListener("click", () => {
+        btnParamDep.classList.add("active");
+        btnParamIndep.classList.remove("active");
+        if (paramTypeHidden) paramTypeHidden.value = "dependent";
+        if (paramValWrap) paramValWrap.style.display = "none";
+        if (paramFormWrap) paramFormWrap.style.display = "block";
+      });
+    }
+
+    const paramFormScopeSel = document.getElementById("paramFormScope");
+    const paramProcWrap = document.getElementById("paramFormProcessWrapper");
+    if (paramFormScopeSel) {
+      paramFormScopeSel.addEventListener("change", (e) => {
+        if (paramProcWrap) {
+          paramProcWrap.style.display = (e.target.value === "local") ? "block" : "none";
+        }
+      });
+    }
+
     // Sticky Notes Controls on Canvas
     const btnToggleSticky = document.getElementById("btnToggleCanvasStickyNotes");
     const labelStickyToggle = document.getElementById("labelStickyNotesToggle");
@@ -9016,6 +9724,12 @@
   window.ECONODE = null;
   window.EconodeApp = {
 
+    openParameterModal,
+    closeParameterModal,
+    saveParameterFromModal,
+    deleteParameter,
+    editParameterById,
+    exportParametersCsv,
     showView,
     openSystem,
     selectCatalogProcess,

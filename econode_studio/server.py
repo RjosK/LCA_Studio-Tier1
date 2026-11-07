@@ -41,6 +41,9 @@ from application import (
     save_system_canvas_use_case,
     delete_product_system_use_case,
     add_system_collaborator_use_case,
+    get_system_parameters_use_case,
+    save_system_parameter_use_case,
+    delete_system_parameter_use_case,
     search_catalog_use_case,
     get_process_sheet_use_case,
     list_system_comments_use_case,
@@ -308,6 +311,16 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self._send_error_json("Sistema producto no encontrado", 404)
                     else:
                         self._send_json({"status": "success", "system": details})
+                    return
+
+                # System Parameters (Requiere Autenticacion)
+                elif path.startswith("/api/systems/") and path.endswith("/parameters"):
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    sys_id = int(path.split("/")[3])
+                    params = get_system_parameters_use_case(conn, sys_id)
+                    self._send_json({"status": "success", "system_id": sys_id, "count": len(params), "items": params})
                     return
 
                 # Download Template CSV
@@ -709,6 +722,37 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     save_system_canvas_use_case(conn, sys_id, body)
                     self._send_json({"status": "success", "message": "Lienzo guardado exitosamente."})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Save or Update System Parameter (Solo Analistas Autenticados)
+            elif path.startswith("/api/systems/") and path.endswith("/parameters"):
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                sys_id = int(path.split("/")[3])
+                try:
+                    saved_param = save_system_parameter_use_case(conn, sys_id, body)
+                    self._send_json({"status": "success", "parameter": saved_param, "message": "Parametro guardado exitosamente."})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Delete System Parameter (Solo Analistas Autenticados)
+            elif path.startswith("/api/systems/") and (("/parameters/" in path and path.endswith("/delete")) or path.endswith("/parameters/delete")):
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                parts = path.split("/")
+                sys_id = int(parts[3])
+                param_id = body.get("param_id") or (parts[5] if len(parts) > 5 and parts[5] != "delete" else "")
+                if not param_id:
+                    self._send_error_json("ID de parametro no especificado", 400)
+                    return
+                try:
+                    ok = delete_system_parameter_use_case(conn, sys_id, param_id)
+                    self._send_json({"status": "success", "deleted_id": param_id, "message": "Parametro eliminado exitosamente."})
                 except Exception as e:
                     self._send_error_json(str(e), 400)
                 return

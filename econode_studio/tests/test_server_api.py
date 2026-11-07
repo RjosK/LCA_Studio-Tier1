@@ -87,6 +87,7 @@ TEST_CASES = [
     # 3. Sistemas & Plantilla
     ("GET /api/systems", lambda: request_json("/api/systems")),
     ("GET /api/systems/21/canvas", lambda: request_json("/api/systems/21/canvas")),
+    ("GET /api/systems/21/parameters", lambda: request_json("/api/systems/21/parameters")),
     ("GET /api/systems/template-csv", lambda: request_json("/api/systems/template-csv")),
 
     # 4. Catálogo LCI ecoinvent 3.12 & Categorías
@@ -164,6 +165,19 @@ TEST_CASES = [
     ("GET /api/documents/download (Valid)", lambda: request_json(f"/api/documents/{request_json('/api/documents')[1]['items'][0]['id']}/download")),
     ("POST /api/documents/delete", lambda: request_json("/api/documents/delete", {"document_id": request_json('/api/documents')[1]['items'][0]['id']}, "POST")),
     ("POST /api/comments/delete", lambda: request_json("/api/comments/delete", {"comment_id": 2, "user_name": "Josué Arentería", "user_role": "auditor"}, "POST")),
+    ("POST /api/systems/21/parameters", lambda: request_json("/api/systems/21/parameters", {
+        "id": "param_test_api_suite",
+        "name": "factor_eficiencia_test",
+        "scope": "local",
+        "process_id": 100001,
+        "process_name": "PET Preform Injection Molding",
+        "group": "Eficiencias y Mermas",
+        "param_type": "independent",
+        "value": 99.2,
+        "unit": "%",
+        "description": "Parametro de prueba para verificacion de API"
+    }, "POST")),
+    ("POST /api/systems/21/parameters/param_test_api_suite/delete", lambda: request_json("/api/systems/21/parameters/param_test_api_suite/delete", {}, "POST")),
 
     # 8. Exportaciones Industriales
     ("GET /api/systems/21/export/openlca", lambda: request_json("/api/systems/21/export/openlca")),

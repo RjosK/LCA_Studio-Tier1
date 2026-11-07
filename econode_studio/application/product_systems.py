@@ -12,13 +12,13 @@ from typing import Dict, List, Any, Optional
 try:
     from infrastructure.database_adapter import (
         list_product_systems, create_product_system, get_product_system_details, save_system_canvas,
-        delete_product_system, add_system_collaborator,
+        delete_product_system, add_system_collaborator, get_system_parameters, save_system_parameter, delete_system_parameter,
         get_active_db_connection
     )
 except (ImportError, ValueError):
     from econode_studio.infrastructure.database_adapter import (
         list_product_systems, create_product_system, get_product_system_details, save_system_canvas,
-        delete_product_system, add_system_collaborator,
+        delete_product_system, add_system_collaborator, get_system_parameters, save_system_parameter, delete_system_parameter,
         get_active_db_connection
     )
 
@@ -206,3 +206,36 @@ def add_system_collaborator_use_case(
             return add_system_collaborator(c, system_id, collaborator)
     return add_system_collaborator(conn, system_id, collaborator)
 
+
+
+def get_system_parameters_use_case(conn: Optional[Any] = None, system_id: int = 1) -> List[Dict[str, Any]]:
+    """Obtiene los parametros definidos para el sistema producto."""
+    if conn is None:
+        with get_active_db_connection() as c:
+            return get_system_parameters(c, system_id)
+    return get_system_parameters(conn, system_id)
+
+
+def save_system_parameter_use_case(
+    conn: Optional[Any] = None,
+    system_id: int = 1,
+    param_data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """Crea o actualiza un parametro en el sistema producto."""
+    param_data = param_data or {}
+    if conn is None:
+        with get_active_db_connection() as c:
+            return save_system_parameter(c, system_id, param_data)
+    return save_system_parameter(conn, system_id, param_data)
+
+
+def delete_system_parameter_use_case(
+    conn: Optional[Any] = None,
+    system_id: int = 1,
+    param_id: str = ""
+) -> bool:
+    """Elimina un parametro del sistema producto."""
+    if conn is None:
+        with get_active_db_connection() as c:
+            return delete_system_parameter(c, system_id, param_id)
+    return delete_system_parameter(conn, system_id, param_id)

@@ -1046,6 +1046,7 @@
         <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="group" aria-label="Modo de vista">
           <button class="segmented-btn active" id="btnCanvasViewVisual" data-mode="visual" data-i18n="canvas.view_diagram" style="padding: 4px 10px; font-size: 11px;"> Diagrama</button>
           <button class="segmented-btn" id="btnCanvasViewTable" data-mode="table" data-i18n="canvas.view_table" style="padding: 4px 10px; font-size: 11px;"> Hoja de Cálculo</button>
+          <button class="segmented-btn" id="btnCanvasViewParams" data-mode="parameters" data-i18n="canvas.view_parameters" style="padding: 4px 10px; font-size: 11px;"> Parámetros</button>
         </div>
 
         <!-- Conmutadores de Paneles Laterales (Para expandir/maximizar el lienzo) -->
@@ -1236,7 +1237,10 @@
                 <span class="sheet-tab-icon">⊞</span> <span data-i18n="canvas.sheet_tab_lci">LCI_Inventario_Procesos</span>
               </button>
               <button type="button" class="spreadsheet-tab-btn" id="tabSheetConnections" data-sheet="connections" role="tab" aria-selected="false">
-                <span class="sheet-tab-icon"></span> <span data-i18n="canvas.sheet_tab_conn">Matriz_Conexiones</span>
+                <span class="sheet-tab-icon">[MAT]</span> <span data-i18n="canvas.sheet_tab_conn">Matriz_Conexiones</span>
+              </button>
+              <button type="button" class="spreadsheet-tab-btn" id="tabSheetParameters" data-sheet="parameters" role="tab" aria-selected="false">
+                <span class="sheet-tab-icon">[PAR]</span> <span data-i18n="canvas.sheet_tab_params">Parametros_del_Modelo</span>
               </button>
             </div>
             <div class="spreadsheet-status-bar mono" id="spreadsheetStatusBar">
@@ -1244,6 +1248,83 @@
               <span id="statRowCount">Filas: 0</span>
               <span id="statProcessCount">Procesos: 0</span>
               <span id="statTotalInputs">Total Insumos: 0 kg</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- SUB-VISTA 3: GESTOR DE PARÁMETROS DINÁMICOS    -->
+        <!-- ============================================== -->
+        <div id="canvasParamsStageContainer" class="canvas-subview-container spreadsheet-app-container" style="width: 100%; height: 100%; display: none; flex-direction: column; background: var(--bg-card);">
+          <!-- Barra de Herramientas de Parámetros -->
+          <div class="spreadsheet-ribbon-bar">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <button class="btn btn-secondary btn-sm" id="btnParamsToVisualView" title="Volver al diagrama visual" data-i18n-title="canvas.slide_to_visual_tip" style="padding: 3px 9px; font-size: 11px;">
+                <span data-i18n="canvas.slide_to_visual">Volver al Diagrama</span>
+              </button>
+              <div class="spreadsheet-file-pill">
+                <span style="font-weight: 700; font-size: 11px; color: var(--text-primary);" id="paramsFileName">Parametros_del_Modelo.xlsx</span>
+                <span class="badge-pill badge-emerald" style="font-size: 8.5px; padding: 1px 5px;" id="badgeParamsCount">10 Parámetros</span>
+              </div>
+            </div>
+
+            <!-- Filtros y Acciones de Parámetros -->
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; overflow-x: auto;">
+              <!-- Filtro de Ámbito (Scope) -->
+              <select id="selectParamScopeFilter" class="form-input" style="height: 27px; font-size: 11px; padding: 2px 8px; width: auto; min-width: 170px; max-width: 220px;" title="Filtrar por Ámbito">
+                <option value="all">Todos los Ámbitos</option>
+                <option value="global">Solo Globales</option>
+                <option value="local">Solo Procesos Locales</option>
+              </select>
+
+              <!-- Filtro de Grupo (Group) -->
+              <select id="selectParamGroupFilter" class="form-input" style="height: 27px; font-size: 11px; padding: 2px 8px; width: auto; min-width: 150px; max-width: 190px;" title="Filtrar por Grupo">
+                <option value="all">Todos los Grupos</option>
+              </select>
+
+              <!-- Filtro de Tipo (Type) -->
+              <select id="selectParamTypeFilter" class="form-input" style="height: 27px; font-size: 11px; padding: 2px 8px; width: auto; min-width: 130px; max-width: 160px;" title="Filtrar por Tipo">
+                <option value="all">Todos los Tipos</option>
+                <option value="independent">Independientes (Valores)</option>
+                <option value="dependent">Dependientes (Fórmulas)</option>
+              </select>
+
+              <!-- Buscador de texto -->
+              <input type="text" class="form-input spreadsheet-search-box" placeholder="Buscar variable..." id="inputParamFilter" style="height: 27px; font-size: 11px; padding: 2px 8px; width: 140px;">
+
+              <!-- Botones de Acción -->
+              <button type="button" class="btn btn-primary btn-sm" id="btnOpenNewParamModal" style="height: 27px; font-size: 11px; padding: 0 10px; white-space: nowrap;">
+                + <span data-i18n="canvas.param_btn_new">Nuevo Parámetro</span>
+              </button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnExportParamsCsv" style="height: 27px; font-size: 11px; padding: 0 8px; white-space: nowrap;" title="Exportar parámetros a CSV">
+                <span>Exportar CSV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Área de Tabla con Scroll para Parámetros -->
+          <div class="spreadsheet-grid-scroll-area" id="canvasParamsScrollArea" style="overflow-y: auto; flex: 1; padding: 0;">
+            <!-- Contenido generado dinámicamente por renderSystemParametersTable() -->
+          </div>
+
+          <!-- Barra de Estado Inferior de Parámetros -->
+          <div class="spreadsheet-bottom-bar">
+            <div class="spreadsheet-sheet-tabs" role="tablist">
+              <button type="button" class="spreadsheet-tab-btn" id="tabSheetLciFromParams" data-sheet="lci" role="tab">
+                <span class="sheet-tab-icon">[LCI]</span> <span>LCI_Inventario_Procesos</span>
+              </button>
+              <button type="button" class="spreadsheet-tab-btn" id="tabSheetConnFromParams" data-sheet="connections" role="tab">
+                <span class="sheet-tab-icon">[MAT]</span> <span>Matriz_Conexiones</span>
+              </button>
+              <button type="button" class="spreadsheet-tab-btn active" id="tabSheetParamsFromParams" data-sheet="parameters" role="tab" aria-selected="true">
+                <span class="sheet-tab-icon">[PAR]</span> <span>Parametros_del_Modelo</span>
+              </button>
+            </div>
+            <div class="spreadsheet-status-bar mono" id="paramsStatusBar">
+              <span class="status-indicator">● LISTO</span>
+              <span id="statParamsCount">Parámetros: 0</span>
+              <span id="statParamsIndep">Independientes: 0</span>
+              <span id="statParamsDep">Dependientes: 0</span>
             </div>
           </div>
         </div>
@@ -2009,6 +2090,105 @@
         <button class="btn btn-secondary btn-sm" id="btnCancelAddProcessComment">Cancelar</button>
         <button class="btn btn-primary btn-sm" id="btnSaveAddProcessComment">Guardar Nota Técnica &rarr;</button>
       </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: DEFINICIÓN DE PARÁMETROS DEL MODELO                    -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalParamForm" role="dialog" aria-modal="true" aria-labelledby="modalParamFormTitle" style="display: none;">
+    <div class="modal-dialog" style="max-width: 580px; width: 95vw;">
+      <div class="modal-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="badge-pill badge-primary" style="font-size: 10px; padding: 2px 7px;">PARAM</span>
+          <h3 id="modalParamFormTitle" style="font-size: 15px; font-weight: 700; margin: 0;">Definir Parámetro del Modelo</h3>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseParamModal" aria-label="Cerrar">&times;</button>
+      </div>
+      <form id="formParamDefinition" onsubmit="return false;" style="display: flex; flex-direction: column; margin: 0;">
+        <div class="modal-body" style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+          <input type="hidden" id="paramFormId" value="">
+          
+          <!-- Nombre de Variable y Unidad -->
+          <div style="display: grid; grid-template-columns: 1fr 130px; gap: 12px;">
+            <div>
+              <label for="paramFormName" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Nombre de la Variable (Identificador):</label>
+              <input type="text" id="paramFormName" class="form-input mono" placeholder="ej. merma_inyeccion_pct" required style="font-size: 12px;">
+              <span style="font-size: 10px; color: var(--text-muted);">Solo letras, números y guiones bajos (sin espacios).</span>
+            </div>
+            <div>
+              <label for="paramFormUnit" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Unidad:</label>
+              <input type="text" id="paramFormUnit" class="form-input mono" placeholder="kg, %, kWh, km" required style="font-size: 12px;">
+            </div>
+          </div>
+
+          <!-- Ámbito (Scope) y Proceso Asociado -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label for="paramFormScope" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Ámbito del Parámetro:</label>
+              <select id="paramFormScope" class="form-input" style="font-size: 11.5px; height: 32px;">
+                <option value="global">Global (Todo el Sistema Producto)</option>
+                <option value="local">Local (Asociado a un Proceso)</option>
+              </select>
+            </div>
+            <div id="paramFormProcessWrapper" style="display: none;">
+              <label for="paramFormProcessSelect" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Proceso Unitario:</label>
+              <select id="paramFormProcessSelect" class="form-input" style="font-size: 11px; height: 32px;">
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+          </div>
+
+          <!-- Grupo / Categoría de Consulta -->
+          <div>
+            <label for="paramFormGroup" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Grupo de Parámetros:</label>
+            <input type="text" id="paramFormGroup" list="paramGroupDatalist" class="form-input" placeholder="ej. Materias Primas, Eficiencias y Mermas, Consumo Energético..." style="font-size: 11.5px;">
+            <datalist id="paramGroupDatalist">
+              <option value="Materias Primas"></option>
+              <option value="Eficiencias y Mermas"></option>
+              <option value="Consumo Energético"></option>
+              <option value="Logística y Transporte"></option>
+              <option value="Factores de Emisión"></option>
+              <option value="Parámetros de Operación"></option>
+              <option value="Costos Operativos"></option>
+            </datalist>
+            <span style="font-size: 10px; color: var(--text-muted);">Permite agrupar y consultar variables tanto dentro de globales como dentro de procesos.</span>
+          </div>
+
+          <!-- Tipo de Parámetro: Independiente (Valor) vs Dependiente (Fórmula) -->
+          <div>
+            <label style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Tipo de Definición:</label>
+            <div class="sankey-toggle-group" style="display: flex; background: var(--bg-muted); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 2px;" role="radiogroup">
+              <button type="button" class="segmented-btn active" id="btnParamTypeIndep" style="flex: 1; padding: 5px; font-size: 11px;">Independiente (Valor Fijo)</button>
+              <button type="button" class="segmented-btn" id="btnParamTypeDep" style="flex: 1; padding: 5px; font-size: 11px;">Dependiente (Fórmula Matemática)</button>
+            </div>
+            <input type="hidden" id="paramFormType" value="independent">
+          </div>
+
+          <!-- Campo de Valor Numérico (para Independiente) -->
+          <div id="paramFormValueWrapper">
+            <label for="paramFormValue" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Valor Numérico:</label>
+            <input type="number" step="any" id="paramFormValue" class="form-input mono" placeholder="0.000" style="font-size: 12px;">
+          </div>
+
+          <!-- Campo de Fórmula Matemática (para Dependiente) -->
+          <div id="paramFormFormulaWrapper" style="display: none;">
+            <label for="paramFormFormula" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Fórmula Matemática / Ecuación:</label>
+            <input type="text" id="paramFormFormula" class="form-input mono" placeholder="ej. peso_nominal_botella * (1 - contenido_rpet_pct / 100)" style="font-size: 12px;">
+            <span style="font-size: 10px; color: var(--text-muted); margin-top: 3px; display: block;">Escribe una expresión combinando nombres de otros parámetros del modelo.</span>
+          </div>
+
+          <!-- Descripción / Metadatos ISO 14044 -->
+          <div>
+            <label for="paramFormDesc" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">Descripción y Documentación Metodológica:</label>
+            <textarea id="paramFormDesc" class="form-input" rows="2" placeholder="Documenta el origen del dato, norma aplicable, supuesto técnico o referencia..." style="font-size: 11.5px; resize: vertical;"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCancelParamModal">Cancelar</button>
+          <button type="button" class="btn btn-primary btn-sm" id="btnSaveParamModal">Guardar Parámetro</button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -6,6 +6,8 @@ Conecta a las bases ecoinvent 3.12 y lcia_engine.db para operaciones de Tier 1 s
 import sqlite3
 import os
 import json
+import re
+import uuid
 from typing import Dict, List, Any, Optional
 
 try:
@@ -257,7 +259,8 @@ def ensure_product_systems_columns(conn: Any):
             ("geography", "TEXT DEFAULT '[MX]'"),
             ("status", "TEXT DEFAULT 'in_audit'"),
             ("compliance_rate", "TEXT DEFAULT '100.0%'"),
-            ("collaborators_json", "TEXT DEFAULT '[]'")
+            ("collaborators_json", "TEXT DEFAULT '[]'"),
+            ("parameters_json", "TEXT DEFAULT '{}'")
         ]
         with conn:
             for col_name, col_def in new_cols:
@@ -583,7 +586,8 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "owner_org": sys_row["owner_org"] if "owner_org" in sys_row.keys() and sys_row["owner_org"] else "BioPack Industrial S.A. de C.V.",
                 "collaborators": collabs,
                 "nodes": saved_nodes,
-                "edges": saved_edges
+                "edges": saved_edges,
+                "parameters": get_system_parameters(conn, system_id)
             }
     except Exception:
         pass
@@ -605,7 +609,8 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "owner_org": sys_row["owner_org"] if "owner_org" in sys_row.keys() and sys_row["owner_org"] else "BioPack Industrial S.A. de C.V.",
                 "collaborators": collabs,
                 "nodes": OFFICIAL_SYSTEM_SPEC["processes"],
-                "edges": OFFICIAL_SYSTEM_SPEC["edges"]
+                "edges": OFFICIAL_SYSTEM_SPEC["edges"],
+                "parameters": get_system_parameters(conn, system_id)
             }
         except Exception:
             pass
@@ -623,7 +628,8 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
         "owner_org": sys_row["owner_org"] if "owner_org" in sys_row.keys() and sys_row["owner_org"] else None,
         "collaborators": collabs,
         "nodes": nodes,
-        "edges": [dict(er) for er in edges_rows]
+        "edges": [dict(er) for er in edges_rows],
+        "parameters": get_system_parameters(conn, system_id)
     }
 
 def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]):
@@ -1070,3 +1076,278 @@ def search_providers(conn: sqlite3.Connection, flow_name: str = "", limit: int =
     return [{"id": r[0], "name": r[1], "location": r[2] or "GLO", "unit": r[3] or "kg"} for r in rows]
 
 
+
+
+# -----------------------------------------------------------------------------
+# 5. PARAMETRIC MODELING & DYNAMIC PARAMETERS DEFINITION
+# -----------------------------------------------------------------------------
+
+DEFAULT_SYSTEM_21_PARAMETERS = [
+    {
+        "id": "param-sys21-peso-botella",
+        "name": "peso_nominal_botella",
+        "scope": "global",
+        "process_id": None,
+        "process_name": "Global / Sistema Completo",
+        "group": "Materias Primas",
+        "param_type": "independent",
+        "value": 0.024,
+        "formula": "",
+        "unit": "kg",
+        "description": "Peso neto nominal del envase PET terminado de 500ml sin tapa ni etiqueta"
+    },
+    {
+        "id": "param-sys21-rpet-pct",
+        "name": "contenido_rpet_pct",
+        "scope": "global",
+        "process_id": None,
+        "process_name": "Global / Sistema Completo",
+        "group": "Materias Primas",
+        "param_type": "independent",
+        "value": 25.0,
+        "formula": "",
+        "unit": "%",
+        "description": "Porcentaje de resina reciclada post-consumo (rPET) grado botella en la formulacion"
+    },
+    {
+        "id": "param-sys21-resina-virgen",
+        "name": "resina_virgen_requerida",
+        "scope": "global",
+        "process_id": None,
+        "process_name": "Global / Sistema Completo",
+        "group": "Materias Primas",
+        "param_type": "dependent",
+        "value": 0.018,
+        "formula": "peso_nominal_botella * (1 - contenido_rpet_pct / 100)",
+        "unit": "kg",
+        "description": "Cantidad neta de resina PET virgen demandada por envase producido"
+    },
+    {
+        "id": "param-sys21-factor-cfe",
+        "name": "factor_emision_red_cfe",
+        "scope": "global",
+        "process_id": None,
+        "process_name": "Global / Sistema Completo",
+        "group": "Factores de Emision",
+        "param_type": "independent",
+        "value": 0.438,
+        "formula": "",
+        "unit": "kg CO2 eq/kWh",
+        "description": "Factor de emision oficial del Sistema Electrico Nacional (SEN) CRE/SEMARNAT"
+    },
+    {
+        "id": "param-sys21-merma-inyeccion",
+        "name": "merma_inyeccion_pct",
+        "scope": "local",
+        "process_id": 100001,
+        "process_name": "PET Preform Injection Molding",
+        "group": "Eficiencias y Mermas",
+        "param_type": "independent",
+        "value": 2.5,
+        "formula": "",
+        "unit": "%",
+        "description": "Porcentaje de scrap o purga generado durante la inyeccion de preformas"
+    },
+    {
+        "id": "param-sys21-kwh-inyeccion",
+        "name": "consumo_electrico_inyeccion",
+        "scope": "local",
+        "process_id": 100001,
+        "process_name": "PET Preform Injection Molding",
+        "group": "Consumo Energetico",
+        "param_type": "independent",
+        "value": 0.28,
+        "formula": "",
+        "unit": "kWh/kg",
+        "description": "Intensidad energetica especifica de la inyectora hidraulica con servomotor"
+    },
+    {
+        "id": "param-sys21-merma-soplado",
+        "name": "merma_soplado_pct",
+        "scope": "local",
+        "process_id": 100002,
+        "process_name": "PET Bottle Stretch Blow Molding",
+        "group": "Eficiencias y Mermas",
+        "param_type": "independent",
+        "value": 0.8,
+        "formula": "",
+        "unit": "%",
+        "description": "Tasa de rechazo y recorte por deformacion termica en soplado rotativo"
+    },
+    {
+        "id": "param-sys21-presion-soplado",
+        "name": "presion_aire_soplado_bar",
+        "scope": "local",
+        "process_id": 100002,
+        "process_name": "PET Bottle Stretch Blow Molding",
+        "group": "Parametros de Operacion",
+        "param_type": "independent",
+        "value": 36.0,
+        "formula": "",
+        "unit": "bar",
+        "description": "Presion neumatica de soplado bi-orientado para espesor de pared uniforme"
+    },
+    {
+        "id": "param-sys21-distancia-distribucion",
+        "name": "distancia_distribucion_km",
+        "scope": "local",
+        "process_id": 100003,
+        "process_name": "PET Bottle Distribution & Logistics",
+        "group": "Logistica y Transporte",
+        "param_type": "independent",
+        "value": 350.0,
+        "formula": "",
+        "unit": "km",
+        "description": "Distancia promedio ponderada de transporte en camion articulado 16-32t hacia el CEDIS"
+    },
+    {
+        "id": "param-sys21-ton-km",
+        "name": "huella_transporte_ton_km",
+        "scope": "local",
+        "process_id": 100003,
+        "process_name": "PET Bottle Distribution & Logistics",
+        "group": "Logistica y Transporte",
+        "param_type": "dependent",
+        "value": 0.0084,
+        "formula": "peso_nominal_botella * distancia_distribucion_km / 1000",
+        "unit": "t*km",
+        "description": "Esfuerzo de transporte ponderado por peso unitario y distancia recorrida"
+    }
+]
+
+def get_system_parameters(conn: Any, system_id: int) -> List[Dict[str, Any]]:
+    """Obtiene los parametros parametricos definidos para un sistema producto."""
+    ensure_product_systems_columns(conn)
+    cur = conn.execute("SELECT parameters_json FROM product_systems WHERE id = ?;", (system_id,))
+    row = cur.fetchone()
+    if not row or not row[0]:
+        if system_id == 21:
+            return [dict(p) for p in DEFAULT_SYSTEM_21_PARAMETERS]
+        return []
+
+    raw = row[0]
+    try:
+        params_dict = json.loads(raw) if isinstance(raw, str) else (raw or {})
+        if isinstance(params_dict, dict) and "parameters" in params_dict and isinstance(params_dict["parameters"], list):
+            if len(params_dict["parameters"]) > 0 or system_id != 21:
+                return params_dict["parameters"]
+    except Exception:
+        pass
+
+    if system_id == 21:
+        return [dict(p) for p in DEFAULT_SYSTEM_21_PARAMETERS]
+    return []
+
+def save_system_parameter(conn: Any, system_id: int, param_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Crea o actualiza un parametro en parameters_json del sistema producto."""
+    ensure_product_systems_columns(conn)
+    cur = conn.execute("SELECT parameters_json FROM product_systems WHERE id = ?;", (system_id,))
+    row = cur.fetchone()
+    params_dict = {}
+    if row and row[0]:
+        try:
+            params_dict = json.loads(row[0]) if isinstance(row[0], str) else (row[0] or {})
+        except Exception:
+            params_dict = {}
+
+    current_params = params_dict.get("parameters")
+    if current_params is None:
+        if system_id == 21:
+            current_params = [dict(p) for p in DEFAULT_SYSTEM_21_PARAMETERS]
+        else:
+            current_params = []
+    elif not isinstance(current_params, list):
+        current_params = []
+
+    p_id = str(param_data.get("id") or "").strip()
+    if not p_id:
+        p_id = f"param_{uuid.uuid4().hex[:8]}"
+
+    raw_name = str(param_data.get("name") or "param_nuevo").strip()
+    clean_name = re.sub(r"[^a-zA-Z0-9_]", "_", raw_name).lower()
+    if not clean_name or clean_name[0].isdigit():
+        clean_name = f"p_{clean_name}"
+
+    scope = str(param_data.get("scope") or "global").strip().lower()
+    if scope not in ("global", "local"):
+        scope = "global"
+
+    proc_id = param_data.get("process_id")
+    proc_name = str(param_data.get("process_name") or "Global / Sistema Completo").strip()
+    if scope == "local" and proc_id is not None and str(proc_id).strip() != "":
+        try:
+            proc_id = int(str(proc_id).replace("node_", ""))
+        except (ValueError, TypeError):
+            proc_id = None
+    else:
+        proc_id = None
+        proc_name = "Global / Sistema Completo"
+
+    group = str(param_data.get("group") or "General").strip()
+    if not group:
+        group = "General"
+
+    param_type = str(param_data.get("param_type") or "independent").strip().lower()
+    if param_type not in ("independent", "dependent"):
+        param_type = "independent"
+
+    try:
+        val = float(param_data.get("value", 0.0))
+    except (ValueError, TypeError):
+        val = 0.0
+
+    formula = str(param_data.get("formula") or "").strip() if param_type == "dependent" else ""
+    unit = str(param_data.get("unit") or "kg").strip()
+    description = str(param_data.get("description") or "").strip()
+
+    normalized_param = {
+        "id": p_id,
+        "name": clean_name,
+        "scope": scope,
+        "process_id": proc_id,
+        "process_name": proc_name,
+        "group": group,
+        "param_type": param_type,
+        "value": val,
+        "formula": formula,
+        "unit": unit,
+        "description": description
+    }
+
+    idx = next((i for i, p in enumerate(current_params) if p.get("id") == p_id), -1)
+    if idx >= 0:
+        current_params[idx] = normalized_param
+    else:
+        current_params.append(normalized_param)
+
+    params_dict["parameters"] = current_params
+    with conn:
+        conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+
+    return normalized_param
+
+def delete_system_parameter(conn: Any, system_id: int, param_id: str) -> bool:
+    """Elimina un parametro del sistema producto."""
+    ensure_product_systems_columns(conn)
+    cur = conn.execute("SELECT parameters_json FROM product_systems WHERE id = ?;", (system_id,))
+    row = cur.fetchone()
+    if not row or not row[0]:
+        return False
+
+    try:
+        params_dict = json.loads(row[0]) if isinstance(row[0], str) else (row[0] or {})
+    except Exception:
+        return False
+
+    current_params = params_dict.get("parameters")
+    if current_params is None:
+        if system_id == 21:
+            current_params = [dict(p) for p in DEFAULT_SYSTEM_21_PARAMETERS]
+        else:
+            return False
+
+    new_params = [p for p in current_params if str(p.get("id")) != str(param_id)]
+    params_dict["parameters"] = new_params
+    with conn:
+        conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+    return True
