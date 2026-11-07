@@ -139,7 +139,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "UNIT_PROCESS_FLOW",
                     "origin": "ecoinvent 3.12 Cutoff CPC 34710",
-                    "is_unit": True
+                    "is_unit": True,
+                    "comment": "Resina PET virgen grado inyección con IV 0.82 dl/g",
+                    "assumptions": "Considera 5% de merma de purga según estándar Husky HyPET",
+                    "external_links": "https://www.petcore-europe.org"
                 },
                 {
                     "name": "CFE electricity grid mix 230kV [MX]",
@@ -147,7 +150,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kWh",
                     "type": "TECHNOSPHERE_INPUT",
                     "origin": "CFE National Grid 2026",
-                    "is_unit": False
+                    "is_unit": False,
+                    "comment": "Factor de emisión oficial del Sistema Eléctrico Nacional SEN",
+                    "assumptions": "0.438 kg CO2 eq/kWh publicado por la Comisión Reguladora de Energía",
+                    "external_links": "https://www.gob.mx/cre"
                 },
                 {
                     "name": "Demineralized process cooling water [MX]",
@@ -155,7 +161,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "m3",
                     "type": "RESOURCE_INPUT",
                     "origin": "Plant Industrial Well",
-                    "is_unit": False
+                    "is_unit": False,
+                    "comment": "Agua de enfriamiento de circuito semicerrado industrial",
+                    "assumptions": "Reposición de pérdidas por evaporación del 1.5% del volumen circulante",
+                    "external_links": "https://www.conagua.gob.mx"
                 }
             ],
             "outputs": [
@@ -164,7 +173,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "amount": 1.000,
                     "unit": "kg",
                     "type": "REFERENCE_PRODUCT",
-                    "is_reference": True
+                    "is_reference": True,
+                    "comment": "Preforma transparente cuello PCO 1881 de 24.0 gramos",
+                    "assumptions": "Flujo de referencia cuantitativo del proceso unitario (1 kg = 41.67 preformas)",
+                    "external_links": "https://www.isbt.com"
                 },
                 {
                     "name": "Purge PET plastic scrap (Waste)",
@@ -172,7 +184,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "WASTE_FLOW",
                     "is_waste": True,
-                    "fate": "Closed-loop internal mechanical recycling"
+                    "fate": "Closed-loop internal mechanical recycling",
+                    "comment": "Merma de purga de arranque y cambio de molde",
+                    "assumptions": "100% segregado y triturado para recirculación interna en circuito cerrado",
+                    "external_links": "https://iso.org/standard/38498.html"
                 },
                 {
                     "name": "Fossil CO2 emissions [Air]",
@@ -180,7 +195,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "ELEMENTARY_FLOW",
                     "is_elementary": True,
-                    "compartment": "Air"
+                    "compartment": "Air",
+                    "comment": "Emisiones directas por calentamiento térmico de cilindro",
+                    "assumptions": "Cálculo estequiométrico basado en Directrices IPCC 2006 (Volumen 3)",
+                    "external_links": "https://www.ipcc-nggip.iges.or.jp"
                 }
             ]
         },
@@ -206,7 +224,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "UNIT_PROCESS_FLOW",
                     "origin": "PET Preform Injection Molding",
-                    "is_unit": True
+                    "is_unit": True,
+                    "comment": "Preforma alimentada directamente desde el proceso de inyeccion previo",
+                    "assumptions": "Relacion 1:1 estequiometrica con factor de perdida por calentamiento infrarrojo del 0.2%",
+                    "external_links": "https://www.sidel.com"
                 },
                 {
                     "name": "High-pressure compressed air (40 bar)",
@@ -214,7 +235,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "m3",
                     "type": "TECHNOSPHERE_INPUT",
                     "origin": "Plant blow compressor",
-                    "is_unit": False
+                    "is_unit": False,
+                    "comment": "Aire comprimido grado alimentario libre de aceite para soplado bi-orientado",
+                    "assumptions": "Presion de 40 bar generada con compresor reciprocante Belliss & Morcom",
+                    "external_links": "https://www.gardnerdenver.com"
                 },
                 {
                     "name": "Thermoforming electricity CFE",
@@ -222,7 +246,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kWh",
                     "type": "TECHNOSPHERE_INPUT",
                     "origin": "CFE National Grid 2026",
-                    "is_unit": False
+                    "is_unit": False,
+                    "comment": "Consumo electrico de lamparas infrarrojas y soplado rotativo",
+                    "assumptions": "Consumo promedio medido en linea de 12000 botellas/hora",
+                    "external_links": "https://www.cfe.mx"
                 }
             ],
             "outputs": [
@@ -231,7 +258,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "amount": 1.000,
                     "unit": "u",
                     "type": "REFERENCE_PRODUCT",
-                    "is_reference": True
+                    "is_reference": True,
+                    "comment": "Botella PET estirada y soplada cuello 28mm lista para embotellado",
+                    "assumptions": "Peso final unitario de 24.0 gramos verificado en bascula analitica",
+                    "external_links": "https://www.petcore-europe.org"
                 },
                 {
                     "name": "Plastic trimming scrap (Waste)",
@@ -239,7 +269,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "WASTE_FLOW",
                     "is_waste": True,
-                    "fate": "Regrind for secondary pallets"
+                    "fate": "Regrind for secondary pallets",
+                    "comment": "Botellas con deformacion dimensional o defecto de pared en prueba optica",
+                    "assumptions": "Tasa de rechazo controlada en 0.2%, triturada para reuso externo",
+                    "external_links": "https://www.iso.org/standard/38498.html"
                 },
                 {
                     "name": "Dissipated waste heat [Air]",
@@ -247,7 +280,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "MJ",
                     "type": "ELEMENTARY_FLOW",
                     "is_elementary": True,
-                    "compartment": "Air"
+                    "compartment": "Air",
+                    "comment": "Calor residual disipado por ventilacion forzada en tunel de enfriamiento",
+                    "assumptions": "Entalpia de conveccion calculada a partir del gradiente termico de 95C a 25C",
+                    "external_links": "https://www.ashrae.org"
                 }
             ]
         },
@@ -273,7 +309,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "u",
                     "type": "UNIT_PROCESS_FLOW",
                     "origin": "PET Bottle Stretch Blow Molding",
-                    "is_unit": True
+                    "is_unit": True,
+                    "comment": "Botellas paletizadas en corrugado con film estirable",
+                    "assumptions": "Embalaje terciario de 2400 botellas por palet europeo estandar",
+                    "external_links": "https://www.epal-pallets.org"
                 },
                 {
                     "name": "Automotive diesel fuel",
@@ -281,7 +320,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "l",
                     "type": "TECHNOSPHERE_INPUT",
                     "origin": "Fuel Distribution Terminal",
-                    "is_unit": False
+                    "is_unit": False,
+                    "comment": "Diesel ultra bajo azufre (UBA) para transporte de carga pesada",
+                    "assumptions": "Consumo de 2.8 km por litro bajo regimen de autopista",
+                    "external_links": "https://www.pemex.com"
                 },
                 {
                     "name": "Freight lorry transport 16-32t [MX]",
@@ -289,7 +331,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "t·km",
                     "type": "TECHNOSPHERE_INPUT",
                     "origin": "ecoinvent 3.12 Cutoff (350 km)",
-                    "is_unit": False
+                    "is_unit": False,
+                    "comment": "Camion articulado de 3 ejes con carga util promedio de 24 toneladas",
+                    "assumptions": "Distancia de traslado de 350 km entre planta y centro de distribucion",
+                    "external_links": "https://www.sct.gob.mx"
                 }
             ],
             "outputs": [
@@ -298,7 +343,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "amount": 1.000,
                     "unit": "u",
                     "type": "REFERENCE_PRODUCT",
-                    "is_reference": True
+                    "is_reference": True,
+                    "comment": "Botella entregada en muelle de recepcion de CEDIS regional",
+                    "assumptions": "Criterio de asignacion Cradle-to-Gate + Distribution segun ISO 14044",
+                    "external_links": "https://www.iso.org/standard/37456.html"
                 },
                 {
                     "name": "Used lubricant oil (Waste)",
@@ -306,7 +354,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "WASTE_FLOW",
                     "is_waste": True,
-                    "fate": "Certified cement co-processing"
+                    "fate": "Certified cement co-processing",
+                    "comment": "Aceite lubricante usado drenado durante mantenimiento preventivo de tractocamion",
+                    "assumptions": "Generacion de 100g por cada 1000 km recorridos, entregado a co-procesamiento",
+                    "external_links": "https://www.semarnat.gob.mx"
                 },
                 {
                     "name": "Diesel combustion emissions CO2 / NOx [Air]",
@@ -314,7 +365,10 @@ OFFICIAL_SYSTEM_SPEC = {
                     "unit": "kg",
                     "type": "ELEMENTARY_FLOW",
                     "is_elementary": True,
-                    "compartment": "Air"
+                    "compartment": "Air",
+                    "comment": "Emisiones directas de escape de tractocamion norma Euro V / NOM-044",
+                    "assumptions": "Factores de emision de ecoinvent 3.12 Cutoff para camiones 16-32t",
+                    "external_links": "https://www.eea.europa.eu"
                 }
             ]
         }

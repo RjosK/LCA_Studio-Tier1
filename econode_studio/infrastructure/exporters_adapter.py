@@ -768,15 +768,49 @@ def export_simapro_csv(conn: sqlite3.Connection, system_id: int) -> str:
 # 4. INVENTARIO LCI CONSOLIDADO CSV
 # -----------------------------------------------------------------------------
 def export_lci_consolidated_csv(conn: sqlite3.Connection, system_id: int) -> str:
-    """Genera inventario consolidado tabular CSV con balances de entradas y salidas."""
-    sys_spec = OFFICIAL_SYSTEM_SPEC
-    lines = ["Proceso,Tipo_Intercambio,Dirección,Nombre_Flujo,Cantidad,Unidad,Categoría,Origen_Proveedor"]
-    for p in sys_spec["processes"]:
+    """Genera inventario consolidado tabular CSV con balances de entradas y salidas, incluyendo comentarios, supuestos y enlaces externos."""
+    processes = []
+    if conn and system_id:
+        try:
+            cur = conn.execute("SELECT parameters_json FROM product_systems WHERE id = ?;", (system_id,))
+            row = cur.fetchone()
+            if row and row[0]:
+                p_data = json.loads(row[0]) if isinstance(row[0], str) else (row[0] or {})
+                if isinstance(p_data, dict) and "canvas_nodes" in p_data and p_data["canvas_nodes"]:
+                    processes = p_data["canvas_nodes"]
+        except Exception:
+            processes = []
+
+    if not processes:
+        processes = OFFICIAL_SYSTEM_SPEC.get("processes", [])
+
+    lines = ["Proceso,Tipo_Intercambio,Direccion,Nombre_Flujo,Cantidad,Unidad,Categoria,Origen_Proveedor,Comentarios,Supuestos,Enlaces_Externos"]
+
+    def esc(val):
+        return str(val or "").replace('"', '""')
+
+    for p in processes:
+        proc_name = esc(p.get("name", ""))
+        proc_cat = esc(p.get("category", ""))
         for inp in p.get("inputs", []):
-            lines.append(f'"{p["name"]}","Tecnosfera","Entrada","{inp["name"]}",{inp["amount"]},"{inp["unit"]}","{p.get("category","")}","{inp.get("origin","")}"')
+            name = esc(inp.get("name", ""))
+            amount = inp.get("amount", 0.0)
+            unit = esc(inp.get("unit", ""))
+            origin = esc(inp.get("origin", ""))
+            comment = esc(inp.get("comment", ""))
+            assumptions = esc(inp.get("assumptions", ""))
+            links = esc(inp.get("external_links", inp.get("links", "")))
+            lines.append(f'"{proc_name}","Tecnosfera","Entrada","{name}",{amount},"{unit}","{proc_cat}","{origin}","{comment}","{assumptions}","{links}"')
         for out in p.get("outputs", []):
             tipo = "Biosfera" if out.get("is_elementary") else ("Residuo" if out.get("is_waste") else "Producto")
-            lines.append(f'"{p["name"]}","{tipo}","Salida","{out["name"]}",{out["amount"]},"{out["unit"]}","{p.get("category","")}","{out.get("fate","Interno")}"')
+            name = esc(out.get("name", ""))
+            amount = out.get("amount", 0.0)
+            unit = esc(out.get("unit", ""))
+            fate = esc(out.get("fate", "Interno"))
+            comment = esc(out.get("comment", ""))
+            assumptions = esc(out.get("assumptions", ""))
+            links = esc(out.get("external_links", out.get("links", "")))
+            lines.append(f'"{proc_name}","{tipo}","Salida","{name}",{amount},"{unit}","{proc_cat}","{fate}","{comment}","{assumptions}","{links}"')
     return "\n".join(lines)
 
 # -----------------------------------------------------------------------------

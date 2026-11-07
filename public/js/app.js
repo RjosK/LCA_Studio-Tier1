@@ -2232,14 +2232,62 @@
         amount: 1.0,
         reference_flow: { name: "Standard clear PET preform 500ml", amount: 1.0, unit: "kg" },
         inputs: [
-          { name: "Virgin PET granulate [GLO]", amount: 1.05, unit: "kg", is_unit: true },
-          { name: "CFE electricity grid mix 230kV [MX]", amount: 0.28, unit: "kWh", is_unit: false },
-          { name: "Demineralized process cooling water [MX]", amount: 0.015, unit: "m3", is_unit: false }
+          { 
+            name: "Virgin PET granulate [GLO]", 
+            amount: 1.05, 
+            unit: "kg", 
+            is_unit: true,
+            comment: "Resina PET virgen grado inyección con IV 0.82 dl/g",
+            assumptions: "Considera 5% de merma de purga según estándar Husky HyPET",
+            external_links: "https://www.petcore-europe.org"
+          },
+          { 
+            name: "CFE electricity grid mix 230kV [MX]", 
+            amount: 0.28, 
+            unit: "kWh", 
+            is_unit: false,
+            comment: "Factor de emisión oficial del Sistema Eléctrico Nacional SEN",
+            assumptions: "0.438 kg CO2 eq/kWh publicado por la Comisión Reguladora de Energía",
+            external_links: "https://www.gob.mx/cre"
+          },
+          { 
+            name: "Demineralized process cooling water [MX]", 
+            amount: 0.015, 
+            unit: "m3", 
+            is_unit: false,
+            comment: "Agua de enfriamiento de circuito semicerrado industrial",
+            assumptions: "Reposición de pérdidas por evaporación del 1.5% del volumen circulante",
+            external_links: "https://www.conagua.gob.mx"
+          }
         ],
         outputs: [
-          { name: "Standard clear PET preform 500ml", amount: 1.0, unit: "kg", is_reference: true },
-          { name: "Purge PET plastic scrap (Waste)", amount: 0.05, unit: "kg", is_waste: true },
-          { name: "Fossil CO2 emissions [Air]", amount: 0.012, unit: "kg", is_elementary: true }
+          { 
+            name: "Standard clear PET preform 500ml", 
+            amount: 1.0, 
+            unit: "kg", 
+            is_reference: true,
+            comment: "Preforma transparente cuello PCO 1881 de 24.0 gramos",
+            assumptions: "Flujo de referencia cuantitativo del proceso unitario (1 kg = 41.67 preformas)",
+            external_links: "https://www.isbt.com"
+          },
+          { 
+            name: "Purge PET plastic scrap (Waste)", 
+            amount: 0.05, 
+            unit: "kg", 
+            is_waste: true,
+            comment: "Merma de purga de arranque y cambio de molde",
+            assumptions: "100% segregado y triturado para recirculación interna en circuito cerrado",
+            external_links: "https://www.iso.org/standard/38498.html"
+          },
+          { 
+            name: "Fossil CO2 emissions [Air]", 
+            amount: 0.012, 
+            unit: "kg", 
+            is_elementary: true,
+            comment: "Emisiones directas por calentamiento térmico de cilindro",
+            assumptions: "Cálculo estequiométrico basado en Directrices IPCC 2006 (Volumen 3)",
+            external_links: "https://www.ipcc-nggip.iges.or.jp"
+          }
         ]
       },
       {
@@ -2252,14 +2300,62 @@
         amount: 1.0,
         reference_flow: { name: "Finished PET bottle 500ml", amount: 1.0, unit: "u" },
         inputs: [
-          { name: "Clear PET preform (Connected Flow)", amount: 1.0, unit: "kg", is_unit: true },
-          { name: "High-pressure compressed air (40 bar)", amount: 0.45, unit: "m3", is_unit: false },
-          { name: "Thermoforming electricity CFE", amount: 0.14, unit: "kWh", is_unit: false }
+          { 
+            name: "Clear PET preform (Connected Flow)", 
+            amount: 1.0, 
+            unit: "kg", 
+            is_unit: true,
+            comment: "Preforma alimentada directamente desde el proceso de inyección previo",
+            assumptions: "Relación 1:1 estequiométrica con factor de pérdida por calentamiento del 0.2%",
+            external_links: "https://www.sidel.com"
+          },
+          { 
+            name: "High-pressure compressed air (40 bar)", 
+            amount: 0.45, 
+            unit: "m3", 
+            is_unit: false,
+            comment: "Aire comprimido grado alimentario libre de aceite para soplado bi-orientado",
+            assumptions: "Presión de 40 bar generada con compresor reciprocante Belliss & Morcom",
+            external_links: "https://www.gardnerdenver.com"
+          },
+          { 
+            name: "Thermoforming electricity CFE", 
+            amount: 0.14, 
+            unit: "kWh", 
+            is_unit: false,
+            comment: "Consumo eléctrico de lámparas infrarrojas y soplado rotativo",
+            assumptions: "Consumo promedio medido en línea de 12000 botellas/hora",
+            external_links: "https://www.cfe.mx"
+          }
         ],
         outputs: [
-          { name: "Finished PET bottle 500ml", amount: 1.0, unit: "u", is_reference: true },
-          { name: "Plastic trimming scrap (Waste)", amount: 0.002, unit: "kg", is_waste: true },
-          { name: "Dissipated waste heat [Air]", amount: 0.005, unit: "MJ", is_elementary: true }
+          { 
+            name: "Finished PET bottle 500ml", 
+            amount: 1.0, 
+            unit: "u", 
+            is_reference: true,
+            comment: "Botella PET estirada y soplada cuello 28mm lista para embotellado",
+            assumptions: "Peso final unitario de 24.0 gramos verificado en báscula analítica",
+            external_links: "https://www.petcore-europe.org"
+          },
+          { 
+            name: "Plastic trimming scrap (Waste)", 
+            amount: 0.002, 
+            unit: "kg", 
+            is_waste: true,
+            comment: "Botellas con deformación dimensional o defecto de pared en prueba óptica",
+            assumptions: "Tasa de rechazo controlada en 0.2%, triturada para reuso externo",
+            external_links: "https://www.iso.org/standard/38498.html"
+          },
+          { 
+            name: "Dissipated waste heat [Air]", 
+            amount: 0.005, 
+            unit: "MJ", 
+            is_elementary: true,
+            comment: "Calor residual disipado por ventilación forzada en túnel de enfriamiento",
+            assumptions: "Entalpía de convección calculada a partir del gradiente térmico de 95°C a 25°C",
+            external_links: "https://www.ashrae.org"
+          }
         ]
       },
       {
@@ -2272,14 +2368,62 @@
         amount: 1.0,
         reference_flow: { name: "Bottle distributed at distribution center", amount: 1.0, unit: "u" },
         inputs: [
-          { name: "Finished PET bottle 500ml (Connected Flow)", amount: 1.0, unit: "u", is_unit: true },
-          { name: "Automotive diesel fuel", amount: 0.008, unit: "l", is_unit: false },
-          { name: "Freight lorry transport 16-32t [MX]", amount: 0.0084, unit: "t·km", is_unit: false }
+          { 
+            name: "Finished PET bottle 500ml (Connected Flow)", 
+            amount: 1.0, 
+            unit: "u", 
+            is_unit: true,
+            comment: "Botellas paletizadas en corrugado con film estirable",
+            assumptions: "Embalaje terciario de 2400 botellas por palet europeo estándar",
+            external_links: "https://www.epal-pallets.org"
+          },
+          { 
+            name: "Automotive diesel fuel", 
+            amount: 0.008, 
+            unit: "l", 
+            is_unit: false,
+            comment: "Diésel ultra bajo azufre (UBA) para transporte de carga pesada",
+            assumptions: "Consumo de 2.8 km por litro bajo régimen de autopista",
+            external_links: "https://www.pemex.com"
+          },
+          { 
+            name: "Freight lorry transport 16-32t [MX]", 
+            amount: 0.0084, 
+            unit: "t·km", 
+            is_unit: false,
+            comment: "Camión articulado de 3 ejes con carga útil promedio de 24 toneladas",
+            assumptions: "Distancia de traslado de 350 km entre planta y centro de distribución",
+            external_links: "https://www.sct.gob.mx"
+          }
         ],
         outputs: [
-          { name: "Bottle distributed at distribution center", amount: 1.0, unit: "u", is_reference: true },
-          { name: "Used lubricant oil (Waste)", amount: 0.0001, unit: "kg", is_waste: true },
-          { name: "Diesel combustion emissions CO2 / NOx [Air]", amount: 0.022, unit: "kg", is_elementary: true }
+          { 
+            name: "Bottle distributed at distribution center", 
+            amount: 1.0, 
+            unit: "u", 
+            is_reference: true,
+            comment: "Botella entregada en muelle de recepción de CEDIS regional",
+            assumptions: "Criterio de asignación Cradle-to-Gate + Distribution según ISO 14044",
+            external_links: "https://www.iso.org/standard/37456.html"
+          },
+          { 
+            name: "Used lubricant oil (Waste)", 
+            amount: 0.0001, 
+            unit: "kg", 
+            is_waste: true,
+            comment: "Aceite lubricante usado drenado durante mantenimiento preventivo de tractocamión",
+            assumptions: "Generación de 100g por cada 1000 km recorridos, entregado a co-procesamiento",
+            external_links: "https://www.semarnat.gob.mx"
+          },
+          { 
+            name: "Diesel combustion emissions CO2 / NOx [Air]", 
+            amount: 0.022, 
+            unit: "kg", 
+            is_elementary: true,
+            comment: "Emisiones directas de escape de tractocamión norma Euro V / NOM-044",
+            assumptions: "Factores de emisión de ecoinvent 3.12 Cutoff para camiones 16-32t",
+            external_links: "https://www.eea.europa.eu"
+          }
         ]
       },
       {
@@ -2646,6 +2790,25 @@
                 <input type="text" class="form-input mono" style="height: 26px; font-size: 10px; background: var(--bg-muted);" value="${inp.unit || 'kg'}" readonly>
               </div>
             </div>
+
+            <!-- Metadatos de Flujo: Comentarios, Supuestos y Enlaces -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+              <div>
+                <label style="font-size: 8.5px; color: var(--text-muted); font-weight: 600;">COMENTARIOS:</label>
+                <input type="text" class="form-input" style="height: 23px; font-size: 9.5px;" value="${escapeHtml(inp.comment || '')}" placeholder="Comentario o especificacion..." oninput="window.EconodeApp.updateEditInput(${idx}, 'comment', this.value)">
+              </div>
+              <div>
+                <label style="font-size: 8.5px; color: var(--text-muted); font-weight: 600;">SUPUESTOS (ASSUMPTIONS):</label>
+                <input type="text" class="form-input" style="height: 23px; font-size: 9.5px;" value="${escapeHtml(inp.assumptions || '')}" placeholder="Supuesto metodologico..." oninput="window.EconodeApp.updateEditInput(${idx}, 'assumptions', this.value)">
+              </div>
+            </div>
+            <div style="margin-top: 5px;">
+              <label style="font-size: 8.5px; color: var(--text-muted); font-weight: 600;">ENLACES EXTERNOS (LINKS):</label>
+              <div style="display: flex; gap: 4px; align-items: center;">
+                <input type="text" class="form-input" style="height: 23px; font-size: 9.5px; flex: 1;" value="${escapeHtml(inp.external_links || inp.links || '')}" placeholder="https://..." oninput="window.EconodeApp.updateEditInput(${idx}, 'external_links', this.value)">
+                ${(inp.external_links || inp.links) ? `<a href="${escapeHtml(inp.external_links || inp.links)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="height: 23px; padding: 0 6px; font-size: 10px; display: inline-flex; align-items: center; text-decoration: none;" title="Abrir enlace externo">↗</a>` : ''}
+              </div>
+            </div>
           </div>
         `).join('');
 
@@ -2732,6 +2895,25 @@
                 <div>
                   <label style="font-size: 9px; color: var(--text-muted); font-weight: 600;">UNIT:</label>
                   <input type="text" class="form-input mono" style="height: 26px; font-size: 10px; background: var(--bg-muted);" value="${out.unit || 'kg'}" readonly>
+                </div>
+              </div>
+
+              <!-- Metadatos de Flujo: Comentarios, Supuestos y Enlaces -->
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;">
+                <div>
+                  <label style="font-size: 8.5px; color: var(--text-muted); font-weight: 600;">COMENTARIOS:</label>
+                  <input type="text" class="form-input" style="height: 23px; font-size: 9.5px;" value="${escapeHtml(out.comment || '')}" placeholder="Comentario o especificacion..." oninput="window.EconodeApp.updateEditOutput(${idx}, 'comment', this.value)">
+                </div>
+                <div>
+                  <label style="font-size: 8.5px; color: var(--text-muted); font-weight: 600;">SUPUESTOS (ASSUMPTIONS):</label>
+                  <input type="text" class="form-input" style="height: 23px; font-size: 9.5px;" value="${escapeHtml(out.assumptions || '')}" placeholder="Supuesto metodologico..." oninput="window.EconodeApp.updateEditOutput(${idx}, 'assumptions', this.value)">
+                </div>
+              </div>
+              <div style="margin-top: 5px;">
+                <label style="font-size: 8.5px; color: var(--text-muted); font-weight: 600;">ENLACES EXTERNOS (LINKS):</label>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                  <input type="text" class="form-input" style="height: 23px; font-size: 9.5px; flex: 1;" value="${escapeHtml(out.external_links || out.links || '')}" placeholder="https://..." oninput="window.EconodeApp.updateEditOutput(${idx}, 'external_links', this.value)">
+                  ${(out.external_links || out.links) ? `<a href="${escapeHtml(out.external_links || out.links)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="height: 23px; padding: 0 6px; font-size: 10px; display: inline-flex; align-items: center; text-decoration: none;" title="Abrir enlace externo">↗</a>` : ''}
                 </div>
               </div>
             </div>
@@ -3943,6 +4125,12 @@
       tableUpdateFlowName(meta.nodeId, meta.flowKind, meta.idx, trimmed);
     } else if (meta.type === "unit" && meta.nodeId) {
       tableUpdateUnit(meta.nodeId, meta.flowKind, meta.idx, trimmed);
+    } else if (meta.type === "comment" && meta.nodeId) {
+      tableUpdateFlowComment(meta.nodeId, meta.flowKind, meta.idx, trimmed);
+    } else if (meta.type === "assumptions" && meta.nodeId) {
+      tableUpdateFlowAssumptions(meta.nodeId, meta.flowKind, meta.idx, trimmed);
+    } else if (meta.type === "external_links" && meta.nodeId) {
+      tableUpdateFlowLinks(meta.nodeId, meta.flowKind, meta.idx, trimmed);
     } else if (meta.type === "processName" && meta.nodeId) {
       tableUpdateProcessName(meta.nodeId, trimmed);
     } else if (meta.type === "edgeAmount" && meta.edgeId) {
@@ -4043,12 +4231,15 @@
             <thead>
               <tr class="excel-header-row-letters">
                 <th class="excel-corner-cell"></th>
-                <th class="excel-col-letter" data-col="A" style="width: 250px;">A</th>
-                <th class="excel-col-letter" data-col="B" style="min-width: 250px;">B</th>
-                <th class="excel-col-letter" data-col="C" style="width: 320px;">C</th>
-                <th class="excel-col-letter" data-col="D" style="width: 110px; text-align: right;">D</th>
-                <th class="excel-col-letter" data-col="E" style="width: 75px; text-align: center;">E</th>
-                <th class="excel-col-letter" data-col="F" style="width: 85px; text-align: center;">F</th>
+                <th class="excel-col-letter" data-col="A" style="width: 210px;">A</th>
+                <th class="excel-col-letter" data-col="B" style="min-width: 190px;">B</th>
+                <th class="excel-col-letter" data-col="C" style="width: 250px;">C</th>
+                <th class="excel-col-letter" data-col="D" style="width: 90px; text-align: right;">D</th>
+                <th class="excel-col-letter" data-col="E" style="width: 65px; text-align: center;">E</th>
+                <th class="excel-col-letter" data-col="F" style="width: 180px;">F</th>
+                <th class="excel-col-letter" data-col="G" style="width: 180px;">G</th>
+                <th class="excel-col-letter" data-col="H" style="width: 160px;">H</th>
+                <th class="excel-col-letter" data-col="I" style="width: 75px; text-align: center;">I</th>
               </tr>
               <tr>
                 <th class="excel-row-num" data-row="1">1</th>
@@ -4057,6 +4248,9 @@
                 <th class="excel-col-label-th">${t("canvas.col_provider", "Proveedor")}</th>
                 <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
                 <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
+                <th class="excel-col-label-th">${t("canvas.col_comments", "Comentarios")}</th>
+                <th class="excel-col-label-th">${t("canvas.col_assumptions", "Supuestos")}</th>
+                <th class="excel-col-label-th">${t("canvas.col_links", "Enlaces Externos")}</th>
                 <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acciones")}</th>
               </tr>
             </thead>
@@ -4092,7 +4286,19 @@
                     onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
                     onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), 2, 'E', 'kg')">
                 </td>
-                <td class="excel-cell" data-col="F" data-row="2" style="text-align: center;">
+                <td class="excel-cell" data-col="F" data-row="2">
+                  <input type="text" class="excel-inline-input excel-input-new-proc-comment"
+                    placeholder="${t("canvas.col_comments_placeholder", "Comentario...")}">
+                </td>
+                <td class="excel-cell" data-col="G" data-row="2">
+                  <input type="text" class="excel-inline-input excel-input-new-proc-assumptions"
+                    placeholder="${t("canvas.col_assumptions_placeholder", "Supuesto...")}">
+                </td>
+                <td class="excel-cell" data-col="H" data-row="2">
+                  <input type="text" class="excel-inline-input excel-input-new-proc-links"
+                    placeholder="https://...">
+                </td>
+                <td class="excel-cell" data-col="I" data-row="2" style="text-align: center;">
                   <button type="button" class="btn btn-primary btn-sm" style="padding: 1px 7px; font-size: 9.5px;"
                     onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value, n.dataset?.processId); }"
                     title="${t("canvas.enter_to_create", "↵ Enter")}">+ Crear</button>
@@ -4117,12 +4323,15 @@
           <thead>
             <tr class="excel-header-row-letters">
               <th class="excel-corner-cell"></th>
-              <th class="excel-col-letter" data-col="A" style="width: 250px;">A</th>
-              <th class="excel-col-letter" data-col="B" style="min-width: 250px;">B</th>
-              <th class="excel-col-letter" data-col="C" style="width: 320px;">C</th>
-              <th class="excel-col-letter" data-col="D" style="width: 110px; text-align: right;">D</th>
-              <th class="excel-col-letter" data-col="E" style="width: 75px; text-align: center;">E</th>
-              <th class="excel-col-letter" data-col="F" style="width: 85px; text-align: center;">F</th>
+              <th class="excel-col-letter" data-col="A" style="width: 210px;">A</th>
+              <th class="excel-col-letter" data-col="B" style="min-width: 190px;">B</th>
+              <th class="excel-col-letter" data-col="C" style="width: 250px;">C</th>
+              <th class="excel-col-letter" data-col="D" style="width: 90px; text-align: right;">D</th>
+              <th class="excel-col-letter" data-col="E" style="width: 65px; text-align: center;">E</th>
+              <th class="excel-col-letter" data-col="F" style="width: 180px;">F</th>
+              <th class="excel-col-letter" data-col="G" style="width: 180px;">G</th>
+              <th class="excel-col-letter" data-col="H" style="width: 160px;">H</th>
+              <th class="excel-col-letter" data-col="I" style="width: 75px; text-align: center;">I</th>
             </tr>
             <tr>
               <th class="excel-row-num" data-row="${currentRowNum}">${currentRowNum}</th>
@@ -4131,6 +4340,9 @@
               <th class="excel-col-label-th">${t("canvas.col_provider", "Proveedor")}</th>
               <th class="excel-col-label-th" style="text-align: right;">${t("canvas.col_value", "Valor")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_unit", "Unidad")}</th>
+              <th class="excel-col-label-th">${t("canvas.col_comments", "Comentarios")}</th>
+              <th class="excel-col-label-th">${t("canvas.col_assumptions", "Supuestos")}</th>
+              <th class="excel-col-label-th">${t("canvas.col_links", "Enlaces Externos")}</th>
               <th class="excel-col-label-th" style="text-align: center;">${t("canvas.col_actions", "Acciones")}</th>
             </tr>
           </thead>
@@ -4235,6 +4447,9 @@
               providerPlain: providerPlain,
               amount: amt,
               unit: inp.unit || "kg",
+              comment: inp.comment || "",
+              assumptions: inp.assumptions || "",
+              externalLinks: inp.external_links || inp.links || "",
               isReference: false,
               isWaste: false,
               isElementary: false,
@@ -4254,16 +4469,16 @@
             let destText = '';
 
             if (out.is_reference) {
-              typeBadge = `<span class="excel-badge-ref">⭐ Referencia</span>`;
+              typeBadge = `<span class="excel-badge-ref">Referencia</span>`;
               destText = `[Flujo de Referencia Principal]`;
             } else if (out.is_waste) {
-              typeBadge = `<span class="excel-badge-techno" style="background:#FEF2F2; color:#991B1B; border-color:#FECACA;">♻️ Residuo</span>`;
+              typeBadge = `<span class="excel-badge-techno" style="background:#FEF2F2; color:#991B1B; border-color:#FECACA;">Residuo</span>`;
               destText = `Tratamiento / Relleno Sanitario`;
             } else if (out.is_elementary) {
-              typeBadge = `<span class="excel-badge-techno" style="background:#FFFBEB; color:#92400E; border-color:#FDE68A;">🌿 Biosfera</span>`;
+              typeBadge = `<span class="excel-badge-techno" style="background:#FFFBEB; color:#92400E; border-color:#FDE68A;">Biosfera</span>`;
               destText = `Emisión Ambiental [Aire/Agua]`;
             } else {
-              typeBadge = `<span class="excel-badge-techno">📦 Coproducto</span>`;
+              typeBadge = `<span class="excel-badge-techno">Coproducto</span>`;
               destText = `Salida intermedia del sistema`;
             }
 
@@ -4284,6 +4499,9 @@
               providerPlain: destText,
               amount: out.amount !== undefined ? Number(out.amount) : 1.0,
               unit: out.unit || "kg",
+              comment: out.comment || "",
+              assumptions: out.assumptions || "",
+              externalLinks: out.external_links || out.links || "",
               isReference: out.is_reference === true,
               isWaste: out.is_waste === true,
               isElementary: out.is_elementary === true,
@@ -4302,6 +4520,9 @@
             providerPlain: "—",
             amount: 0,
             unit: "—",
+            comment: "",
+            assumptions: "",
+            externalLinks: "",
             isReference: false,
             canDelete: false
           });
@@ -4361,8 +4582,36 @@
                 <input type="text" class="excel-inline-input" style="text-align: center;" value="${escapeHtml(rowItem.unit)}" 
                   onchange="window.EconodeApp.tableUpdateUnit('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)">
               </td>
-              <!-- Col F: Acciones rápidas -->
-              <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center;">
+              <!-- Col F: Comentarios -->
+              <td class="excel-cell" data-col="F" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'F', '${escapeHtml(rowItem.comment || '')}', { type: 'comment', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
+                <input type="text" class="excel-inline-input" value="${escapeHtml(rowItem.comment || '')}" 
+                  placeholder="${t("canvas.col_comments_placeholder", "Comentario...")}"
+                  onchange="window.EconodeApp.tableUpdateFlowComment('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)"
+                  onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'F', this.value, { type: 'comment', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} });">
+              </td>
+              <!-- Col G: Supuestos (Assumptions) -->
+              <td class="excel-cell" data-col="G" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'G', '${escapeHtml(rowItem.assumptions || '')}', { type: 'assumptions', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
+                <input type="text" class="excel-inline-input" value="${escapeHtml(rowItem.assumptions || '')}" 
+                  placeholder="${t("canvas.col_assumptions_placeholder", "Supuesto metodologico...")}"
+                  onchange="window.EconodeApp.tableUpdateFlowAssumptions('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)"
+                  onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'G', this.value, { type: 'assumptions', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} });">
+              </td>
+              <!-- Col H: Enlaces Externos -->
+              <td class="excel-cell" data-col="H" data-row="${currentRowNum}" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'H', '${escapeHtml(rowItem.externalLinks || '')}', { type: 'external_links', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} })">
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <input type="text" class="excel-inline-input" style="flex: 1; min-width: 80px;" value="${escapeHtml(rowItem.externalLinks || '')}" 
+                    placeholder="https://..."
+                    onchange="window.EconodeApp.tableUpdateFlowLinks('${node.id}', '${rowItem.flowKind}', ${rowItem.idx}, this.value)"
+                    onfocus="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'H', this.value, { type: 'external_links', nodeId: '${node.id}', flowKind: '${rowItem.flowKind}', idx: ${rowItem.idx} });">
+                  ${rowItem.externalLinks ? `
+                    <a href="${escapeHtml(rowItem.externalLinks)}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="padding: 1px 4px; font-size: 9.5px; text-decoration: none; display: inline-flex; align-items: center; line-height: 1;" title="Abrir enlace externo">
+                      ↗
+                    </a>
+                  ` : ''}
+                </div>
+              </td>
+              <!-- Col I: Acciones rapidas -->
+              <td class="excel-cell" data-col="I" data-row="${currentRowNum}" style="text-align: center;">
                 ${rowItem.canDelete ? `
                   <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9.5px; color: #EF4444;" 
                     onclick="window.EconodeApp.tableDeleteFlow('${node.id}', '${rowItem.flowKind}', ${rowItem.idx})" title="Eliminar fila">✕</button>
@@ -4391,10 +4640,10 @@
             <td class="excel-cell" data-col="B" data-row="${currentRowNum}">
               <div style="display: flex; align-items: center; gap: 4px;">
                 <select class="excel-inline-select excel-select-new-flow-kind" style="width: auto; min-width: 105px; font-size: 9.5px; height: 21px; padding: 0 4px; border-radius: 3px; background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); flex-shrink: 0;" onchange="window.EconodeApp.tableUpdateNewFlowKind(this)">
-                  <option value="input">${t("canvas.flow_kind_input", "📥 Entrada (Insumo)")}</option>
-                  <option value="output_coproduct">${t("canvas.flow_kind_coproduct", "📦 Salida (Coproducto)")}</option>
-                  <option value="output_waste">${t("canvas.flow_kind_waste", "♻️ Salida (Residuo)")}</option>
-                  <option value="output_elementary">${t("canvas.flow_kind_emission", "🌿 Salida (Emisión)")}</option>
+                  <option value="input">${t("canvas.flow_kind_input", "Entrada (Insumo)")}</option>
+                  <option value="output_coproduct">${t("canvas.flow_kind_coproduct", "Salida (Coproducto)")}</option>
+                  <option value="output_waste">${t("canvas.flow_kind_waste", "Salida (Residuo)")}</option>
+                  <option value="output_elementary">${t("canvas.flow_kind_emission", "Salida (Emision)")}</option>
                 </select>
                 <input type="text" class="excel-inline-input excel-input-new-flow-name" style="flex: 1; min-width: 120px;"
                   placeholder="${t("canvas.placeholder_new_flow", "+ Agregar insumo (Enter)...")}"
@@ -4417,10 +4666,22 @@
                 onkeydown="window.EconodeApp.handleNewFlowKeyDown(event, '${node.id}', this)"
                 onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'E', 'kg')">
             </td>
-            <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center; color: var(--text-muted); font-size: 9px;">
+            <td class="excel-cell" data-col="F" data-row="${currentRowNum}">
+              <input type="text" class="excel-inline-input excel-input-new-flow-comment"
+                placeholder="${t("canvas.col_comments_placeholder", "Comentario...")}">
+            </td>
+            <td class="excel-cell" data-col="G" data-row="${currentRowNum}">
+              <input type="text" class="excel-inline-input excel-input-new-flow-assumptions"
+                placeholder="${t("canvas.col_assumptions_placeholder", "Supuesto...")}">
+            </td>
+            <td class="excel-cell" data-col="H" data-row="${currentRowNum}">
+              <input type="text" class="excel-inline-input excel-input-new-flow-links"
+                placeholder="https://...">
+            </td>
+            <td class="excel-cell" data-col="I" data-row="${currentRowNum}" style="text-align: center; color: var(--text-muted); font-size: 9px;">
               <div style="display: flex; align-items: center; justify-content: center; gap: 3px;">
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; opacity: 0.8;"
-                  onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-flow-name'); const kind=tr.querySelector('.excel-select-new-flow-kind')?.value || 'input'; if(n && n.value.trim()){ window.EconodeApp.tableCreateFlowInline('${node.id}', n.value.trim(), tr.querySelector('.excel-input-new-flow-amt')?.value, tr.querySelector('.excel-input-new-flow-unit')?.value, n.dataset?.upstreamSourceId ? 'Conexión Interna' : 'Mercado ecoinvent 3.12', n.dataset?.upstreamSourceId, n.dataset?.upstreamProcessId, kind); }" title="${t("canvas.enter_to_create", "↵ Enter")}">↵</button>
+                  onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-flow-name'); const kind=tr.querySelector('.excel-select-new-flow-kind')?.value || 'input'; const cmt=tr.querySelector('.excel-input-new-flow-comment')?.value; const assump=tr.querySelector('.excel-input-new-flow-assumptions')?.value; const lnk=tr.querySelector('.excel-input-new-flow-links')?.value; if(n && n.value.trim()){ window.EconodeApp.tableCreateFlowInline('${node.id}', n.value.trim(), tr.querySelector('.excel-input-new-flow-amt')?.value, tr.querySelector('.excel-input-new-flow-unit')?.value, n.dataset?.upstreamSourceId ? 'Conexión Interna' : 'Mercado ecoinvent 3.12', n.dataset?.upstreamSourceId, n.dataset?.upstreamProcessId, kind, cmt, assump, lnk); }" title="${t("canvas.enter_to_create", "↵ Enter")}">↵</button>
                 <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px;" 
                   onclick="window.EconodeApp.openProcessEditor('${node.id}')" title="${t("canvas.btn_edit_process_tip", "Abrir editor visual completo")}"></button>
               </div>
@@ -4464,7 +4725,19 @@
               onkeydown="window.EconodeApp.handleNewProcessKeyDown(event, this)"
               onclick="window.EconodeApp.selectSpreadsheetCell(this.closest('td'), ${currentRowNum}, 'E', 'kg')">
           </td>
-          <td class="excel-cell" data-col="F" data-row="${currentRowNum}" style="text-align: center;">
+          <td class="excel-cell" data-col="F" data-row="${currentRowNum}">
+            <input type="text" class="excel-inline-input excel-input-new-proc-comment"
+              placeholder="${t("canvas.col_comments_placeholder", "Comentario...")}">
+          </td>
+          <td class="excel-cell" data-col="G" data-row="${currentRowNum}">
+            <input type="text" class="excel-inline-input excel-input-new-proc-assumptions"
+              placeholder="${t("canvas.col_assumptions_placeholder", "Supuesto...")}">
+          </td>
+          <td class="excel-cell" data-col="H" data-row="${currentRowNum}">
+            <input type="text" class="excel-inline-input excel-input-new-proc-links"
+              placeholder="https://...">
+          </td>
+          <td class="excel-cell" data-col="I" data-row="${currentRowNum}" style="text-align: center;">
             <button type="button" class="btn btn-primary btn-sm" style="padding: 1px 7px; font-size: 9.5px;"
               onclick="const tr=this.closest('tr'); const n=tr.querySelector('.excel-input-new-proc-name'); if(n && n.value.trim()){ window.EconodeApp.tableCreateProcessInline(n.value.trim(), tr.querySelector('.excel-input-new-mat')?.value, tr.querySelector('.excel-input-new-amt')?.value, tr.querySelector('.excel-input-new-unit')?.value, n.dataset?.processId); }"
               title="${t("canvas.enter_to_create", "↵ Enter")}">+ Crear</button>
@@ -4667,7 +4940,7 @@
     csv += "========================================================================\n\n";
 
     // 1. Procesos y Flujos
-    csv += "Proceso,Material,Proveedor,Valor,Unidad\n";
+    csv += "Proceso,Material,Proveedor,Valor,Unidad,Comentarios,Supuestos,Enlaces_Externos\n";
 
     (state.canvasNodes || []).forEach(node => {
       const pid = node.process_id || node.id;
@@ -4682,14 +4955,20 @@
         );
         let flowType = connectedEdge ? "Flujo Conectado" : (inp.is_unit ? "Insumo Tecnosfera" : "Insumo Auxiliar");
         let provider = connectedEdge ? `Proceso upstream (#${connectedEdge.from})` : (inp.origin || "Mercado global");
-        csv += `${pName},"${(inp.name || "").replace(/"/g, '""')}","${provider.replace(/"/g, '""')}",${inp.amount !== undefined ? inp.amount : 1.0},"${(inp.unit || "kg").replace(/"/g, '""')}"\n`;
+        const cmt = (inp.comment || "").replace(/"/g, '""');
+        const assump = (inp.assumptions || "").replace(/"/g, '""');
+        const links = (inp.external_links || inp.links || "").replace(/"/g, '""');
+        csv += `${pName},"${(inp.name || "").replace(/"/g, '""')}","${provider.replace(/"/g, '""')}",${inp.amount !== undefined ? inp.amount : 1.0},"${(inp.unit || "kg").replace(/"/g, '""')}","${cmt}","${assump}","${links}"\n`;
       });
 
       // Outputs
       (node.outputs || []).forEach(out => {
         let flowType = out.is_reference ? "Producto de Referencia" : (out.is_waste ? "Residuo / Salida" : (out.is_elementary ? "Emisión Biosférica" : "Salida Técnica"));
         let dest = out.is_reference ? "Producto principal" : (out.is_waste ? "Tratamiento de residuos" : "Medio ambiente");
-        csv += `${pName},"${(out.name || "").replace(/"/g, '""')}","${dest.replace(/"/g, '""')}",${out.amount !== undefined ? out.amount : 1.0},"${(out.unit || "kg").replace(/"/g, '""')}"\n`;
+        const cmt = (out.comment || "").replace(/"/g, '""');
+        const assump = (out.assumptions || "").replace(/"/g, '""');
+        const links = (out.external_links || out.links || "").replace(/"/g, '""');
+        csv += `${pName},"${(out.name || "").replace(/"/g, '""')}","${dest.replace(/"/g, '""')}",${out.amount !== undefined ? out.amount : 1.0},"${(out.unit || "kg").replace(/"/g, '""')}","${cmt}","${assump}","${links}"\n`;
       });
     });
 
@@ -5449,6 +5728,55 @@
 
     syncSystemProcesses();
     scheduleAutoSaveCanvas();
+  }
+
+  function tableUpdateFlowComment(nodeId, type, idx, value) {
+    const procs = getAllSystemProcesses();
+    const node = procs.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const trimmed = (value || "").trim();
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      node.inputs[idx].comment = trimmed;
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      node.outputs[idx].comment = trimmed;
+    }
+
+    syncSystemProcesses();
+    scheduleAutoSaveCanvas();
+  }
+
+  function tableUpdateFlowAssumptions(nodeId, type, idx, value) {
+    const procs = getAllSystemProcesses();
+    const node = procs.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const trimmed = (value || "").trim();
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      node.inputs[idx].assumptions = trimmed;
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      node.outputs[idx].assumptions = trimmed;
+    }
+
+    syncSystemProcesses();
+    scheduleAutoSaveCanvas();
+  }
+
+  function tableUpdateFlowLinks(nodeId, type, idx, value) {
+    const procs = getAllSystemProcesses();
+    const node = procs.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
+    if (!node) return;
+    const trimmed = (value || "").trim();
+
+    if (type === "input" && node.inputs && node.inputs[idx]) {
+      node.inputs[idx].external_links = trimmed;
+    } else if (type === "output" && node.outputs && node.outputs[idx]) {
+      node.outputs[idx].external_links = trimmed;
+    }
+
+    syncSystemProcesses();
+    scheduleAutoSaveCanvas();
+    renderCanvasTableView();
   }
 
   function tableUpdateProcessName(nodeId, newName) {
@@ -6258,7 +6586,7 @@
     }
   }
 
-  function tableCreateFlowInline(nodeId, flowName, amount = 1.0, unit = "kg", origin = "Mercado ecoinvent 3.12", upstreamSourceId = null, upstreamProcessId = null, flowKind = "input") {
+  function tableCreateFlowInline(nodeId, flowName, amount = 1.0, unit = "kg", origin = "Mercado ecoinvent 3.12", upstreamSourceId = null, upstreamProcessId = null, flowKind = "input", comment = "", assumptions = "", externalLinks = "") {
     const procs = getAllSystemProcesses();
     const node = procs.find(n => String(n.id) === String(nodeId) || String(n.process_id) === String(nodeId));
     if (!node) return null;
@@ -6295,7 +6623,10 @@
         amount: numAmount,
         unit: cleanUnit,
         is_unit: true,
-        origin: finalOrigin || (finalSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12")
+        origin: finalOrigin || (finalSourceId ? "Conexión Interna" : "Mercado ecoinvent 3.12"),
+        comment: (comment || "").trim(),
+        assumptions: (assumptions || "").trim(),
+        external_links: (externalLinks || "").trim()
       };
 
       node.inputs.push(createdFlow);
@@ -6332,7 +6663,10 @@
         is_reference: false,
         is_waste: isWaste,
         is_elementary: isElementary,
-        compartment: isElementary ? "Air" : "N/A"
+        compartment: isElementary ? "Air" : "N/A",
+        comment: (comment || "").trim(),
+        assumptions: (assumptions || "").trim(),
+        external_links: (externalLinks || "").trim()
       };
       node.outputs.push(createdFlow);
     }
@@ -6393,7 +6727,14 @@
       const upstreamProcessId = nameInput?.dataset?.upstreamProcessId || null;
       const origin = upstreamSourceId ? "Conexión Interna" : (flowKind === "input" ? "Mercado ecoinvent 3.12" : (flowKind === "output_waste" ? "Tratamiento de residuo" : (flowKind === "output_elementary" ? "Emisión biosférica" : "Salida intermedia")));
 
-      tableCreateFlowInline(nodeId, val, amt, unit, origin, upstreamSourceId, upstreamProcessId, flowKind);
+      const cmtInput = tr ? tr.querySelector(".excel-input-new-flow-comment") : null;
+      const assumpInput = tr ? tr.querySelector(".excel-input-new-flow-assumptions") : null;
+      const linksInput = tr ? tr.querySelector(".excel-input-new-flow-links") : null;
+      const comment = cmtInput ? cmtInput.value.trim() : "";
+      const assumptions = assumpInput ? assumpInput.value.trim() : "";
+      const links = linksInput ? linksInput.value.trim() : "";
+
+      tableCreateFlowInline(nodeId, val, amt, unit, origin, upstreamSourceId, upstreamProcessId, flowKind, comment, assumptions, links);
     }
   }
 
@@ -10019,9 +10360,12 @@
     tableUpdateAmount: (nodeId, type, idx, val, isInput) => tableUpdateAmount(nodeId, type, idx, val, isInput),
     tableUpdateFlowName: (nodeId, type, idx, val) => tableUpdateFlowName(nodeId, type, idx, val),
     tableUpdateUnit: (nodeId, type, idx, val) => tableUpdateUnit(nodeId, type, idx, val),
+    tableUpdateFlowComment: (nodeId, type, idx, val) => tableUpdateFlowComment(nodeId, type, idx, val),
+    tableUpdateFlowAssumptions: (nodeId, type, idx, val) => tableUpdateFlowAssumptions(nodeId, type, idx, val),
+    tableUpdateFlowLinks: (nodeId, type, idx, val) => tableUpdateFlowLinks(nodeId, type, idx, val),
     tableUpdateProcessName: (nodeId, val) => tableUpdateProcessName(nodeId, val),
     tableCreateProcessInline: (name, mat, amt, unit, procId) => tableCreateProcessInline(name, mat, amt, unit, procId),
-    tableCreateFlowInline: (nodeId, name, amt, unit, origin, srcId, srcProcId, flowKind) => tableCreateFlowInline(nodeId, name, amt, unit, origin, srcId, srcProcId, flowKind),
+    tableCreateFlowInline: (nodeId, name, amt, unit, origin, srcId, srcProcId, flowKind, comment, assumptions, externalLinks) => tableCreateFlowInline(nodeId, name, amt, unit, origin, srcId, srcProcId, flowKind, comment, assumptions, externalLinks),
     tableUpdateNewFlowKind: (selectEl) => tableUpdateNewFlowKind(selectEl),
     tableChangeProvider: (nodeId, flowIdx, val) => tableChangeProvider(nodeId, flowIdx, val),
     tableChangeNodeToCatalogProcess: (nodeId, procId) => tableChangeNodeToCatalogProcess(nodeId, procId),
