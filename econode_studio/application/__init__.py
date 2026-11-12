@@ -10,7 +10,9 @@ from .product_systems import (
     get_dashboard_systems_use_case, create_system_wizard_use_case,
     import_systems_csv_use_case, import_simapro_to_system_use_case, get_system_canvas_use_case, save_system_canvas_use_case,
     delete_product_system_use_case, add_system_collaborator_use_case,
-    get_system_parameters_use_case, save_system_parameter_use_case, delete_system_parameter_use_case
+    get_system_parameters_use_case, save_system_parameter_use_case, delete_system_parameter_use_case,
+    list_projects_use_case, create_project_use_case, delete_project_use_case,
+    assign_system_to_project_use_case, compare_project_systems_use_case
 )
 from .lci_catalog import (
     search_catalog_use_case, get_process_sheet_use_case, get_categories_use_case,

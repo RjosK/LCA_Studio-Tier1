@@ -242,11 +242,25 @@ def delete_user_custom_flow(conn: sqlite3.Connection, flow_id: Any) -> bool:
 
 
 def ensure_product_systems_columns(conn: Any):
-    """Garantiza la existencia de columnas de propietario y metadatos en product_systems."""
+    """Garantiza la existencia de columnas de propietario, metadatos y proyectos en product_systems."""
     if getattr(settings, "IS_POSTGRES", False):
         return
     ensure_custom_tables_and_views(conn)
     try:
+        conn.executescript("""
+        CREATE TABLE IF NOT EXISTS projects (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            description TEXT,
+            category TEXT DEFAULT 'General',
+            owner_id TEXT DEFAULT 'analyst_carla',
+            owner_email TEXT DEFAULT 'carla.mendez@econode.io',
+            owner_name TEXT DEFAULT 'Carla Méndez',
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+        );
+        """)
         cur = conn.execute("PRAGMA table_info(product_systems);")
         cols = {c[1] for c in cur.fetchall()}
         new_cols = [
@@ -260,7 +274,8 @@ def ensure_product_systems_columns(conn: Any):
             ("status", "TEXT DEFAULT 'in_audit'"),
             ("compliance_rate", "TEXT DEFAULT '100.0%'"),
             ("collaborators_json", "TEXT DEFAULT '[]'"),
-            ("parameters_json", "TEXT DEFAULT '{}'")
+            ("parameters_json", "TEXT DEFAULT '{}'"),
+            ("project_id", "INTEGER DEFAULT NULL")
         ]
         with conn:
             for col_name, col_def in new_cols:
@@ -300,9 +315,13 @@ def list_product_systems(
                    coalesce(s.status, 'draft') as status,
                    coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                    coalesce(s.collaborators_json, '[]') as collaborators_json,
+                   s.project_id,
+                   pr.name as project_name,
+                   pr.code as project_code,
                    p.name as reference_process_name,
                    f.unit_symbol as reference_unit
             FROM product_systems s
+            LEFT JOIN projects pr ON s.project_id = pr.id
             LEFT JOIN processes p ON s.reference_process_id = p.id
             LEFT JOIN flows f ON p.reference_flow_id = f.id
             ORDER BY s.id DESC;
@@ -320,9 +339,13 @@ def list_product_systems(
                coalesce(s.status, 'draft') as status,
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
+               s.project_id,
+               pr.name as project_name,
+               pr.code as project_code,
                p.name as reference_process_name,
                f.unit_symbol as reference_unit
         FROM product_systems s
+        LEFT JOIN projects pr ON s.project_id = pr.id
         LEFT JOIN processes p ON s.reference_process_id = p.id
         LEFT JOIN flows f ON p.reference_flow_id = f.id
         WHERE lower(s.owner_email) = ? OR lower(s.owner_id) = ? OR s.collaborators_json LIKE ?
@@ -360,7 +383,10 @@ def list_product_systems(
             "owner_org": r["owner_org"] if "owner_org" in r.keys() and r["owner_org"] else "BioPack Industrial S.A. de C.V.",
             "category": r["category"] if "category" in r.keys() and r["category"] else "Polímeros",
             "geography": r["geography"] if "geography" in r.keys() and r["geography"] else "[MX]",
-            "collaborators": collabs
+            "collaborators": collabs,
+            "project_id": r["project_id"] if "project_id" in r.keys() else None,
+            "project_name": r["project_name"] if "project_name" in r.keys() else None,
+            "project_code": r["project_code"] if "project_code" in r.keys() else None
         })
     return results
 
@@ -445,9 +471,10 @@ def create_product_system(
     owner_role: str = "analyst",
     owner_org: str = "BioPack Industrial S.A. de C.V.",
     category: str = "Polímeros",
-    geography: str = "[MX]"
+    geography: str = "[MX]",
+    project_id: Optional[int] = None
 ) -> int:
-    """Crea un nuevo sistema producto desde el Wizard asociándolo al usuario activo."""
+    """Crea un nuevo sistema producto desde el Wizard asociándolo al usuario activo y opcionalmente a un proyecto."""
     ensure_product_systems_columns(conn)
     # Evitar duplicaciones accidentales por doble clic rápido
     try:
@@ -467,10 +494,10 @@ def create_product_system(
                 INSERT INTO product_systems (
                     name, code, target_amount, description, parameters_json,
                     owner_id, owner_email, owner_name, owner_role, owner_org,
-                    category, geography, status, compliance_rate
+                    category, geography, status, compliance_rate, project_id
                 )
-                VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%')
-            """, (name, code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography))
+                VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%', ?)
+            """, (name, code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography, project_id))
             return cur.lastrowid
         except Exception as err:
             err_str = str(err).lower()
@@ -480,12 +507,92 @@ def create_product_system(
                     INSERT INTO product_systems (
                         name, code, target_amount, description, parameters_json,
                         owner_id, owner_email, owner_name, owner_role, owner_org,
-                        category, geography, status, compliance_rate
+                        category, geography, status, compliance_rate, project_id
                     )
-                    VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%')
-                """, (name, unique_code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography))
+                    VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%', ?)
+                """, (name, unique_code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography, project_id))
                 return cur.lastrowid
             raise err
+
+# -----------------------------------------------------------------------------
+# 1.1 GESTIÓN DE PROYECTOS CONTENEDORES DE SISTEMAS PRODUCTO
+# -----------------------------------------------------------------------------
+def create_project(
+    conn: sqlite3.Connection,
+    name: str,
+    code: Optional[str] = None,
+    description: str = "",
+    category: str = "General",
+    owner_id: str = "analyst_carla",
+    owner_email: str = "carla.mendez@econode.io",
+    owner_name: str = "Carla Méndez"
+) -> int:
+    """Crea un proyecto contenedor para agrupar sistemas producto y realizar comparativas."""
+    ensure_product_systems_columns(conn)
+    if not code:
+        code = f"PRJ-{os.urandom(3).hex().upper()}"
+    with conn:
+        cur = conn.execute("""
+            INSERT INTO projects (code, name, description, category, owner_id, owner_email, owner_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?);
+        """, (code.strip(), name.strip(), description.strip(), category.strip(), owner_id, owner_email, owner_name))
+        return cur.lastrowid
+
+def list_projects(
+    conn: sqlite3.Connection,
+    user_email: Optional[str] = None,
+    user_id: Optional[str] = None,
+    user_role: Optional[str] = None
+) -> List[Dict[str, Any]]:
+    """Obtiene la lista de proyectos registrados con el conteo de sistemas asignados."""
+    ensure_product_systems_columns(conn)
+    clean_email = (user_email or "").strip().lower()
+    clean_uid = (user_id or "").strip().lower()
+
+    if not clean_email and not clean_uid:
+        query = """
+            SELECT pr.id, pr.code, pr.name, coalesce(pr.description, '') as description,
+                   coalesce(pr.category, 'General') as category,
+                   pr.owner_id, pr.owner_email, pr.owner_name, pr.created_at, pr.updated_at,
+                   (SELECT count(*) FROM product_systems WHERE project_id = pr.id) as systems_count
+            FROM projects pr
+            ORDER BY pr.id DESC;
+        """
+        rows = conn.execute(query).fetchall()
+    else:
+        query = """
+            SELECT pr.id, pr.code, pr.name, coalesce(pr.description, '') as description,
+                   coalesce(pr.category, 'General') as category,
+                   pr.owner_id, pr.owner_email, pr.owner_name, pr.created_at, pr.updated_at,
+                   (SELECT count(*) FROM product_systems WHERE project_id = pr.id) as systems_count
+            FROM projects pr
+            WHERE lower(pr.owner_email) = ? OR lower(pr.owner_id) = ?
+            ORDER BY pr.id DESC;
+        """
+        rows = conn.execute(query, (clean_email, clean_uid)).fetchall()
+
+    return [dict(r) for r in rows]
+
+def get_project_by_id(conn: sqlite3.Connection, project_id: int) -> Optional[Dict[str, Any]]:
+    """Obtiene un proyecto por su ID."""
+    ensure_product_systems_columns(conn)
+    row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
+    return dict(row) if row else None
+
+def delete_project(conn: sqlite3.Connection, project_id: int) -> bool:
+    """Elimina un proyecto y desasocia sus sistemas (quedando como independientes 'solitos')."""
+    ensure_product_systems_columns(conn)
+    with conn:
+        conn.execute("UPDATE product_systems SET project_id = NULL WHERE project_id = ?;", (project_id,))
+        cur = conn.execute("DELETE FROM projects WHERE id = ?;", (project_id,))
+        return cur.rowcount > 0
+
+def assign_system_to_project(conn: sqlite3.Connection, system_id: int, project_id: Optional[int]) -> bool:
+    """Asigna o desasocia un sistema producto a un proyecto contenedor."""
+    ensure_product_systems_columns(conn)
+    with conn:
+        cur = conn.execute("UPDATE product_systems SET project_id = ? WHERE id = ?;", (project_id, system_id))
+        return cur.rowcount > 0
 
 def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene un sistema producto con sus nodos y enlaces."""

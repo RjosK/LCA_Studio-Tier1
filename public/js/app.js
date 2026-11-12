@@ -25,6 +25,9 @@
     allAccounts: [],
     activeSystem: null,
     systems: [],
+    projects: [],
+    collapsedProjects: {},
+    collapsedStandalone: false,
     canvasNodes: [],
     canvasEdges: [],
     selectedNode: null,
@@ -256,7 +259,14 @@
     // System management
     deleteSystem: (sysId) => api.post("/api/systems/delete", { system_id: sysId }),
     inviteCollaborator: (sysId, name, email, role) =>
-      api.post("/api/systems/collaborators/invite", { system_id: sysId, name, email, role })
+      api.post("/api/systems/collaborators/invite", { system_id: sysId, name, email, role }),
+
+    // Project management & comparative LCIA
+    getProjects: () => api.get("/api/projects"),
+    createProject: (data) => api.post("/api/projects/create", data),
+    deleteProject: (projId) => api.post("/api/projects/delete", { project_id: projId }),
+    assignSystemToProject: (sysId, projId) => api.post(`/api/systems/${sysId}/assign-project`, { project_id: projId }),
+    compareProject: (projId) => api.get(`/api/projects/${projId}/compare`)
   };
 
   // =========================================================================
@@ -724,10 +734,15 @@
         }
       }
 
-      // 2. Traer versión fresca del servidor
-      const res = await api.getSystems();
+      // 2. Traer versión fresca del servidor (sistemas y proyectos)
+      const [res, projRes] = await Promise.all([
+        api.getSystems().catch(e => ({ items: [] })),
+        api.getProjects().catch(e => ({ items: [] }))
+      ]);
       state.systems = res.items || [];
+      state.projects = projRes.items || [];
       try { localStorage.setItem("econode_cached_systems", JSON.stringify(state.systems)); } catch(e) {}
+      updateProjectSelectOptions();
 
       // Si no hay un sistema activo seleccionado explícitamente, mantener el título neutral
       const navTitle = document.getElementById("navProjectTitle");
@@ -741,6 +756,25 @@
     } catch (err) {
       console.error("Error al cargar dashboard:", err);
     }
+  }
+
+  function updateProjectSelectOptions() {
+    const selects = [
+      document.getElementById("wizSystemProject"),
+      document.getElementById("selectAssignProject")
+    ];
+    selects.forEach(sel => {
+      if (!sel) return;
+      const currentVal = sel.value;
+      const defaultOpt = `<option value="">-- ${window.I18n.t("wiz.no_project", "Ninguno (Sistema Independiente / Solito)")} --</option>`;
+      const projOpts = (state.projects || []).map(p => {
+        const count = p.systems_count || 0;
+        const countTxt = count === 1 ? "1 sistema" : `${count} sistemas`;
+        return `<option value="${p.id}">${escapeHtml(p.name)} (${p.code}) - ${countTxt}</option>`;
+      }).join("");
+      sel.innerHTML = defaultOpt + projOpts;
+      if (currentVal) sel.value = currentVal;
+    });
   }
 
   async function loadDocsCount() {
@@ -834,12 +868,13 @@
       if (search) {
         const matchesName = (sys.name || "").toLowerCase().includes(search);
         const matchesCode = (sys.code || "").toLowerCase().includes(search);
-        if (!matchesName && !matchesCode) return false;
+        const matchesProj = (sys.project_name || "").toLowerCase().includes(search);
+        if (!matchesName && !matchesCode && !matchesProj) return false;
       }
       return true;
     });
 
-    if (state.systems.length === 0) {
+    if (state.systems.length === 0 && (!state.projects || state.projects.length === 0)) {
       tbody.innerHTML = `
         <tr>
           <td colspan="5" style="text-align: center; padding: 48px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 8px;">
@@ -861,7 +896,7 @@
       return;
     }
 
-    if (filtered.length === 0) {
+    if (filtered.length === 0 && (!state.projects || state.projects.length === 0)) {
       tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">${window.I18n.t("app.no_systems_found", "No se encontraron sistemas producto que coincidan con el filtro.")}</td></tr>`;
       return;
     }
@@ -869,84 +904,212 @@
     const isAuditor = state.activeUser && state.activeUser.role === "auditor";
     const isClient = state.activeUser && state.activeUser.role === "client";
 
-    tbody.innerHTML = filtered
-      .map((sys) => {
-        let badgeClass = "badge-slate";
-        let statusText = window.I18n.t("app.status_draft", "Borrador Técnico");
-        if (sys.status === "in_audit") {
-          badgeClass = "badge-emerald";
-          statusText = window.I18n.t("app.status_in_audit", "En Auditoría NOM-070");
-        } else if (sys.status === "certified") {
-          badgeClass = "badge-emerald";
-          statusText = window.I18n.t("app.status_certified", "✓ Certificado NOM-070");
-        }
+    const chevronDownSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(90deg); transition: transform 0.18s ease;"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
+    const chevronRightSvg = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(0deg); transition: transform 0.18s ease;"><polyline points="9 18 15 12 9 6"></polyline></svg>`;
 
-        const isOfficial = sys.code === "SYS-PET-CIRCULAR-01" || sys.id === 21;
+    function renderSystemRow(sys, isChildOfProject) {
+      let badgeClass = "badge-slate";
+      let statusText = window.I18n.t("app.status_draft", "Borrador Técnico");
+      if (sys.status === "in_audit") {
+        badgeClass = "badge-emerald";
+        statusText = window.I18n.t("app.status_in_audit", "En Auditoría NOM-070");
+      } else if (sys.status === "certified") {
+        badgeClass = "badge-emerald";
+        statusText = window.I18n.t("app.status_certified", "Certificado NOM-070");
+      }
 
-        let ownerNotice = "";
-        const currentUser = state.activeUser;
-        const currentUserName = currentUser ? (currentUser.display_name || currentUser.username) : "";
-        const isOwner = sys.owner_name && (sys.owner_name.toLowerCase() === currentUserName.toLowerCase() || sys.owner_name.toLowerCase() === (currentUser?.email || "").toLowerCase());
+      const isOfficial = sys.code === "SYS-PET-CIRCULAR-01" || sys.id === 21;
 
-        if (isOwner) {
-          ownerNotice = `<div style="font-size: 9.5px; color: var(--accent-emerald); margin-top: 2px;">${window.I18n.t("app.creator_you", "Creador:")} ${currentUserName} ${window.I18n.t("app.you_tag", "(Tú)")}</div>`;
-        } else if (isAuditor) {
-          ownerNotice = `<div style="font-size: 10px; color: var(--accent-emerald); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.created_by", "Creado por:")} ${sys.owner_name || "Carla Méndez"} · ${sys.owner_org || "BioPack Industrial S.A. de C.V."}</div>`;
-        } else if (isClient) {
-          ownerNotice = `<div style="font-size: 10px; color: var(--accent-blue); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.shared_by", "Compartido por:")} ${sys.owner_name || "Carla Méndez"} (BioPack Lab)</div>`;
-        } else {
-          ownerNotice = `<div style="font-size: 9.5px; color: var(--text-dim); margin-top: 2px;">${window.I18n.t("app.creator_you", "Creador:")} ${sys.owner_name || "Carla Méndez"}</div>`;
-        }
+      let ownerNotice = "";
+      const currentUser = state.activeUser;
+      const currentUserName = currentUser ? (currentUser.display_name || currentUser.username) : "";
+      const isOwner = sys.owner_name && (sys.owner_name.toLowerCase() === currentUserName.toLowerCase() || sys.owner_name.toLowerCase() === (currentUser?.email || "").toLowerCase());
 
-        const ownerShortName = sys.owner_name ? (sys.owner_name.split(" ")[0] + (sys.owner_name.split(" ")[1] ? " " + sys.owner_name.split(" ")[1][0] + "." : "")) : "Creador";
-        const collabsList = sys.collaborators || [];
-        const extraCollabsHtml = collabsList.map(c => {
-          const cRole = c.role === "auditor" ? "🔍" : c.role === "client" ? "🏢" : "👤";
-          const cShort = c.display_name ? (c.display_name.split(" ")[0] + (c.display_name.split(" ")[1] ? " " + c.display_name.split(" ")[1][0] + "." : "")) : "Colab";
-          const colorBg = c.role === "auditor" ? "rgba(16, 185, 129, 0.12)" : c.role === "client" ? "rgba(139, 92, 246, 0.12)" : "rgba(14, 165, 233, 0.12)";
-          const colorText = c.role === "auditor" ? "#059669" : c.role === "client" ? "#7C3AED" : "#0284C7";
-          return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="${c.display_name} (${c.role})">${cShort}</span>`;
-        }).join("");
+      if (isOwner) {
+        ownerNotice = `<div style="font-size: 9.5px; color: var(--accent-emerald); margin-top: 2px;">${window.I18n.t("app.creator_you", "Creador:")} ${currentUserName} ${window.I18n.t("app.you_tag", "(Tú)")}</div>`;
+      } else if (isAuditor) {
+        ownerNotice = `<div style="font-size: 10px; color: var(--accent-emerald); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.created_by", "Creado por:")} ${sys.owner_name || "Carla Méndez"} · ${sys.owner_org || "BioPack Industrial S.A. de C.V."}</div>`;
+      } else if (isClient) {
+        ownerNotice = `<div style="font-size: 10px; color: var(--accent-blue); font-weight: 600; margin-top: 3px;">${window.I18n.t("app.shared_by", "Compartido por:")} ${sys.owner_name || "Carla Méndez"} (BioPack Lab)</div>`;
+      } else {
+        ownerNotice = `<div style="font-size: 9.5px; color: var(--text-dim); margin-top: 2px;">${window.I18n.t("app.creator_you", "Creador:")} ${sys.owner_name || "Carla Méndez"}</div>`;
+      }
 
-        const teamHtml = isOfficial ? `
-          <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;" title="Equipo de trabajo asignado al proyecto">
-            <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Carla Méndez (Analista de ACV)">Carla M.</span>
-            <span class="user-chip-mini" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Josué Arentería (Auditor Líder)">Josué A.</span>
-            <span class="user-chip-mini" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Elena Ramírez (Cliente / Productor)">Elena R.</span>
-          </div>
-        ` : `
-          <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;" title="Equipo del proyecto">
-            <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${ownerShortName}</span>
-            ${extraCollabsHtml}
-            <button class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; border-radius: 4px;" onclick="window.EconodeApp.openInviteModal(${sys.id}, '${escape(sys.name)}')" title="Invitar auditor o cliente a este proyecto">+ Invitar</button>
-          </div>
-        `;
+      const ownerShortName = sys.owner_name ? (sys.owner_name.split(" ")[0] + (sys.owner_name.split(" ")[1] ? " " + sys.owner_name.split(" ")[1][0] + "." : "")) : "Creador";
+      const collabsList = sys.collaborators || [];
+      const extraCollabsHtml = collabsList.map(c => {
+        const cRole = c.role === "auditor" ? "AUD" : c.role === "client" ? "CLI" : "COL";
+        const cShort = c.display_name ? (c.display_name.split(" ")[0] + (c.display_name.split(" ")[1] ? " " + c.display_name.split(" ")[1][0] + "." : "")) : "Colab";
+        const colorBg = c.role === "auditor" ? "rgba(16, 185, 129, 0.12)" : c.role === "client" ? "rgba(139, 92, 246, 0.12)" : "rgba(14, 165, 233, 0.12)";
+        const colorText = c.role === "auditor" ? "#059669" : c.role === "client" ? "#7C3AED" : "#0284C7";
+        return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="${escapeHtml(c.display_name)} (${cRole})">${escapeHtml(cShort)}</span>`;
+      }).join("");
 
-        return `
-        <tr style="${isOfficial ? 'background: rgba(5, 150, 105, 0.03);' : ''}">
-          <td>
-            <strong style="color: var(--text-primary); cursor: pointer;" onclick="window.EconodeApp.openSystem(${sys.id})">${sys.name}</strong>
-            <div style="font-size: 10px; color: var(--text-muted);">${sys.category || "Polímeros"} · ${sys.geography || "[MX]"} ${isOfficial ? `<span class="badge-pill badge-emerald" style="font-size: 8px;">${window.I18n.t("app.official_3_proc", "OFICIAL 3 PROCESOS")}</span>` : ''}</div>
+      const teamHtml = isOfficial ? `
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;" title="Equipo de trabajo asignado al proyecto">
+          <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Carla Méndez (Analista de ACV)">Carla M.</span>
+          <span class="user-chip-mini" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Josué Arentería (Auditor Líder)">Josué A.</span>
+          <span class="user-chip-mini" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;" title="Elena Ramírez (Cliente / Productor)">Elena R.</span>
+        </div>
+      ` : `
+        <div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;" title="Equipo del proyecto">
+          <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">${escapeHtml(ownerShortName)}</span>
+          ${extraCollabsHtml}
+          <button class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; border-radius: 4px;" onclick="window.EconodeApp.openInviteModal(${sys.id}, '${escape(sys.name)}')" title="Invitar auditor o cliente a este proyecto">+ Invitar</button>
+        </div>
+      `;
+
+      return `
+        <tr style="${isOfficial ? 'background: rgba(5, 150, 105, 0.03);' : ''} ${isChildOfProject ? 'background: #FAFBFD;' : ''}">
+          <td style="${isChildOfProject ? 'padding-left: 38px; position: relative;' : 'padding-left: 18px;'}">
+            ${isChildOfProject ? `<span style="position: absolute; left: 20px; top: 16px; width: 10px; height: 12px; border-left: 1.5px solid #CBD5E1; border-bottom: 1.5px solid #CBD5E1; border-bottom-left-radius: 3px;"></span>` : ''}
+            <strong style="color: var(--text-primary); cursor: pointer; font-size: 12.5px;" onclick="window.EconodeApp.openSystem(${sys.id})">${escapeHtml(sys.name)}</strong>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">
+              ${escapeHtml(sys.category || "Polímeros")} · ${escapeHtml(sys.geography || "[MX]")}
+              ${isOfficial ? `<span class="badge-pill badge-emerald" style="font-size: 8px;">OFICIAL 3 PROCESOS</span>` : ''}
+              ${sys.project_name ? `<span class="badge-pill badge-blue" style="font-size: 8px; margin-left: 4px;">${escapeHtml(sys.project_name)}</span>` : ''}
+            </div>
             ${ownerNotice}
           </td>
-          <td><span class="mono">${sys.code || "SKU-N/A"}</span></td>
+          <td><span class="mono" style="font-size: 11px;">${escapeHtml(sys.code || "SKU-N/A")}</span></td>
           <td>${teamHtml}</td>
           <td><span class="badge-pill ${badgeClass}">${statusText}</span></td>
           <td>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})" style="border-radius: 7px; height: 30px; padding: 0 12px; font-weight: 500; font-size: 11.5px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155;">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 10px; font-weight: 500; font-size: 11px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155;">
                 ${window.I18n.t("app.vault_btn", "Bóveda")}
               </button>
-              <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openSystem(${sys.id})" style="border-radius: 7px; height: 30px; padding: 0 13px; font-weight: 600; font-size: 11.5px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15);">
-                ${window.I18n.t("app.open_canvas_btn", "Abrir Lienzo ➔")}
+              <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openSystem(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 12px; font-weight: 600; font-size: 11px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15);">
+                ${window.I18n.t("app.open_canvas_btn", "Abrir Lienzo")} &rarr;
               </button>
-              ${!isOfficial ? `<button class="btn btn-secondary btn-sm" style="height: 30px; width: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #94A3B8; border-color: rgba(0,0,0,0.08); border-radius: 7px; background: #FFFFFF;" onclick="window.EconodeApp.deleteSystem(${sys.id}, '${escape(sys.name)}')" title="Eliminar este sistema producto" onmouseover="this.style.color='#EF4444';this.style.borderColor='rgba(239,68,68,0.3)';" onmouseout="this.style.color='#94A3B8';this.style.borderColor='rgba(0,0,0,0.08)';"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>` : ''}
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openAssignProjectModal(${sys.id}, ${sys.project_id || 'null'}, '${escape(sys.name)}')" style="border-radius: 7px; height: 28px; padding: 0 9px; font-weight: 500; font-size: 10.5px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #475569;" title="${sys.project_name ? 'Cambiar de proyecto o desasociar a sistema solito' : 'Asignar a un proyecto contenedor'}">
+                ${sys.project_name ? window.I18n.t("dash.assign_proj_btn", "Mover") : '+ Proyecto'}
+              </button>
+              ${!isOfficial ? `<button class="btn btn-secondary btn-sm" style="height: 28px; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; color: #94A3B8; border-color: rgba(0,0,0,0.08); border-radius: 7px; background: #FFFFFF;" onclick="window.EconodeApp.deleteSystem(${sys.id}, '${escape(sys.name)}')" title="Eliminar este sistema producto" onmouseover="this.style.color='#EF4444';this.style.borderColor='rgba(239,68,68,0.3)';" onmouseout="this.style.color='#94A3B8';this.style.borderColor='rgba(0,0,0,0.08)';"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>` : ''}
             </div>
           </td>
         </tr>
       `;
-      })
-      .join("");
+    }
+
+    let rowsHtml = "";
+
+    // 1. Proyectos Contenedores con Secciones Desplegables
+    const projectsList = state.projects || [];
+    projectsList.forEach((p) => {
+      const pSystems = filtered.filter((s) => s.project_id === p.id);
+      // Si hay búsqueda y el proyecto no coincide ni tiene sistemas coincidentes, omitir
+      if (search && pSystems.length === 0 && !(p.name || "").toLowerCase().includes(search) && !(p.code || "").toLowerCase().includes(search)) {
+        return;
+      }
+
+      const isCollapsed = !!state.collapsedProjects[p.id];
+      const count = pSystems.length;
+      const countLabel = count === 1 ? `1 ${window.I18n.t("dash.systems_count_badge", "sistema")}` : `${count} ${window.I18n.t("dash.systems_count_badge", "sistemas")}`;
+
+      rowsHtml += `
+        <tr class="project-header-row" style="background: #F8FAFC; border-top: 1.5px solid #E2E8F0; border-bottom: 1px solid #E2E8F0; user-select: none;">
+          <td colspan="5" style="padding: 10px 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.EconodeApp.toggleProjectCollapse(${p.id})">
+                <span class="project-chevron" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; color: #475569; background: #EEF2F6;">
+                  ${isCollapsed ? chevronRightSvg : chevronDownSvg}
+                </span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="badge-pill badge-blue" style="font-size: 9.5px; font-weight: 700; padding: 2px 7px;">${escapeHtml(p.code || "PRJ")}</span>
+                  <strong style="font-size: 13px; color: #0F172A; font-weight: 700;">${escapeHtml(p.name)}</strong>
+                  <span style="font-size: 11px; color: #475569; background: #E2E8F0; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                    ${countLabel}
+                  </span>
+                  <span style="font-size: 10.5px; color: #64748B;">${escapeHtml(p.category || 'General')}</span>
+                  ${p.description ? `<span style="font-size: 10.5px; color: #94A3B8; font-style: italic; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(p.description)}">· ${escapeHtml(p.description)}</span>` : ''}
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                ${pSystems.length >= 2 ? `
+                  <button class="btn btn-sm" onclick="window.EconodeApp.openCompareProjectModal(${p.id})" style="height: 28px; padding: 0 12px; font-size: 11px; font-weight: 600; border-radius: 6px; background: rgba(14, 165, 233, 0.12); color: #0284C7; border: 1px solid rgba(14, 165, 233, 0.35); display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 1px 2px rgba(14,165,233,0.08);" title="Comparar huella ambiental (LCIA) entre los sistemas de este proyecto">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+                    <span>${window.I18n.t("dash.compare_btn", "Comparar Sistemas (LCIA)")}</span>
+                  </button>
+                ` : ''}
+                <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openWizardForProject(${p.id})" style="height: 28px; padding: 0 10px; font-size: 11px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Crear un nuevo sistema producto dentro de este proyecto">
+                  <span>+ Agregar Sistema</span>
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.deleteProject(${p.id}, '${escape(p.name)}')" style="height: 28px; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 6px; color: #94A3B8;" title="Eliminar proyecto (los sistemas pasarán a independientes)" onmouseover="this.style.color='#EF4444';" onmouseout="this.style.color='#94A3B8';">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </div>
+          </td>
+        </tr>
+      `;
+
+      if (!isCollapsed) {
+        if (pSystems.length === 0) {
+          rowsHtml += `
+            <tr class="project-child-row" style="background: #FAFCFE;">
+              <td colspan="5" style="padding: 14px 38px; font-size: 11.5px; color: #94A3B8; font-style: italic;">
+                Este proyecto no contiene sistemas producto aún. Haz clic en '+ Agregar Sistema' para modelar el primero.
+              </td>
+            </tr>
+          `;
+        } else {
+          pSystems.forEach((s) => {
+            rowsHtml += renderSystemRow(s, true);
+          });
+        }
+      }
+    });
+
+    // 2. Sistemas Independientes ("Solitos" / Sin Proyecto)
+    const standaloneSystems = filtered.filter((s) => !s.project_id);
+    const standaloneCount = standaloneSystems.length;
+    const standaloneLabel = standaloneCount === 1 ? `1 ${window.I18n.t("dash.standalone_count_badge", "sistema solito")}` : `${standaloneCount} ${window.I18n.t("dash.standalone_count_badge", "sistemas solitos")}`;
+
+    rowsHtml += `
+      <tr class="standalone-header-row" style="background: #F8FAFC; border-top: 1.5px solid #E2E8F0; border-bottom: 1px solid #E2E8F0; user-select: none;">
+        <td colspan="5" style="padding: 10px 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px; cursor: pointer;" onclick="window.EconodeApp.toggleStandaloneCollapse()">
+              <span class="standalone-chevron" style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 5px; color: #475569; background: #EEF2F6;">
+                ${state.collapsedStandalone ? chevronRightSvg : chevronDownSvg}
+              </span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="badge-pill badge-slate" style="font-size: 9.5px; font-weight: 700; padding: 2px 7px;">INDEPENDIENTES</span>
+                <strong style="font-size: 13px; color: #0F172A; font-weight: 700;">${window.I18n.t("dash.standalone_header", "Sistemas Independientes (Sin Proyecto)")}</strong>
+                <span style="font-size: 11px; color: #475569; background: #E2E8F0; padding: 2px 8px; border-radius: 12px; font-weight: 600;">
+                  ${standaloneLabel}
+                </span>
+                <span style="font-size: 10.5px; color: #64748B;">${window.I18n.t("dash.standalone_hint", "Modelos individuales")}</span>
+              </div>
+            </div>
+            <div>
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openWizardForProject(null)" style="height: 28px; padding: 0 10px; font-size: 11px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Crear un sistema producto independiente (sin proyecto)">
+                <span>+ Nuevo Sistema Solito</span>
+              </button>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+
+    if (!state.collapsedStandalone) {
+      if (standaloneSystems.length === 0) {
+        rowsHtml += `
+          <tr class="standalone-child-row" style="background: #FFFFFF;">
+            <td colspan="5" style="padding: 14px 38px; font-size: 11.5px; color: #94A3B8; font-style: italic;">
+              No hay sistemas independientes en este momento. Todos pertenecen a un proyecto.
+            </td>
+          </tr>
+        `;
+      } else {
+        standaloneSystems.forEach((s) => {
+          rowsHtml += renderSystemRow(s, false);
+        });
+      }
+    }
+
+    tbody.innerHTML = rowsHtml;
   }
 
   async function openSystem(sysId, navigateToCanvas = true) {
@@ -993,7 +1156,7 @@
             const ownerShort = rawOwner.split(" ")[0] + (rawOwner.split(" ")[1] ? " " + rawOwner.split(" ")[1][0] + "." : "");
             const collabs = res.system.collaborators || [];
             const collabsChips = collabs.map(c => {
-              const icon = c.role === "auditor" ? "🔍" : c.role === "client" ? "🏢" : "👤";
+              const icon = c.role === "auditor" ? "" : c.role === "client" ? "" : "";
               const roleTitle = c.role === "auditor" ? "Auditor" : c.role === "client" ? "Cliente" : "Colab";
               const cName = c.display_name || c.name || "Colab";
               const cShort = cName.split(" ")[0] + (cName.split(" ")[1] ? " " + cName.split(" ")[1][0] + "." : "");
@@ -1004,7 +1167,7 @@
             const inviteBtn = `<button class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; border-radius: 4px; margin-left: 2px;" onclick="window.EconodeApp.openInviteModal(${res.system.id}, '${escape(res.system.name)}')" title="Invitar auditor o cliente a este proyecto">+ Invitar</button>`;
             canvasTeam.innerHTML = `
               <span style="font-weight: 600; color: var(--text-secondary);">${window.I18n.t("dash.col_team", "Equipo")}:</span>
-              <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">👤 ${ownerShort} (Analista)</span>
+              <span class="user-chip-mini" style="background: rgba(14, 165, 233, 0.12); color: #0284C7; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;"> ${ownerShort} (Analista)</span>
               ${collabsChips}
               ${inviteBtn}
             `;
@@ -1275,7 +1438,7 @@
 
     const emptyGuideHtml = (!state.canvasNodes || state.canvasNodes.length === 0) ? `
       <div class="empty-canvas-guide" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; z-index: 5; opacity: 0.85;">
-        <div style="font-size: 38px; margin-bottom: 10px;">🎨</div>
+        <div style="font-size: 38px; margin-bottom: 10px;"></div>
         <h4 style="font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Lienzo de Modelado Vacío</h4>
         <p style="font-size: 12px; color: var(--text-muted); max-width: 400px; line-height: 1.45; margin: 0 auto;">
           Arrastra procesos desde el catálogo izquierdo o realiza conexiones en la <strong>Hoja de Cálculo (pestaña Conexiones Internas)</strong> para visualizar la cadena en el diagrama.
@@ -1454,9 +1617,9 @@
         ${sankeyBadgeHtml}
 
         <div class="node-ports-row" style="margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
-          <span class="node-port port-in" data-node-id="${node.id}" title="Inlet Port (Click to connect)">🡇</span>
+          <span class="node-port port-in" data-node-id="${node.id}" title="Inlet Port (Click to connect)">↓</span>
           <span style="font-size: 9px; color: var(--text-muted);">Connectors</span>
-          <span class="node-port port-out" data-node-id="${node.id}" title="Outlet Port (Click to connect)">🡆</span>
+          <span class="node-port port-out" data-node-id="${node.id}" title="Outlet Port (Click to connect)">→</span>
         </div>
       `;
 
@@ -1895,11 +2058,11 @@
         <div class="canvas-sticky-note ${roleCls}" id="sticky_note_${c.id}" style="left: ${posX}px; top: ${posY}px;">
           <div class="sticky-header-row">
             <span>● ${roleLabel}: ${c.author_name ? c.author_name.split(' ')[0] : 'Nota'}</span>
-            <span style="font-size: 8.5px; opacity: 0.8;">${isResolved ? '✓ Resuelto' : '⚠️ Pendiente'}</span>
+            <span style="font-size: 8.5px; opacity: 0.8;">${isResolved ? '[OK] Resuelto' : '⚠️ Pendiente'}</span>
           </div>
           <div class="sticky-content-body">${c.content}</div>
           <div style="margin-top: 6px; display: flex; justify-content: space-between; align-items: center; gap: 4px;">
-            ${canDelete ? `<button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px; color: #EF4444;" onclick="window.EconodeApp.deleteComment(${c.id})" title="Eliminar observación">🗑 Eliminar</button>` : '<span></span>'}
+            ${canDelete ? `<button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px; color: #EF4444;" onclick="window.EconodeApp.deleteComment(${c.id})" title="Eliminar observación"> Eliminar</button>` : '<span></span>'}
             <button type="button" class="btn btn-secondary btn-sm" style="padding: 1px 5px; font-size: 9px;" onclick="window.EconodeApp.showView('report')">Ver en Reporte ➔</button>
           </div>
         </div>
@@ -2000,7 +2163,7 @@
 
   function completeConnection(targetNode) {
     if (!state.connectingFromNode) {
-      showNotification("Please click the outlet port [🡆] on the source node first.");
+      showNotification("Please click the outlet port [→] on the source node first.");
       return;
     }
     const source = state.connectingFromNode;
@@ -2047,7 +2210,7 @@
       let opts = `<option value="">-- Main flow: ${defaultFlowName} (${defaultAmt} ${defaultUnit}) --</option>`;
       if (source.outputs && Array.isArray(source.outputs) && source.outputs.length > 0) {
         source.outputs.forEach((out, oIdx) => {
-          const typeBadge = out.is_reference ? '⭐ [Reference]' : out.is_waste ? '♻️ [Waste]' : '⚡ [Emission/Output]';
+          const typeBadge = out.is_reference ? ' [Reference]' : out.is_waste ? ' [Waste]' : '⚡ [Emission/Output]';
           opts += `<option value="${oIdx}">${typeBadge} ${out.name} (${Number(out.amount || 1.0).toFixed(3)} ${out.unit || 'kg'})</option>`;
         });
       }
@@ -2096,7 +2259,7 @@
       if (inspDetails) {
         inspDetails.innerHTML = `
           <div style="padding: 24px 12px; text-align: center; color: var(--text-muted);">
-            <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+            <div style="font-size: 32px; margin-bottom: 8px;"></div>
             <div style="font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">${window.I18n ? window.I18n.t("canvas.inspector_title", "Process Inspector") : "Process Inspector"}</div>
             <div style="font-size: 11px; line-height: 1.45;">${window.I18n ? window.I18n.t("canvas.inspector_empty", "Select a canvas node or add a process from the palette to inspect technosphere exchanges, unit inputs, and waste flows.") : "Select a canvas node or add a process from the palette to inspect technosphere exchanges, unit inputs, and waste flows."}</div>
           </div>
@@ -2510,11 +2673,11 @@
     if (filtered.length === 0) {
       list.innerHTML = `
         <div style="padding: 24px 14px; font-size: 11px; color: var(--text-muted); text-align: center;">
-          <div style="font-size: 26px; margin-bottom: 6px;">📂</div>
+          <div style="font-size: 26px; margin-bottom: 6px;"></div>
           <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">Catálogo de Procesos Vacío</div>
           <div style="font-size: 10px; line-height: 1.4; margin-bottom: 12px;">Agrega procesos en la <strong>Hoja de Cálculo</strong> (Entradas y Salidas) o explora la base de datos oficial ecoinvent 3.12.</div>
           <div style="display: flex; flex-direction: column; gap: 6px;">
-            <button class="btn btn-secondary btn-sm" style="font-size: 10.5px;" onclick="window.EconodeApp.showView('catalog')">🔍 Explorar Catálogo ecoinvent</button>
+            <button class="btn btn-secondary btn-sm" style="font-size: 10.5px;" onclick="window.EconodeApp.showView('catalog')"> Explorar Catálogo ecoinvent</button>
           </div>
         </div>
       `;
@@ -2526,7 +2689,7 @@
         (p) => {
           const connected = isNodeConnected(p);
           const badgeConn = connected ? 
-            `<span style="font-size: 8px; font-weight: 600; color: #0284C7; background: rgba(14, 165, 233, 0.1); padding: 1px 4px; border-radius: 3px;">🔗 En diagrama</span>` :
+            `<span style="font-size: 8px; font-weight: 600; color: #0284C7; background: rgba(14, 165, 233, 0.1); padding: 1px 4px; border-radius: 3px;"> En diagrama</span>` :
             `<span style="font-size: 8px; font-weight: 600; color: #D97706; background: rgba(245, 158, 11, 0.1); padding: 1px 4px; border-radius: 3px;">⏳ Por conectar</span>`;
 
           return `
@@ -2775,7 +2938,7 @@
             <div style="margin: 4px 0;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <label style="font-size: 9px; color: var(--text-muted); font-weight: 600;">PROVIDER (SUPPLYING PROCESS):</label>
-                <button type="button" style="background: none; border: none; color: var(--accent-blue); font-size: 9.5px; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="window.EconodeApp.openSelectProviderModal(${idx})">🔍 Search Process</button>
+                <button type="button" style="background: none; border: none; color: var(--accent-blue); font-size: 9.5px; font-weight: 600; cursor: pointer; text-decoration: underline;" onclick="window.EconodeApp.openSelectProviderModal(${idx})"> Search Process</button>
               </div>
               <input type="text" class="form-input" style="height: 24px; font-size: 10px; margin-top: 2px;" value="${inp.provider || inp.supplier || 'Market ecoinvent 3.12 [GLO]'}" placeholder="Supplying unit process..." oninput="window.EconodeApp.updateEditInput(${idx}, 'provider', this.value)">
             </div>
@@ -3334,7 +3497,7 @@
       subTitle.textContent = `Proceso: ${node.name} (ID: #${node.process_id || node.id})`;
     }
     if (authorSpan) {
-      authorSpan.textContent = `👤 Publicando como: ${author} (${roleTitle})`;
+      authorSpan.textContent = ` Publicando como: ${author} (${roleTitle})`;
     }
     if (textarea) {
       textarea.value = "";
@@ -4394,7 +4557,7 @@
               const srcNode = systemProcesses.find(n => String(n.id) === String(connectedEdge.from) || String(n.process_id) === String(connectedEdge.source_process_id) || String(n.id) === String(connectedEdge.source_process_id));
               const srcName = srcNode ? srcNode.name : (connectedEdge.from || "Upstream");
               providerPlain = srcName;
-              typeBadge = `<span class="excel-badge-connected">🔗 ${t("canvas.tag_connected", "Conectado")}</span>`;
+              typeBadge = `<span class="excel-badge-connected"> ${t("canvas.tag_connected", "Conectado")}</span>`;
               if (otherNodes.length > 0) {
                 providerText = `
                   <select class="excel-provider-select is-connected" 
@@ -4406,13 +4569,13 @@
                     <optgroup label="${isEn ? 'Upstream Processes (Internal Links)' : 'Procesos Origen (Conexión Interna)'}">
                       ${otherNodes.map(on => {
                         const isSel = (String(connectedEdge.from) === String(on.id) || String(connectedEdge.source_process_id) === String(on.process_id) || String(connectedEdge.from) === String(on.process_id));
-                        return `<option value="${on.id}" ${isSel ? 'selected' : ''}>🔗 ${escapeHtml(on.name)} (#${on.process_id || on.id})</option>`;
+                        return `<option value="${on.id}" ${isSel ? 'selected' : ''}> ${escapeHtml(on.name)} (#${on.process_id || on.id})</option>`;
                       }).join('')}
                     </optgroup>
                   </select>
                 `;
               } else {
-                providerText = `<span style="color: #6D28D9; font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
+                providerText = `<span style="color: #6D28D9; font-weight: 600;"> ${escapeHtml(srcName)}</span>`;
               }
             } else {
               typeBadge = inp.is_unit ? `<span class="excel-badge-techno"> Tecnosfera</span>` : `<span class="excel-badge-techno">⚡ Auxiliar</span>`;
@@ -4426,7 +4589,7 @@
                     <option value="cfe" ${(inp.origin && inp.origin.includes('CFE')) ? 'selected' : ''}>Suministro Industrial / CFE</option>
                     <optgroup label="${isEn ? 'Upstream Processes (Internal Links)' : 'Procesos Origen (Conexión Interna)'}">
                       ${otherNodes.map(on => {
-                        return `<option value="${on.id}">🔗 ${escapeHtml(on.name)} (#${on.process_id || on.id})</option>`;
+                        return `<option value="${on.id}"> ${escapeHtml(on.name)} (#${on.process_id || on.id})</option>`;
                       }).join('')}
                     </optgroup>
                   </select>
@@ -4842,7 +5005,7 @@
                 <span class="excel-badge-connected">${escapeHtml(edge.flow || "Flujo Conectado")}</span>
               </td>
               <td class="excel-cell" data-col="D" data-row="${currentRowNum}" style="font-weight: 600; color: #7C3AED;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'D', '${escapeHtml(tgtLabel)}')">
-                🡇 ${escapeHtml(tgtLabel)}
+                ↓ ${escapeHtml(tgtLabel)}
               </td>
               <td class="excel-cell mono" data-col="E" data-row="${currentRowNum}" style="text-align: right;" onclick="window.EconodeApp.selectSpreadsheetCell(this, ${currentRowNum}, 'E', '${edge.amount || 1.0}', { type: 'edgeAmount', edgeId: '${edge.id}' })">
                 <input type="number" step="any" class="excel-inline-input" style="text-align: right;" 
@@ -5602,7 +5765,7 @@
           let opts = `<option value="">-- Flujo principal: ${escapeHtml(defaultFlowName)} (${defaultAmt} ${defaultUnit}) --</option>`;
           if (srcNode.outputs && Array.isArray(srcNode.outputs) && srcNode.outputs.length > 0) {
             srcNode.outputs.forEach((out, oIdx) => {
-              const typeBadge = out.is_reference ? '⭐ [Referencia]' : out.is_waste ? '♻️ [Residuo]' : '📦 [Coproducto]';
+              const typeBadge = out.is_reference ? ' [Referencia]' : out.is_waste ? ' [Residuo]' : ' [Coproducto]';
               opts += `<option value="${oIdx}">${typeBadge} ${escapeHtml(out.name)} (${Number(out.amount || 1.0).toFixed(3)} ${out.unit || 'kg'})</option>`;
             });
           }
@@ -6041,13 +6204,13 @@
 
         let badgeTag = '';
         if (isUpstream) {
-          badgeTag = `<span class="excel-ac-badge-tag excel-ac-badge-connected">🔗 ${t("canvas.autocomplete_upstream_badge", "Conexión")}</span>`;
+          badgeTag = `<span class="excel-ac-badge-tag excel-ac-badge-connected"> ${t("canvas.autocomplete_upstream_badge", "Conexión")}</span>`;
         } else if (item.flow_type === "ELEMENTARY_FLOW") {
-          badgeTag = `<span class="excel-ac-badge-tag" style="background:#FEF3C7; color:#92400E;">🌿 Biosfera</span>`;
+          badgeTag = `<span class="excel-ac-badge-tag" style="background:#FEF3C7; color:#92400E;"> Biosfera</span>`;
         } else if (item.flow_type === "WASTE_FLOW") {
-          badgeTag = `<span class="excel-ac-badge-tag" style="background:#FEE2E2; color:#991B1B;">♻️ Residuo</span>`;
+          badgeTag = `<span class="excel-ac-badge-tag" style="background:#FEE2E2; color:#991B1B;"> Residuo</span>`;
         } else if (item.location) {
-          badgeTag = `<span class="excel-ac-badge-tag">📍 ${item.location}</span>`;
+          badgeTag = `<span class="excel-ac-badge-tag"> ${item.location}</span>`;
         }
 
         listHtml += `
@@ -6125,7 +6288,7 @@
             if (providerCell) {
               const srcNode = (state.canvasNodes || []).find(n => String(n.id) === String(item.source_node_id));
               const srcName = srcNode ? srcNode.name : (item.source_node_name || "Proceso Upstream");
-              providerCell.innerHTML = `<span style="color: #6D28D9; font-weight: 600;">🔗 ${escapeHtml(srcName)}</span>`;
+              providerCell.innerHTML = `<span style="color: #6D28D9; font-weight: 600;"> ${escapeHtml(srcName)}</span>`;
             }
           }
         }
@@ -6899,7 +7062,7 @@
     }
 
     flowSelect.innerHTML = flows.map((f, idx) => {
-      const badge = f.is_reference ? '⭐ ' : (f.is_waste ? '♻️ ' : '');
+      const badge = f.is_reference ? ' ' : (f.is_waste ? ' ' : '');
       return `<option value="${escapeHtml(f.name)}" data-amount="${f.amount}" data-unit="${escapeHtml(f.unit)}" ${idx === 0 ? 'selected' : ''}>${badge}${escapeHtml(f.name)} (${f.amount} ${f.unit})</option>`;
     }).join('');
 
@@ -7582,7 +7745,7 @@
         tbody.innerHTML = `
           <tr>
             <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">
-              <div style="font-size: 20px; margin-bottom: 4px;">🎨</div>
+              <div style="font-size: 20px; margin-bottom: 4px;"></div>
               <div style="font-weight: 600; color: var(--text-secondary);">No modeled processes on canvas</div>
               <div style="font-size: 10.5px; margin-top: 4px;">Model processes on the canvas to automatically generate report stages and balances.</div>
             </td>
@@ -7627,7 +7790,7 @@
             name: inp.name,
             amount: inp.amount,
             unit: inp.unit,
-            verified: inp.is_unit ? "✓ Connected Unit Flow" : "✓ Technosphere Input"
+            verified: inp.is_unit ? "[OK] Connected Unit Flow" : "[OK] Technosphere Input"
           });
         });
         (node.outputs || []).filter(o => o.is_waste || o.is_elementary).forEach(out => {
@@ -7646,19 +7809,19 @@
             <td>Virgin PET granulate [GLO] (ecoinvent)</td>
             <td class="mono">1.050</td>
             <td class="mono">kg</td>
-            <td><span class="badge-pill badge-emerald">✓ Validated Plant/CFE Invoice</span></td>
+            <td><span class="badge-pill badge-emerald">[OK] Validated Plant/CFE Invoice</span></td>
           </tr>
           <tr>
             <td>CFE electricity grid mix 230kV [MX]</td>
             <td class="mono">0.420</td>
             <td class="mono">kWh</td>
-            <td><span class="badge-pill badge-emerald">✓ Verified CFE Utility Bill</span></td>
+            <td><span class="badge-pill badge-emerald">[OK] Verified CFE Utility Bill</span></td>
           </tr>
           <tr>
             <td>Diesel freight truck transport 16-32t [MX]</td>
             <td class="mono">0.0084</td>
             <td class="mono">t·km</td>
-            <td><span class="badge-pill badge-emerald">✓ Compliant 350 km Freight</span></td>
+            <td><span class="badge-pill badge-emerald">[OK] Compliant 350 km Freight</span></td>
           </tr>
           <tr>
             <td>Purge PET plastic scrap (Waste)</td>
@@ -7727,7 +7890,7 @@
           initials = "ER";
         }
 
-        const statusLabel = isResolved ? window.I18n.t("app.resolved", "Resuelto ✓") : window.I18n.t("app.pending", "Pendiente");
+        const statusLabel = isResolved ? window.I18n.t("app.resolved", "Resuelto [OK]") : window.I18n.t("app.pending", "Pendiente");
         const replyPrefix = window.I18n.t("app.reply_label", "Respuesta");
 
         return `
@@ -7763,7 +7926,7 @@
               ? `
             <div style="display: flex; gap: 6px; margin-top: 8px;">
               <input type="text" class="form-input" id="replyInput_${c.id}" placeholder="Escribir aclaración técnica..." style="height: 28px; font-size: 10.5px;">
-              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.resolveComment(${c.id})">${window.I18n.t("app.resolved", "Resolver ✓")}</button>
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.resolveComment(${c.id})">${window.I18n.t("app.resolved", "Resolver [OK]")}</button>
             </div>
           `
               : ""
@@ -7773,7 +7936,7 @@
             (c.author_name === (state.activeUser ? state.activeUser.display_name : "Carla Méndez") || (state.activeUser && state.activeUser.role === "auditor"))
               ? `
             <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
-              <button class="btn btn-secondary btn-sm" style="font-size: 9.5px; color: #EF4444; padding: 1px 6px;" onclick="window.EconodeApp.deleteComment(${c.id})">🗑 Eliminar Nota</button>
+              <button class="btn btn-secondary btn-sm" style="font-size: 9.5px; color: #EF4444; padding: 1px 6px;" onclick="window.EconodeApp.deleteComment(${c.id})"> Eliminar Nota</button>
             </div>
           `
               : ""
@@ -8154,19 +8317,19 @@
     }
 
     const typeIcons = {
-      sql: "🗄️",
-      xlsx: "📊",
-      xls: "📊",
-      csv: "📑",
-      pdf: "📄",
+      sql: "[SQL]",
+      xlsx: "[XLS]",
+      xls: "[XLS]",
+      csv: "[CSV]",
+      pdf: "[PDF]",
       json: "",
-      zip: "📦"
+      zip: ""
     };
 
     tbody.innerHTML = state.documents
       .map((doc) => {
         const ext = (doc.file_type || "bin").toLowerCase();
-        const icon = typeIcons[ext] || "📁";
+        const icon = typeIcons[ext] || "";
         const sizeKb = (doc.file_size_bytes / 1024).toFixed(1);
         const hashShort = doc.sha256_hash ? doc.sha256_hash.slice(0, 12) + "..." : "SHA-256 OK";
 
@@ -8336,7 +8499,7 @@
           description: `Google Drive: ${driveLink}`
         });
 
-        showNotification(`Archivo "${file.name}" custodiado con éxito en tu Google Drive 📁`);
+        showNotification(`Archivo "${file.name}" custodiado con éxito en tu Google Drive `);
         if (formUpload) formUpload.reset();
         await loadDocumentsList(sysId);
       } catch (err) {
@@ -8565,6 +8728,9 @@
         const prevText = btnSubmit.textContent;
         btnSubmit.textContent = "Creando sistema...";
 
+        const projVal = document.getElementById("wizSystemProject")?.value;
+        const projectId = projVal ? parseInt(projVal, 10) : null;
+
         try {
           const res = await api.createSystem({
             name,
@@ -8572,14 +8738,15 @@
             category,
             geography,
             reference_amount: amount,
-            reference_unit: unit
+            reference_unit: unit,
+            project_id: projectId
           });
           // Crear carpeta de proyecto en Google Drive del analista
           if (window.EconodeDrive) {
             try {
               const driveFolder = await window.EconodeDrive.createProjectFolder(name, code);
               if (driveFolder && driveFolder.folderId) {
-                showNotification(`Carpeta "${driveFolder.folderName}" creada en tu Google Drive 📁`);
+                showNotification(`Carpeta "${driveFolder.folderName}" creada en tu Google Drive`);
               }
             } catch (driveErr) {
               console.warn("Creación de carpeta en Google Drive diferida:", driveErr.message);
@@ -8636,7 +8803,7 @@
             <td><span class="badge-pill ${statusClass}">${statusLabel}</span></td>
             <td style="text-align: right; white-space: nowrap;">
               <button type="button" class="btn btn-secondary btn-sm" onclick="window.ECONODE.copyToClipboard('${fullUrl}')" style="font-size: 10px; padding: 2px 7px; height: 22px;" title="Copiar enlace de acceso">
-                📋 Copiar
+                 Copiar
               </button>
               ${inv.status === 'pending' ? `
                 <button type="button" class="btn btn-secondary btn-sm" onclick="window.ECONODE.cancelInvite('${inv.id}')" style="font-size: 10px; padding: 2px 6px; height: 22px; color: #EF4444; margin-left: 4px;" title="Revocar invitación">
@@ -8680,11 +8847,11 @@
       roleSelect.addEventListener("change", () => {
         const val = roleSelect.value;
         if (val === "auditor") {
-          roleHint.textContent = "✓ Verificador oficial con facultades de firma conforme NOM-070-SE-2024 e ISO 14040/14044.";
+          roleHint.textContent = "[OK] Verificador oficial con facultades de firma conforme NOM-070-SE-2024 e ISO 14040/14044.";
         } else if (val === "client") {
-          roleHint.textContent = "✓ Cliente productor con acceso para subir recibos, balances y consultar reportes finales.";
+          roleHint.textContent = "[OK] Cliente productor con acceso para subir recibos, balances y consultar reportes finales.";
         } else {
-          roleHint.textContent = "✓ Analista colaborador con acceso total para editar procesos y conectar flujos.";
+          roleHint.textContent = "[OK] Analista colaborador con acceso total para editar procesos y conectar flujos.";
         }
       });
     }
@@ -8733,7 +8900,7 @@
               const rootFolderId = await window.EconodeDrive.getOrCreateRootFolder();
               if (rootFolderId) {
                 await window.EconodeDrive.shareProjectFolder(rootFolderId, email, driveRole, true);
-                showNotification(`Carpeta compartida en Google Drive con ${email} (${driveRole}) ✓`);
+                showNotification(`Carpeta compartida en Google Drive con ${email} (${driveRole}) [OK]`);
               }
             } catch (driveShareErr) {
               console.warn("Compartición en Google Drive diferida:", driveShareErr.message);
@@ -8954,7 +9121,7 @@
           <h3 style="font-size: 16px; font-weight: 700; margin-top: 6px;">ECONODE Studio & Auditoría ACV</h3>
           <p style="font-size: 11px; color: var(--text-muted);">$2,400.00 USD / año · Licencia corporativa institucional</p>
           <div style="margin-top: 8px; font-size: 11px; color: var(--text-secondary);">
-            ✓ Sistemas producto ilimitados &nbsp;|&nbsp; ✓ ecoinvent 3.12 y Sphera oficiales &nbsp;|&nbsp; ✓ Sellos SHA-256
+            [OK] Sistemas producto ilimitados &nbsp;|&nbsp; [OK] ecoinvent 3.12 y Sphera oficiales &nbsp;|&nbsp; [OK] Sellos SHA-256
           </div>
         </div>
 
@@ -10140,6 +10307,288 @@
     updateCanvasHeaderToolbar();
   }
 
+  // =========================================================================
+  // GESTION DE PROYECTOS CONTENEDORES Y COMPARATIVA LCIA
+  // =========================================================================
+  function toggleProjectCollapse(projectId) {
+    state.collapsedProjects[projectId] = !state.collapsedProjects[projectId];
+    renderDashboardTable();
+  }
+
+  function toggleStandaloneCollapse() {
+    state.collapsedStandalone = !state.collapsedStandalone;
+    renderDashboardTable();
+  }
+
+  function openNewProjectModal() {
+    const modal = document.getElementById("modalNewProject");
+    if (!modal) return;
+    const nameInput = document.getElementById("newProjectName");
+    const codeInput = document.getElementById("newProjectCode");
+    const descInput = document.getElementById("newProjectDesc");
+    if (nameInput) {
+      nameInput.value = "";
+      setTimeout(() => nameInput.focus(), 60);
+    }
+    if (codeInput) {
+      codeInput.value = `PRJ-${Math.floor(1000 + Math.random() * 9000)}`;
+    }
+    if (descInput) descInput.value = "";
+    modal.style.display = "flex";
+    modal.classList.add("active");
+  }
+
+  function closeNewProjectModal() {
+    const modal = document.getElementById("modalNewProject");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+  }
+
+  async function submitNewProject() {
+    const name = document.getElementById("newProjectName")?.value || "";
+    const code = document.getElementById("newProjectCode")?.value || "";
+    const category = document.getElementById("newProjectCategory")?.value || "General";
+    const description = document.getElementById("newProjectDesc")?.value || "";
+
+    if (!name.trim()) {
+      alert("Por favor ingresa el nombre del proyecto.");
+      return;
+    }
+
+    try {
+      const res = await api.createProject({ name, code, category, description });
+      closeNewProjectModal();
+      showNotification(`Proyecto "${name}" creado exitosamente.`);
+      await loadDashboard();
+    } catch (err) {
+      alert("Error al crear proyecto: " + err.message);
+    }
+  }
+
+  async function deleteProject(projectId, projectName) {
+    const displayName = projectName ? unescape(projectName) : `ID #${projectId}`;
+    const msg = window.I18n.t(
+      "dash.delete_project_confirm",
+      `¿Deseas eliminar el proyecto "${displayName}"? Sus sistemas producto NO se eliminarán, quedarán como independientes (solitos).`
+    );
+    if (!confirm(msg)) return;
+
+    try {
+      await api.deleteProject(projectId);
+      showNotification(`Proyecto "${displayName}" eliminado. Sus sistemas ahora son independientes.`);
+      await loadDashboard();
+    } catch (err) {
+      alert("Error al eliminar proyecto: " + err.message);
+    }
+  }
+
+  function openAssignProjectModal(systemId, currentProjectId, systemName) {
+    const modal = document.getElementById("modalAssignProject");
+    if (!modal) return;
+    const idInput = document.getElementById("assignProjectSystemId");
+    if (idInput) idInput.value = systemId;
+    const nameEl = document.getElementById("assignProjectSystemName");
+    if (nameEl) nameEl.textContent = `Sistema: ${systemName ? unescape(systemName) : systemId}`;
+    updateProjectSelectOptions();
+    const select = document.getElementById("selectAssignProject");
+    if (select) {
+      select.value = currentProjectId && currentProjectId !== "null" ? String(currentProjectId) : "";
+    }
+    modal.style.display = "flex";
+    modal.classList.add("active");
+  }
+
+  function closeAssignProjectModal() {
+    const modal = document.getElementById("modalAssignProject");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+  }
+
+  async function submitAssignProject() {
+    const sysId = document.getElementById("assignProjectSystemId")?.value;
+    const projVal = document.getElementById("selectAssignProject")?.value;
+    const projId = projVal ? parseInt(projVal, 10) : null;
+    if (!sysId) return;
+
+    try {
+      const res = await api.assignSystemToProject(sysId, projId);
+      closeAssignProjectModal();
+      showNotification(res.message || "Asignación actualizada exitosamente.");
+      await loadDashboard();
+    } catch (err) {
+      alert("Error al asignar proyecto: " + err.message);
+    }
+  }
+
+  async function openCompareProjectModal(projectId) {
+    const modal = document.getElementById("modalCompareProject");
+    const container = document.getElementById("compareProjectContent");
+    const titleEl = document.getElementById("compareProjTitle");
+    const codeEl = document.getElementById("compareProjCode");
+    const descEl = document.getElementById("compareProjDesc");
+    if (!modal || !container) return;
+
+    modal.style.display = "flex";
+    modal.classList.add("active");
+    container.innerHTML = `
+      <div style="text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 12px;">
+        <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Calculando balance de masa e impacto ambiental comparativo (LCIA)...</div>
+        <div style="font-size: 11.5px; color: #64748B;">Resolviendo matrices de inventario ecoinvent 3.12 y factores ReCiPe 2016 Midpoint (H)</div>
+      </div>
+    `;
+
+    try {
+      const data = await api.compareProject(projectId);
+      const proj = data.project || {};
+      const systems = data.systems || [];
+      const cats = data.comparison_categories || [];
+
+      if (titleEl) titleEl.textContent = `${proj.name || 'Proyecto'} · Comparativa de Sistemas`;
+      if (codeEl) codeEl.textContent = proj.code || "PRJ";
+      if (descEl) descEl.textContent = proj.description || `${systems.length} sistemas producto modelados`;
+
+      if (systems.length === 0) {
+        container.innerHTML = `<div style="text-align: center; padding: 36px; color: var(--text-muted); font-size: 12px;">Este proyecto no tiene sistemas asignados aún. Asigna o crea sistemas para ejecutar la comparativa.</div>`;
+        return;
+      }
+
+      // 1. Resumen en Tarjetas Comparativas (Apple HIG)
+      let cardsHtml = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-bottom: 24px;">
+          ${systems.map(s => {
+            const gw = s.lcia_scores?.global_warming || 0.0;
+            const isBest = s.is_best_carbon;
+            const diffPct = s.diff_vs_best_pct || 0;
+            const score = s.eco_efficiency_score || 100;
+            return `
+              <div style="background: #FFFFFF; border: 1.5px solid ${isBest ? '#10B981' : '#E2E8F0'}; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative;">
+                ${isBest ? `
+                  <div style="position: absolute; top: 12px; right: 12px; background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3);">
+                    ${window.I18n.t("proj.best_carbon_badge", "Menor Huella")}
+                  </div>
+                ` : `
+                  <div style="position: absolute; top: 12px; right: 12px; background: #F1F5F9; color: #64748B; font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 12px;">
+                    +${diffPct}% ${window.I18n.t("proj.diff_vs_best", "vs mejor")}
+                  </div>
+                `}
+                <div style="font-size: 10px; color: var(--text-muted); font-family: monospace;">${escapeHtml(s.code)}</div>
+                <div style="font-size: 14px; font-weight: 700; color: #0F172A; margin: 2px 0 8px 0; padding-right: 70px;">${escapeHtml(s.name)}</div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: #F8FAFC; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 11px;">
+                  <div>
+                    <span style="color: #64748B;">Huella Carbono:</span>
+                    <div style="font-size: 13px; font-weight: 700; color: ${isBest ? '#059669' : '#0F172A'}; font-family: monospace;">${gw} kg CO2</div>
+                  </div>
+                  <div>
+                    <span style="color: #64748B;">Eficiencia Eco:</span>
+                    <div style="font-size: 13px; font-weight: 700; color: #0284C7; font-family: monospace;">${score} / 100</div>
+                  </div>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748B;">
+                  <span>UF: ${s.target_amount} ${escapeHtml(s.unit)}</span>
+                  <span>Procesos: ${s.nodes_count || 0}</span>
+                  <a href="javascript:void(0)" onclick="window.EconodeApp.closeCompareProjectModal(); window.EconodeApp.openSystem(${s.id});" style="color: #0284C7; font-weight: 600; text-decoration: none;">Ver Lienzo &rarr;</a>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+
+      // 2. Tabla Comparativa Multidimensional LCIA (ReCiPe Midpoint)
+      let tableHtml = `
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
+          <div style="padding: 12px 16px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+            <strong style="font-size: 12.5px; color: #0F172A;">Matriz Comparativa de Categorías de Impacto (LCIA ReCiPe 2016)</strong>
+            <span style="font-size: 11px; color: #64748B;">Valores normalizados por Unidad Funcional</span>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="margin: 0; width: 100%;">
+              <thead>
+                <tr style="background: #FAFBFD;">
+                  <th style="font-size: 11px; width: 32%;">Categoría Ambiental</th>
+                  <th style="font-size: 11px; width: 14%;">Unidad</th>
+                  ${systems.map(s => `<th style="font-size: 11px; text-align: right; min-width: 140px;">${escapeHtml(s.name)}</th>`).join("")}
+                </tr>
+              </thead>
+              <tbody>
+                ${cats.map(cat => {
+                  const vals = systems.map(s => s.lcia_scores?.[cat.key] || 0.0);
+                  const maxVal = Math.max(...vals, 0.00001);
+                  const minVal = Math.min(...vals);
+                  return `
+                    <tr>
+                      <td>
+                        <strong style="font-size: 11.5px; color: #0F172A;">${escapeHtml(cat.label)}</strong>
+                        <div style="font-size: 9.5px; color: #64748B;">${escapeHtml(cat.description)}</div>
+                      </td>
+                      <td style="font-size: 11px; color: #475569; font-family: monospace;">${escapeHtml(cat.unit)}</td>
+                      ${systems.map((s, idx) => {
+                        const val = vals[idx];
+                        const pctOfMax = Math.min(100, Math.max(10, Math.round((val / maxVal) * 100)));
+                        const isMin = (val === minVal);
+                        const barColor = isMin ? "#10B981" : "#94A3B8";
+                        return `
+                          <td style="text-align: right; vertical-align: middle;">
+                            <div style="font-weight: 700; font-size: 11.5px; color: ${isMin ? '#059669' : '#0F172A'}; font-family: monospace;">
+                              ${val}
+                            </div>
+                            <div style="display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 3px;">
+                              <div style="width: 70px; height: 5px; background: #EEF2F6; border-radius: 3px; overflow: hidden;">
+                                <div style="width: ${pctOfMax}%; height: 100%; background: ${barColor}; border-radius: 3px;"></div>
+                              </div>
+                              <span style="font-size: 9px; color: #94A3B8; width: 28px;">${pctOfMax}%</span>
+                            </div>
+                          </td>
+                        `;
+                      }).join("")}
+                    </tr>
+                  `;
+                }).join("")}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = cardsHtml + tableHtml;
+    } catch (err) {
+      container.innerHTML = `<div style="text-align: center; padding: 30px; color: #EF4444; font-size: 12px;">Error al cargar comparativa: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function closeCompareProjectModal() {
+    const modal = document.getElementById("modalCompareProject");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+  }
+
+  function openWizardForProject(projectId) {
+    const select = document.getElementById("wizSystemProject");
+    if (select) {
+      select.value = projectId ? String(projectId) : "";
+    }
+    const modal = document.getElementById("modalWizard");
+    if (modal) {
+      modal.style.display = "flex";
+      modal.classList.add("active");
+      const nameInput = document.getElementById("wizSystemName");
+      if (nameInput) {
+        nameInput.value = "";
+        setTimeout(() => nameInput.focus(), 60);
+      }
+      const codeInput = document.getElementById("wizSystemCode");
+      if (codeInput) codeInput.value = "";
+    }
+  }
+
   // Métodos globales de acceso rápido
   window.showView = showView;
   window.openSystem = openSystem;
@@ -10147,7 +10596,18 @@
   // API Pública para llamadas inline desde HTML y pruebas
   window.ECONODE = null;
   window.EconodeApp = {
-
+    toggleProjectCollapse,
+    toggleStandaloneCollapse,
+    openNewProjectModal,
+    closeNewProjectModal,
+    submitNewProject,
+    deleteProject,
+    openAssignProjectModal,
+    closeAssignProjectModal,
+    submitAssignProject,
+    openCompareProjectModal,
+    closeCompareProjectModal,
+    openWizardForProject,
     openParameterModal,
     closeParameterModal,
     saveParameterFromModal,

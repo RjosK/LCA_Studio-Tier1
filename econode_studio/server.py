@@ -45,6 +45,11 @@ from application import (
     get_system_parameters_use_case,
     save_system_parameter_use_case,
     delete_system_parameter_use_case,
+    list_projects_use_case,
+    create_project_use_case,
+    delete_project_use_case,
+    assign_system_to_project_use_case,
+    compare_project_systems_use_case,
     search_catalog_use_case,
     get_process_sheet_use_case,
     list_system_comments_use_case,
@@ -299,6 +304,35 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         "count": len(systems),
                         "items": systems
                     })
+                    return
+
+                # Proyectos Contenedores (Requiere Autenticación)
+                elif path == "/api/projects":
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    user_email = user.get("email")
+                    user_id = user.get("id")
+                    user_role = user.get("role")
+                    projects = list_projects_use_case(conn, user_email=user_email, user_id=user_id, user_role=user_role)
+                    self._send_json({
+                        "status": "success",
+                        "count": len(projects),
+                        "items": projects
+                    })
+                    return
+
+                # Comparativa LCIA entre Sistemas de un Proyecto (Requiere Autenticación)
+                elif path.startswith("/api/projects/") and path.endswith("/compare"):
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    proj_id = int(path.split("/")[3])
+                    try:
+                        res = compare_project_systems_use_case(conn, proj_id)
+                        self._send_json(res)
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
                     return
 
                 # Canvas details for a system (Requiere Autenticación)
@@ -784,6 +818,50 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     ok = delete_product_system_use_case(conn, sys_id)
                     self._send_json({"status": "success", "deleted_id": sys_id, "message": "Sistema producto eliminado correctamente."})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Crear Proyecto Contenedor (Solo Analistas Autenticados)
+            elif path == "/api/projects/create":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                try:
+                    res = create_project_use_case(conn, body, user=user)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Eliminar Proyecto Contenedor (Solo Analistas Autenticados)
+            elif path == "/api/projects/delete" or (path.startswith("/api/projects/") and path.endswith("/delete")):
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                parts = path.split("/")
+                proj_id = int(body.get("project_id") or (parts[3] if len(parts) > 3 and parts[3] != "delete" else 0))
+                if not proj_id:
+                    self._send_error_json("ID de proyecto no especificado", 400)
+                    return
+                try:
+                    ok = delete_project_use_case(conn, proj_id)
+                    self._send_json({"status": "success", "deleted_id": proj_id, "message": "Proyecto eliminado. Sus sistemas ahora son independientes."})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Asignar o Desasociar Sistema a Proyecto (Solo Analistas Autenticados)
+            elif path.startswith("/api/systems/") and path.endswith("/assign-project"):
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                sys_id = int(path.split("/")[3])
+                raw_proj = body.get("project_id")
+                proj_id = int(raw_proj) if raw_proj not in (None, "", "null", 0, "0") else None
+                try:
+                    res = assign_system_to_project_use_case(conn, sys_id, proj_id)
+                    self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)
                 return
