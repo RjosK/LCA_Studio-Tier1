@@ -1118,6 +1118,15 @@
       if (res && res.system) {
         try { localStorage.setItem("econode_active_system_id", String(sysId)); } catch (e) {}
         state.activeSystem = res.system;
+
+        // Reset total del lienzo y paleta para aislamiento estricto entre sistemas
+        state.selectedNode = null;
+        state.connectingFromNode = null;
+        state.connectingToNode = null;
+        state.canvasNodes = [];
+        state.canvasEdges = [];
+        state.paletteProcesses = [];
+
         state.canvasNodes = (res.system.nodes || []).map(n => {
           const nx = (n.x !== undefined && n.x !== null) ? Number(n.x) : ((n.pos_x !== undefined && n.pos_x !== null) ? Number(n.pos_x) : 60);
           const ny = (n.y !== undefined && n.y !== null) ? Number(n.y) : ((n.pos_y !== undefined && n.pos_y !== null) ? Number(n.pos_y) : 140);
@@ -1174,9 +1183,28 @@
           }
         }
 
-        // Paleta y selección de nodo: sincronizar procesos del catálogo y lienzo
+        // Catálogo (paleta) estrictamente aislado por sistema producto
         if (isOfficial) {
           initDefaultPalette();
+        } else {
+          const seenPids = new Set();
+          state.paletteProcesses = [];
+          (state.canvasNodes || []).forEach(n => {
+            const pid = String(n.process_id !== undefined ? n.process_id : n.id);
+            if (!seenPids.has(pid)) {
+              seenPids.add(pid);
+              state.paletteProcesses.push({
+                id: n.id,
+                process_id: n.process_id,
+                name: n.name,
+                category: n.category || n.category_name || "General",
+                unit: n.unit || "kg",
+                amount: n.amount || 1.0,
+                inputs: n.inputs ? JSON.parse(JSON.stringify(n.inputs)) : [],
+                outputs: n.outputs ? JSON.parse(JSON.stringify(n.outputs)) : []
+              });
+            }
+          });
         }
         syncSystemProcesses();
         if (state.canvasNodes && state.canvasNodes.length > 0) {
@@ -1231,7 +1259,7 @@
       const esrc = String(e.source_process_id || "");
       const etgt = String(e.target_process_id || "");
       return ef === nid || et === nid || esrc === npid || etgt === npid ||
-             (cleanNum && (ef === `node_${cleanNum}` || et === `node_${cleanNum}` || esrc === cleanNum || etgt === cleanNum));
+             (cleanNum && (ef === cleanNum || ef === `node_${cleanNum}` || et === cleanNum || et === `node_${cleanNum}` || esrc === cleanNum || etgt === cleanNum));
     });
   }
 
@@ -1255,15 +1283,20 @@
   }
 
   function syncSystemProcesses() {
-    const allProcs = getAllSystemProcesses();
     if (!state.paletteProcesses) state.paletteProcesses = [];
     if (!state.canvasNodes) state.canvasNodes = [];
 
-    // La paleta (catálogo) contiene todos los procesos definidos en el sistema
-    state.paletteProcesses = allProcs.map(p => ({ ...p }));
-
-    // El lienzo solo contiene procesos que están conectados en la matriz de conexiones (o colocados manualmente)
-    state.canvasNodes = allProcs.filter(p => isNodeConnected(p) || p._placedOnCanvas === true);
+    // Sincronizar datos modificados (insumos, salidas, nombres) entre nodos del lienzo y catálogo
+    state.canvasNodes.forEach(n => {
+      const pIdx = state.paletteProcesses.findIndex(p => String(p.process_id || p.id) === String(n.process_id || n.id));
+      if (pIdx !== -1) {
+        state.paletteProcesses[pIdx].inputs = n.inputs;
+        state.paletteProcesses[pIdx].outputs = n.outputs;
+        state.paletteProcesses[pIdx].name = n.name;
+        state.paletteProcesses[pIdx].amount = n.amount;
+        state.paletteProcesses[pIdx].unit = n.unit;
+      }
+    });
   }
 
   function getNodeDirectEnergy(node) {
@@ -2724,6 +2757,9 @@
   }
 
   function addNodeToCanvas(name, cat, unit, x = null, y = null, initialInputs = null, initialOutputs = null, processId = null) {
+    if (!state.canvasNodes) state.canvasNodes = [];
+    if (!state.paletteProcesses) state.paletteProcesses = [];
+
     const defaultInputs = [
       { name: "Primary Material [GLO]", amount: 1.05, unit: unit, is_unit: true },
       { name: "CFE Grid Electricity [MX]", amount: 0.25, unit: "kWh", is_unit: false },
@@ -2735,43 +2771,94 @@
       { name: "CO2 Emissions [Air]", amount: 0.01, unit: "kg", is_elementary: true }
     ];
 
-    let numericProcessId = (processId && !isNaN(parseInt(processId, 10)))
-      ? parseInt(processId, 10)
-      : (100000 + (state.canvasNodes ? state.canvasNodes.length : 0) + 1);
+    const searchId = processId ? String(processId) : "";
+    const cleanNum = searchId.replace(/\D/g, "");
 
-    if (state.canvasNodes && state.canvasNodes.some(n => n.process_id === numericProcessId || n.id === `node_${numericProcessId}`)) {
-      numericProcessId = 100000 + state.canvasNodes.length + 1;
-      while (state.canvasNodes.some(n => n.process_id === numericProcessId || n.id === `node_${numericProcessId}`)) {
+    // 1. Si el proceso ya se encuentra en el lienzo, reubicarlo y seleccionarlo (NO duplicar en catálogo ni lienzo)
+    const existingNode = state.canvasNodes.find(n => {
+      const nid = String(n.id);
+      const npid = String(n.process_id !== undefined ? n.process_id : "");
+      if (searchId && (nid === searchId || npid === searchId || (cleanNum && (nid === `node_${cleanNum}` || npid === cleanNum)))) return true;
+      return (n.name || "").trim().toLowerCase() === (name || "").trim().toLowerCase();
+    });
+
+    if (existingNode) {
+      if (x !== null && y !== null) {
+        existingNode.x = x;
+        existingNode.y = y;
+        existingNode.pos_x = x;
+        existingNode.pos_y = y;
+      }
+      inspectNode(existingNode);
+      renderCanvasStage();
+      renderCanvasEdges();
+      scheduleAutoSaveCanvas();
+      showNotification(`Proceso "${name}" reposicionado en el lienzo.`);
+      return;
+    }
+
+    // 2. Si no está en el lienzo, buscar si existe en la paleta para preservar sus datos originales
+    const paletteItem = state.paletteProcesses.find(p => {
+      const pid = String(p.id);
+      const ppid = String(p.process_id !== undefined ? p.process_id : "");
+      if (searchId && (pid === searchId || ppid === searchId || (cleanNum && (pid === `node_${cleanNum}` || ppid === cleanNum)))) return true;
+      return (p.name || "").trim().toLowerCase() === (name || "").trim().toLowerCase();
+    });
+
+    let numericProcessId = (paletteItem && paletteItem.process_id) || (processId && !isNaN(parseInt(processId, 10)) ? parseInt(processId, 10) : null);
+    if (!numericProcessId) {
+      numericProcessId = 100001;
+      while (state.canvasNodes.some(n => n.process_id === numericProcessId) || state.paletteProcesses.some(p => p.process_id === numericProcessId)) {
         numericProcessId++;
       }
     }
 
+    const nodeInputs = (paletteItem && Array.isArray(paletteItem.inputs)) ? JSON.parse(JSON.stringify(paletteItem.inputs))
+                     : (Array.isArray(initialInputs) ? JSON.parse(JSON.stringify(initialInputs)) : defaultInputs);
+    const nodeOutputs = (paletteItem && Array.isArray(paletteItem.outputs)) ? JSON.parse(JSON.stringify(paletteItem.outputs))
+                      : (Array.isArray(initialOutputs) ? JSON.parse(JSON.stringify(initialOutputs)) : defaultOutputs);
+
     const newNode = {
       id: `node_${numericProcessId}`,
       process_id: numericProcessId,
-      name: name,
-      category: cat || "Custom processes & flows",
-      amount: 1.0,
-      unit: unit || "kg",
-      x: x || (60 + Math.random() * 80),
-      y: y || (80 + Math.random() * 180),
-      pos_x: x || (60 + Math.random() * 80),
-      pos_y: y || (80 + Math.random() * 180),
-      reference_flow: { name: name, amount: 1.0, unit: unit || "kg" },
-      inputs: Array.isArray(initialInputs) ? JSON.parse(JSON.stringify(initialInputs)) : defaultInputs,
-      outputs: Array.isArray(initialOutputs) ? JSON.parse(JSON.stringify(initialOutputs)) : defaultOutputs,
+      name: (paletteItem && paletteItem.name) || name,
+      category: (paletteItem && paletteItem.category) || cat || "Custom processes & flows",
+      amount: (paletteItem && paletteItem.amount) || 1.0,
+      unit: (paletteItem && paletteItem.unit) || unit || "kg",
+      x: x !== null ? x : (60 + Math.random() * 80),
+      y: y !== null ? y : (80 + Math.random() * 180),
+      pos_x: x !== null ? x : (60 + Math.random() * 80),
+      pos_y: y !== null ? y : (80 + Math.random() * 180),
+      reference_flow: (paletteItem && paletteItem.reference_flow) || { name: name, amount: 1.0, unit: unit || "kg" },
+      inputs: nodeInputs,
+      outputs: nodeOutputs,
       _placedOnCanvas: true
     };
-    if (!state.canvasNodes) state.canvasNodes = [];
+
     state.canvasNodes.push(newNode);
-    syncSystemProcesses();
+
+    // Si el proceso es nuevo y no existía en el catálogo, registrarlo en la paleta una sola vez
+    if (!paletteItem) {
+      state.paletteProcesses.push({
+        id: newNode.id,
+        process_id: newNode.process_id,
+        name: newNode.name,
+        category: newNode.category,
+        unit: newNode.unit,
+        amount: newNode.amount,
+        inputs: JSON.parse(JSON.stringify(nodeInputs)),
+        outputs: JSON.parse(JSON.stringify(nodeOutputs))
+      });
+    }
+
+    inspectNode(newNode);
     renderCanvasStage();
     renderPaletteProcesses();
     if (state.canvasViewMode === "table") {
       renderCanvasTableView();
     }
     scheduleAutoSaveCanvas();
-    showNotification(`Process "${name}" added to canvas.`);
+    showNotification(`Proceso "${name}" agregado al lienzo.`);
   }
 
   // =========================================================================
@@ -10812,41 +10899,66 @@
       updateProcessMassBalance();
     },
     removeNode: (nodeId) => {
-      const targetId = String(nodeId);
+      const targetId = String(nodeId).trim();
       const cleanNumeric = targetId.replace(/\D/g, "");
 
       // 1. Localizar el nodo antes de retirarlo
-      const procs = getAllSystemProcesses();
-      const removedNode = procs.find((n) => {
+      const nodeIndex = (state.canvasNodes || []).findIndex((n) => {
         const nid = String(n.id);
-        const npid = String(n.process_id || "");
-        return nid === targetId || npid === targetId || (cleanNumeric && (nid === `node_${cleanNumeric}` || npid === cleanNumeric));
+        const npid = String(n.process_id !== undefined ? n.process_id : "");
+        return nid === targetId || npid === targetId ||
+               (cleanNumeric && (nid === cleanNumeric || nid === `node_${cleanNumeric}` || npid === cleanNumeric));
       });
 
-      if (removedNode) {
-        delete removedNode._placedOnCanvas;
+      let removedNode = null;
+      if (nodeIndex !== -1) {
+        removedNode = state.canvasNodes[nodeIndex];
+        state.canvasNodes.splice(nodeIndex, 1);
+      } else {
+        state.canvasNodes = (state.canvasNodes || []).filter((n) => {
+          const nid = String(n.id);
+          const npid = String(n.process_id !== undefined ? n.process_id : "");
+          const match = nid === targetId || npid === targetId ||
+                        (cleanNumeric && (nid === cleanNumeric || nid === `node_${cleanNumeric}` || npid === cleanNumeric));
+          if (match && !removedNode) removedNode = n;
+          return !match;
+        });
       }
 
-      // 2. Filtrar y quitar del lienzo
-      state.canvasNodes = (state.canvasNodes || []).filter((n) => {
-        const nid = String(n.id);
-        const npid = String(n.process_id || "");
-        return nid !== targetId && npid !== targetId && (!cleanNumeric || (nid !== `node_${cleanNumeric}` && npid !== cleanNumeric));
-      });
+      const removedId = removedNode ? String(removedNode.id) : targetId;
+      const removedPid = removedNode && removedNode.process_id !== undefined ? String(removedNode.process_id) : "";
+      const removedClean = (removedPid || removedId).replace(/\D/g, "") || cleanNumeric;
 
-      // 3. Quitar conexiones conectadas a este nodo
+      // 2. Desactivar flag _placedOnCanvas en la paleta si existe
+      if (state.paletteProcesses) {
+        state.paletteProcesses.forEach(p => {
+          const pid = String(p.id);
+          const ppid = String(p.process_id !== undefined ? p.process_id : "");
+          if (pid === removedId || pid === targetId || ppid === removedPid ||
+              (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean))) {
+            delete p._placedOnCanvas;
+          }
+        });
+      }
+
+      // 3. Quitar TODAS las conexiones conectadas a este nodo (sin excepciones)
       state.canvasEdges = (state.canvasEdges || []).filter((e) => {
         const ef = String(e.from);
         const et = String(e.to);
-        const esrc = String(e.source_process_id || "");
-        const etgt = String(e.target_process_id || "");
-        return ef !== targetId && et !== targetId && esrc !== targetId && etgt !== targetId &&
-               (!cleanNumeric || (ef !== `node_${cleanNumeric}` && et !== `node_${cleanNumeric}` && esrc !== cleanNumeric && etgt !== cleanNumeric));
+        const esrc = String(e.source_process_id !== undefined ? e.source_process_id : "");
+        const etgt = String(e.target_process_id !== undefined ? e.target_process_id : "");
+
+        const isSource = ef === removedId || ef === targetId || (removedPid && ef === removedPid) ||
+                         (removedClean && (ef === removedClean || ef === `node_${removedClean}` || esrc === removedClean));
+        const isTarget = et === removedId || et === targetId || (removedPid && et === removedPid) ||
+                         (removedClean && (et === removedClean || et === `node_${removedClean}` || etgt === removedClean));
+
+        return !isSource && !isTarget;
       });
 
       // 4. Restaurar orígenes de insumos dependientes a mercado global
       if (removedNode) {
-        getAllSystemProcesses().forEach(p => {
+        state.canvasNodes.forEach(p => {
           if (Array.isArray(p.inputs)) {
             p.inputs.forEach(inp => {
               if (inp.origin && (inp.origin === removedNode.name || inp.origin.includes(removedNode.name))) {
@@ -10857,11 +10969,18 @@
         });
       }
 
-      syncSystemProcesses();
-
-      if (!state.selectedNode || String(state.selectedNode.id) === targetId || String(state.selectedNode.process_id) === targetId || (cleanNumeric && (String(state.selectedNode.id).includes(cleanNumeric) || String(state.selectedNode.process_id) === cleanNumeric)) || state.canvasNodes.length === 0) {
-        inspectNode(null);
+      // 5. Limpiar inspector si el nodo retirado estaba seleccionado
+      if (state.selectedNode) {
+        const selId = String(state.selectedNode.id);
+        const selPid = String(state.selectedNode.process_id !== undefined ? state.selectedNode.process_id : "");
+        if (selId === removedId || selId === targetId || selPid === removedPid ||
+            (removedClean && (selId === removedClean || selId === `node_${removedClean}` || selPid === removedClean))) {
+          state.selectedNode = null;
+          inspectNode(null);
+        }
       }
+
+      // 6. Actualizar vistas inmediatamente
       renderCanvasEdges();
       renderPaletteProcesses();
       renderCanvasStage();
@@ -10869,7 +10988,7 @@
         renderCanvasTableView();
       }
       scheduleAutoSaveCanvas();
-      showNotification(removedNode ? `Proceso "${removedNode.name}" retirado del lienzo (disponible en catálogo).` : "Nodo retirado del lienzo.");
+      showNotification(removedNode ? `Proceso "${removedNode.name}" retirado del lienzo.` : "Nodo retirado del lienzo.");
     },
     addPaletteNode: (param1, cat, unit) => {
       const searchStr = String(param1);
@@ -10877,10 +10996,19 @@
       const found = procs.find(p => String(p.id) === searchStr || String(p.process_id) === searchStr);
       if (found) {
         found._placedOnCanvas = true;
-        if (!state.canvasNodes.some(n => String(n.id) === String(found.id) || String(n.process_id) === String(found.process_id))) {
-          state.canvasNodes.push(found);
+        const already = state.canvasNodes.find(n => String(n.id) === String(found.id) || String(n.process_id) === String(found.process_id));
+        if (!already) {
+          state.canvasNodes.push({
+            ...found,
+            id: found.id || `node_${found.process_id}`,
+            process_id: found.process_id,
+            x: 60 + Math.random() * 80,
+            y: 80 + Math.random() * 180,
+            pos_x: 60 + Math.random() * 80,
+            pos_y: 80 + Math.random() * 180,
+            _placedOnCanvas: true
+          });
         }
-        syncSystemProcesses();
         renderCanvasStage();
         renderPaletteProcesses();
         if (state.canvasViewMode === "table") {
