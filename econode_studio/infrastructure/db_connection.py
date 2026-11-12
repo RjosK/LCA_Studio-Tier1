@@ -63,7 +63,7 @@ class PostgresCursorProxy:
         has_returning = "RETURNING" in cleaned_query.upper()
         if is_insert and not has_returning:
             # Tablas con ID autoincremental en PostgreSQL
-            target_tables = ("product_systems", "custom_processes", "custom_flows", "custom_exchanges", "audit_comments", "documents")
+            target_tables = ("product_systems", "custom_processes", "custom_flows", "custom_exchanges", "audit_comments", "documents", "projects")
             if any(tbl in cleaned_query for tbl in target_tables):
                 cleaned_query += " RETURNING id"
 

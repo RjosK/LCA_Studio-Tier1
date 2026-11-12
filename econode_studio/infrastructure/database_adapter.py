@@ -242,9 +242,47 @@ def delete_user_custom_flow(conn: sqlite3.Connection, flow_id: Any) -> bool:
 
 
 def ensure_product_systems_columns(conn: Any):
-    """Garantiza la existencia de columnas de propietario, metadatos y proyectos en product_systems."""
+    """Garantiza la existencia de columnas de propietario, metadatos y proyectos en product_systems (SQLite y PostgreSQL)."""
     if getattr(settings, "IS_POSTGRES", False):
+        try:
+            with conn:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS projects (
+                        id BIGSERIAL PRIMARY KEY,
+                        code VARCHAR(64) NOT NULL UNIQUE,
+                        name VARCHAR(255) NOT NULL,
+                        description TEXT,
+                        category VARCHAR(128) DEFAULT 'General',
+                        owner_id TEXT DEFAULT 'analyst_carla',
+                        owner_email VARCHAR(255) DEFAULT 'carla.mendez@econode.io',
+                        owner_name VARCHAR(255) DEFAULT 'Carla Méndez',
+                        created_at TIMESTAMPTZ DEFAULT NOW(),
+                        updated_at TIMESTAMPTZ DEFAULT NOW()
+                    );
+                """)
+                pg_cols = [
+                    ("project_id", "BIGINT DEFAULT NULL"),
+                    ("owner_id", "TEXT DEFAULT 'analyst_carla'"),
+                    ("owner_email", "VARCHAR(255) DEFAULT 'carla.mendez@econode.io'"),
+                    ("owner_name", "VARCHAR(255) DEFAULT 'Carla Méndez'"),
+                    ("owner_role", "VARCHAR(32) DEFAULT 'analyst'"),
+                    ("owner_org", "VARCHAR(255) DEFAULT 'BioPack Industrial S.A. de C.V.'"),
+                    ("category", "VARCHAR(128) DEFAULT 'Polímeros'"),
+                    ("geography", "VARCHAR(64) DEFAULT '[MX]'"),
+                    ("status", "VARCHAR(64) DEFAULT 'in_audit'"),
+                    ("compliance_rate", "VARCHAR(32) DEFAULT '100.0%'"),
+                    ("collaborators_json", "TEXT DEFAULT '[]'"),
+                    ("parameters_json", "TEXT DEFAULT '{}'")
+                ]
+                for col_name, col_def in pg_cols:
+                    try:
+                        conn.execute(f"ALTER TABLE product_systems ADD COLUMN IF NOT EXISTS {col_name} {col_def};")
+                    except Exception:
+                        pass
+        except Exception as e:
+            pass
         return
+
     ensure_custom_tables_and_views(conn)
     try:
         conn.executescript("""
@@ -294,10 +332,7 @@ def list_product_systems(
     user_role: Optional[str] = None
 ) -> List[Dict[str, Any]]:
     """
-    Obtiene la lista de sistemas producto registrados con aislamiento multi-usuario:
-    - Las 3 cuentas oficiales colaborativas (Carla Méndez, Josué Arentería auditor, Elena Ramírez cliente)
-      tienen acceso compartido al modelo oficial SYS-PET-CIRCULAR-01 (ID 21).
-    - Nuevas cuentas registradas sólo ven sus propios sistemas producto creados (o lista vacía si aún no crean uno).
+    Obtiene la lista de sistemas producto registrados con aislamiento multi-usuario y resiliencia dual.
     """
     ensure_product_systems_columns(conn)
 
@@ -310,34 +345,8 @@ def list_product_systems(
     is_local_sqlite = not getattr(settings, "IS_POSTGRES", False)
     is_admin = clean_email in admin_emails or user_role == "admin"
 
-    # En modo local SQLite (Tier 1 Desktop Studio), para administradores o analistas:
-    # Garantizar que el usuario tenga acceso completo a todos los sistemas producto registrados
-    if (not clean_email and not clean_uid) or is_local_sqlite or is_admin:
-        query = """
-            SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
-                   coalesce(s.description, '') as description,
-                   s.owner_id, s.owner_email, s.owner_name, s.owner_role, s.owner_org,
-                   coalesce(s.category, 'General') as category,
-                   coalesce(s.geography, '[MX]') as geography,
-                   coalesce(s.status, 'draft') as status,
-                   coalesce(s.compliance_rate, '0.0%') as compliance_rate,
-                   coalesce(s.collaborators_json, '[]') as collaborators_json,
-                   s.project_id,
-                   pr.name as project_name,
-                   pr.code as project_code,
-                   p.name as reference_process_name,
-                   f.unit_symbol as reference_unit
-            FROM product_systems s
-            LEFT JOIN projects pr ON s.project_id = pr.id
-            LEFT JOIN processes p ON s.reference_process_id = p.id
-            LEFT JOIN flows f ON p.reference_flow_id = f.id
-            ORDER BY s.id DESC;
-        """
-        rows = conn.execute(query).fetchall()
-    else:
-        # Para cualquier analista o colaborador autenticado: aislamiento estricto
-        # Ningún proyecto de demostración ni de terceros se inyecta en su portafolio
-        query = """
+    # Consulta principal con JOIN a proyectos
+    query_full = """
         SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
                coalesce(s.description, '') as description,
                s.owner_id, s.owner_email, s.owner_name, s.owner_role, s.owner_org,
@@ -355,16 +364,71 @@ def list_product_systems(
         LEFT JOIN projects pr ON s.project_id = pr.id
         LEFT JOIN processes p ON s.reference_process_id = p.id
         LEFT JOIN flows f ON p.reference_flow_id = f.id
-        WHERE lower(s.owner_email) = ? OR lower(s.owner_id) = ? OR s.collaborators_json LIKE ?
-        ORDER BY s.id DESC;
-        """
-        email_like = f"%{clean_email}%" if clean_email else "%nomatch%"
-        rows = conn.execute(query, (clean_email, clean_uid, email_like)).fetchall()
+    """
+
+    # Consulta fallback sin JOIN a proyectos por si la tabla no está creada aún en Supabase
+    query_fallback = """
+        SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
+               coalesce(s.description, '') as description,
+               s.owner_id, s.owner_email, s.owner_name, s.owner_role, s.owner_org,
+               coalesce(s.category, 'General') as category,
+               coalesce(s.geography, '[MX]') as geography,
+               coalesce(s.status, 'draft') as status,
+               coalesce(s.compliance_rate, '0.0%') as compliance_rate,
+               coalesce(s.collaborators_json, '[]') as collaborators_json,
+               NULL as project_id,
+               NULL as project_name,
+               NULL as project_code,
+               p.name as reference_process_name,
+               f.unit_symbol as reference_unit
+        FROM product_systems s
+        LEFT JOIN processes p ON s.reference_process_id = p.id
+        LEFT JOIN flows f ON p.reference_flow_id = f.id
+    """
+
+    rows = []
+    # 1. Intentar consulta completa
+    try:
+        if (not clean_email and not clean_uid) or is_local_sqlite or is_admin:
+            rows = conn.execute(query_full + " ORDER BY s.id DESC;").fetchall()
+        else:
+            email_like = f"%{clean_email}%" if clean_email else "%nomatch%"
+            q = query_full + """
+                WHERE lower(coalesce(s.owner_email, '')) = ? 
+                   OR lower(coalesce(s.owner_id, '')) = ? 
+                   OR lower(coalesce(s.owner_name, '')) = ?
+                   OR lower(coalesce(s.owner_name, '')) LIKE ?
+                   OR s.collaborators_json LIKE ?
+                ORDER BY s.id DESC;
+            """
+            rows = conn.execute(q, (clean_email, clean_uid, clean_email, email_like, email_like)).fetchall()
+    except Exception as e:
+        # Fallback a consulta segura
+        try:
+            if (not clean_email and not clean_uid) or is_local_sqlite or is_admin:
+                rows = conn.execute(query_fallback + " ORDER BY s.id DESC;").fetchall()
+            else:
+                email_like = f"%{clean_email}%" if clean_email else "%nomatch%"
+                q = query_fallback + """
+                    WHERE lower(coalesce(s.owner_email, '')) = ? 
+                       OR lower(coalesce(s.owner_id, '')) = ? 
+                       OR lower(coalesce(s.owner_name, '')) = ?
+                       OR lower(coalesce(s.owner_name, '')) LIKE ?
+                       OR s.collaborators_json LIKE ?
+                    ORDER BY s.id DESC;
+                """
+                rows = conn.execute(q, (clean_email, clean_uid, clean_email, email_like, email_like)).fetchall()
+        except Exception as e2:
+            rows = []
 
     results = []
     for r in rows:
         sys_id = r["id"]
-        nodes_count = conn.execute("SELECT count(*) FROM product_system_nodes WHERE system_id = ?", (sys_id,)).fetchone()[0]
+        try:
+            nodes_count = conn.execute("SELECT count(*) FROM product_system_nodes WHERE system_id = ?", (sys_id,)).fetchone()[0]
+        except Exception:
+            nodes_count = 0
+
         collabs = []
         raw_c = r["collaborators_json"] if "collaborators_json" in r.keys() and r["collaborators_json"] else "[]"
         try:
@@ -385,6 +449,7 @@ def list_product_systems(
             "status": r["status"] if "status" in r.keys() and r["status"] else "draft",
             "compliance_rate": r["compliance_rate"] if "compliance_rate" in r.keys() and r["compliance_rate"] else "0.0%",
             "owner_id": r["owner_id"] if "owner_id" in r.keys() and r["owner_id"] else "analyst_carla",
+            "owner_email": r["owner_email"] if "owner_email" in r.keys() and r["owner_email"] else "",
             "owner_name": r["owner_name"] if "owner_name" in r.keys() and r["owner_name"] else "Carla Méndez",
             "owner_role": r["owner_role"] if "owner_role" in r.keys() and r["owner_role"] else "Analista de ACV",
             "owner_org": r["owner_org"] if "owner_org" in r.keys() and r["owner_org"] else "BioPack Industrial S.A. de C.V.",
@@ -562,50 +627,67 @@ def list_projects(
     is_local_sqlite = not getattr(settings, "IS_POSTGRES", False)
     is_admin = clean_email in admin_emails or user_role == "admin"
 
-    if (not clean_email and not clean_uid) or is_local_sqlite or is_admin:
-        query = """
-            SELECT pr.id, pr.code, pr.name, coalesce(pr.description, '') as description,
-                   coalesce(pr.category, 'General') as category,
-                   pr.owner_id, pr.owner_email, pr.owner_name, pr.created_at, pr.updated_at,
-                   (SELECT count(*) FROM product_systems WHERE project_id = pr.id) as systems_count
-            FROM projects pr
-            ORDER BY pr.id DESC;
-        """
-        rows = conn.execute(query).fetchall()
-    else:
-        query = """
-            SELECT pr.id, pr.code, pr.name, coalesce(pr.description, '') as description,
-                   coalesce(pr.category, 'General') as category,
-                   pr.owner_id, pr.owner_email, pr.owner_name, pr.created_at, pr.updated_at,
-                   (SELECT count(*) FROM product_systems WHERE project_id = pr.id) as systems_count
-            FROM projects pr
-            WHERE lower(pr.owner_email) = ? OR lower(pr.owner_id) = ?
-            ORDER BY pr.id DESC;
-        """
-        rows = conn.execute(query, (clean_email, clean_uid)).fetchall()
+    try:
+        if (not clean_email and not clean_uid) or is_local_sqlite or is_admin:
+            query = """
+                SELECT pr.id, pr.code, pr.name, coalesce(pr.description, '') as description,
+                       coalesce(pr.category, 'General') as category,
+                       pr.owner_id, pr.owner_email, pr.owner_name, pr.created_at, pr.updated_at,
+                       (SELECT count(*) FROM product_systems WHERE project_id = pr.id) as systems_count
+                FROM projects pr
+                ORDER BY pr.id DESC;
+            """
+            rows = conn.execute(query).fetchall()
+        else:
+            query = """
+                SELECT pr.id, pr.code, pr.name, coalesce(pr.description, '') as description,
+                       coalesce(pr.category, 'General') as category,
+                       pr.owner_id, pr.owner_email, pr.owner_name, pr.created_at, pr.updated_at,
+                       (SELECT count(*) FROM product_systems WHERE project_id = pr.id) as systems_count
+                FROM projects pr
+                WHERE lower(coalesce(pr.owner_email, '')) = ? 
+                   OR lower(coalesce(pr.owner_id, '')) = ?
+                   OR lower(coalesce(pr.owner_name, '')) = ?
+                ORDER BY pr.id DESC;
+            """
+            rows = conn.execute(query, (clean_email, clean_uid, clean_email)).fetchall()
 
-    return [dict(r) for r in rows]
+        return [dict(r) for r in rows]
+    except Exception:
+        return []
 
 def get_project_by_id(conn: sqlite3.Connection, project_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene un proyecto por su ID."""
     ensure_product_systems_columns(conn)
-    row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
-    return dict(row) if row else None
+    try:
+        row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
+        return dict(row) if row else None
+    except Exception:
+        return None
 
 def delete_project(conn: sqlite3.Connection, project_id: int) -> bool:
     """Elimina un proyecto y desasocia sus sistemas (quedando como independientes 'solitos')."""
     ensure_product_systems_columns(conn)
-    with conn:
-        conn.execute("UPDATE product_systems SET project_id = NULL WHERE project_id = ?;", (project_id,))
-        cur = conn.execute("DELETE FROM projects WHERE id = ?;", (project_id,))
-        return cur.rowcount > 0
+    try:
+        with conn:
+            try:
+                conn.execute("UPDATE product_systems SET project_id = NULL WHERE project_id = ?;", (project_id,))
+            except Exception:
+                pass
+            cur = conn.execute("DELETE FROM projects WHERE id = ?;", (project_id,))
+            return cur.rowcount > 0
+    except Exception:
+        return False
 
 def assign_system_to_project(conn: sqlite3.Connection, system_id: int, project_id: Optional[int]) -> bool:
     """Asigna o desasocia un sistema producto a un proyecto contenedor."""
     ensure_product_systems_columns(conn)
-    with conn:
-        cur = conn.execute("UPDATE product_systems SET project_id = ? WHERE id = ?;", (project_id, system_id))
-        return cur.rowcount > 0
+    try:
+        with conn:
+            cur = conn.execute("UPDATE product_systems SET project_id = ? WHERE id = ?;", (project_id, system_id))
+            return cur.rowcount > 0
+    except Exception:
+        return False
 
 def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Optional[Dict[str, Any]]:
     """Obtiene un sistema producto con sus nodos y enlaces."""

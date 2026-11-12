@@ -723,9 +723,12 @@
       const cached = localStorage.getItem("econode_cached_systems");
       if (cached && (!state.systems || state.systems.length === 0)) {
         try {
-          state.systems = JSON.parse(cached);
-          renderDashboardTable();
-          renderDashboardKpis();
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            state.systems = parsed;
+            renderDashboardTable();
+            renderDashboardKpis();
+          }
         } catch(e) {}
       } else if (!state.systems || state.systems.length === 0) {
         const tbody = document.getElementById("tableSystemsBody");
@@ -734,14 +737,42 @@
         }
       }
 
-      // 2. Traer versión fresca del servidor (sistemas y proyectos)
-      const [res, projRes] = await Promise.all([
-        api.getSystems().catch(e => ({ items: [] })),
-        api.getProjects().catch(e => ({ items: [] }))
-      ]);
-      state.systems = res.items || [];
-      state.projects = projRes.items || [];
-      try { localStorage.setItem("econode_cached_systems", JSON.stringify(state.systems)); } catch(e) {}
+      // 2. Traer versión fresca del servidor (sistemas y proyectos) con protección contra wiping
+      let freshSystems = null;
+      let freshProjects = null;
+      try {
+        const [res, projRes] = await Promise.all([
+          api.getSystems(),
+          api.getProjects().catch(() => ({ items: [] }))
+        ]);
+        if (res && Array.isArray(res.items)) {
+          freshSystems = res.items;
+        }
+        if (projRes && Array.isArray(projRes.items)) {
+          freshProjects = projRes.items;
+        }
+      } catch (fetchErr) {
+        console.warn("No se pudo obtener versión fresca del portafolio desde el servidor:", fetchErr);
+      }
+
+      if (freshSystems !== null) {
+        state.systems = freshSystems;
+        try { localStorage.setItem("econode_cached_systems", JSON.stringify(freshSystems)); } catch(e) {}
+      } else if (!state.systems || state.systems.length === 0) {
+        const fallback = localStorage.getItem("econode_cached_systems");
+        if (fallback) {
+          try {
+            const p = JSON.parse(fallback);
+            if (Array.isArray(p)) state.systems = p;
+          } catch(e) {}
+        }
+      }
+
+      if (freshProjects !== null) {
+        state.projects = freshProjects;
+        try { localStorage.setItem("econode_cached_projects", JSON.stringify(freshProjects)); } catch(e) {}
+      }
+
       updateProjectSelectOptions();
 
       // Si no hay un sistema activo seleccionado explícitamente, mantener el título neutral
