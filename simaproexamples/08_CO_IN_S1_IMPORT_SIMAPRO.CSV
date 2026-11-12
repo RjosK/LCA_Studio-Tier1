@@ -1,0 +1,270 @@
+{SimaPro 10.2.0.0}
+{processes}
+{Date: 8/11/2025}
+{Time: 1:39:42 PM}
+{Project: ESG Training}
+{CSV Format version: 9.0.0}
+{CSV separator: Semicolon}
+{Decimal separator: .}
+{Date separator: /}
+{Short date format: M/d/yyyy}
+{Export platform IDs: No}
+{Skip empty fields: No}
+{Convert expressions to constants: No}
+{Selection: Selection (1)}
+{Related objects (system descriptions
+{Include sub product stages and processes: No}
+{Skip unused parameters: No}
+{Open project: 'ESG Training'}
+{Library 'Ecoinvent 3 - allocation
+{Library 'Methods'}
+
+Process
+
+Category type
+material
+
+Process identifier
+EarthSh1000060353700206
+
+Type
+
+
+Process name
+
+
+Status
+
+
+Time period
+Unspecified
+
+Geography
+Unspecified
+
+Technology
+Unspecified
+
+Representativeness
+Unspecified
+
+Multiple output allocation
+Unspecified
+
+Substitution allocation
+Unspecified
+
+Cut off rules
+Unspecified
+
+Capital goods
+Unspecified
+
+Boundary with nature
+Unspecified
+
+Infrastructure
+No
+
+Date
+8/9/2025
+
+Record
+
+
+Generator
+
+
+External documents
+
+
+Literature references
+
+
+Collection method
+
+
+Data treatment
+
+
+Verification
+
+
+Comment
+
+
+Allocation rules
+
+
+System description
+
+
+Products
+08_CO_IN_S1;kg;1;100;not defined;1 TRAINING\CottonEoL;
+
+Avoided products
+
+Resources
+Transformation, from grassland/pasture/meadow;land;m2;0.00000078647;Undefined;0;0;0;RES, 1;
+Occupation, construction site;land;m2a;0.0000031677;Undefined;0;0;0;RES, 2;
+Transformation, to dump site;land;m2;0.00000063355;Undefined;0;0;0;RES, 3;
+Occupation, dump site;land;m2a;0.000019006;Undefined;0;0;0;RES, 4;
+Transformation, from dump site;land;m2;0.00000063355;Undefined;0;0;0;RES, 5;
+Transformation, to shrub land, sclerophyllous;land;m2;0.00000063355;Undefined;0;0;0;RES, 6;
+Occupation, shrub land, sclerophyllous;land;m2a;0.0000031677;Undefined;0;0;0;RES, 7;
+Transformation, from shrub land, sclerophyllous;land;m2;0.00000063355;Undefined;0;0;0;RES, 8;
+Transformation, to forest, intensive;land;m2;0.00000063355;Undefined;0;0;0;RES, 9;
+Transformation, to traffic area, road network;land;m2;0.00000015292;Undefined;0;0;0;RES, 10;
+Occupation, traffic area, road network;land;m2a;0.00001412;Undefined;0;0;0;RES, 11;
+Transformation, from traffic area, road network;land;m2;0.00000015292;Undefined;0;0;0;RES, 12;
+Transformation, to grassland/pasture/meadow, CH;land;m2;0.00000015292;Undefined;0;0;0;RES, 13;
+Oxygen;in air;kg;2.2451;Undefined;0;0;0;RES, 18;
+
+Materials/fuels
+Water, decarbonised {RoW}| market for water, decarbonised | Cut-off, U;kg;0.133;Undefined;0;0;0;MATERIAL/FUEL, 1;
+Sodium hydroxide, without water, in 50% solution state {RoW}| market for sodium hydroxide, without water, in 50% solution state | Cut-off, U;kg;0.000082017;Undefined;0;0;0;MATERIAL/FUEL, 2;
+Hydrochloric acid, without water, in 30% solution state {RoW}| market for hydrochloric acid, without water, in 30% solution state | Cut-off, U;kg;0.000056958;Undefined;0;0;0;MATERIAL/FUEL, 3;
+Iron(III) chloride, without water, in 40% solution state {RoW}| iron(III) chloride production, product in 40% solution state | Cut-off, U;kg;0.00000043457;Undefined;0;0;0;MATERIAL/FUEL, 4;
+Triazine-compound {RER}| triazine-compound production | Cut-off, U;kg;0.0000000091461;Undefined;0;0;0;MATERIAL/FUEL, 6;
+Chemical, inorganic {GLO}| chemical production, inorganic | Cut-off, U;kg;0.000011219;Undefined;0;0;0;MATERIAL/FUEL, 7;
+Cement, unspecified {RoW}| market for cement, unspecified | Cut-off, U;kg;0.00090049;Undefined;0;0;0;MATERIAL/FUEL, 8;
+Transport, freight, train, fleet average {GLO}| market group for transport, freight, train, fleet average | Cut-off, U;tkm;0.0030338;Undefined;0;0;0;MATERIAL/FUEL, 9;
+Transport, freight, lorry, 16-32 metric ton, diesel, EURO 5 {RoW}| transport, freight, lorry, 16-32 metric ton, diesel, EURO 5 | Cut-off, U;tkm;0.0045153;Undefined;0;0;0;MATERIAL/FUEL, 10;
+Ammonia, anhydrous, liquid {RoW}| market for ammonia, anhydrous, liquid | Cut-off, U;kg;0.00057281;Undefined;0;0;0;MATERIAL/FUEL, 11;
+Heat, district or industrial, natural gas {RoW}| heat production, natural gas, at industrial furnace low-NOx >100kW | Cut-off, U;MJ;0.09637;Undefined;0;0;0;MATERIAL/FUEL, 12;
+Titanium dioxide {RER}| market for titanium dioxide | Cut-off, U;kg;0.000032299;Undefined;0;0;0;MATERIAL/FUEL, 13;
+Chromium trioxide, flakes {GLO}| market for chromium trioxide, flakes | Cut-off, U;kg;0.00000065916;Undefined;0;0;0;MATERIAL/FUEL, 14;
+Hydrogen peroxide, without water, in 50% solution state {RoW}| hydrogen peroxide production, product in 50% solution state | Cut-off, U;kg;0.00013746;Undefined;0;0;0;MATERIAL/FUEL, 15;
+Excavation, hydraulic digger {RoW}| excavation, hydraulic digger | Cut-off, U;m3;0.0000039611;Undefined;0;0;0;MATERIAL/FUEL, 17;
+Excavation, skid-steer loader {RoW}| excavation, skid-steer loader | Cut-off, U;m3;0.0000039611;Undefined;0;0;0;MATERIAL/FUEL, 18;
+Diesel, burned in building machine {GLO}| diesel, burned in building machine | Cut-off, U;MJ;0.0004335;Undefined;0;0;0;MATERIAL/FUEL, 19;
+Gravel, round {RoW}| market for gravel, round | Cut-off, U;kg;0.0013514;Undefined;0;0;0;MATERIAL/FUEL, 20;
+Bitumen seal {RER}| bitumen seal production | Cut-off, U;kg;0.0000057345;Undefined;0;0;0;MATERIAL/FUEL, 21;
+Concrete, normal strength {RoW}| concrete, all types to generic market for concrete, normal strength | Cut-off, U;m3;0.0000000021389;Undefined;0;0;0;MATERIAL/FUEL, 22;
+Polyethylene, high density, granulate {RoW}| polyethylene production, high density, granulate | Cut-off, U;kg;0.0000034325;Undefined;0;0;0;MATERIAL/FUEL, 23;
+Extrusion, plastic pipes {RoW}| extrusion, plastic pipes | Cut-off, U;kg;0.0000013882;Undefined;0;0;0;MATERIAL/FUEL, 24;
+Reinforcing steel {RoW}| reinforcing steel production | Cut-off, U;kg;0.00000013346;Undefined;0;0;0;MATERIAL/FUEL, 25;
+Steel, chromium steel 18/8 {GLO}| market for steel, chromium steel 18/8 | Cut-off, U;kg;0.000000046315;Undefined;0;0;0;MATERIAL/FUEL, 26;
+Cast iron {RER}| cast iron production | Cut-off, U;kg;0.000000022548;Undefined;0;0;0;MATERIAL/FUEL, 27;
+Polyvinylchloride, flexible, pellets, recycled {RER}| market for polyvinylchloride, flexible, pellets, recycled | Cut-off, U;kg;0.0000000036565;Undefined;0;0;0;MATERIAL/FUEL, 28;
+Polypropylene, granulate {RoW}| polypropylene production, granulate | Cut-off, U;kg;0.0000000036565;Undefined;0;0;0;MATERIAL/FUEL, 29;
+Synthetic rubber {RoW}| synthetic rubber production | Cut-off, U;kg;0.0000000012188;Undefined;0;0;0;MATERIAL/FUEL, 30;
+Sand {RoW}| market for sand | Cut-off, U;kg;0.0000010238;Undefined;0;0;0;MATERIAL/FUEL, 31;
+Tap water {RoW}| market for tap water | Cut-off, U;kg;0.000028439;Undefined;0;0;0;MATERIAL/FUEL, 32;
+Municipal waste incineration facility {GLO}| market for municipal waste incineration facility | Cut-off, U;unit;0.00000000025;Undefined;0;0;0;MATERIAL/FUEL, 42;
+
+Electricity/heat
+Electricity, low voltage {GLO}| market group for electricity, low voltage | Cut-off, U;kWh;0.0000001329;Undefined;0;0;0;ENERGY/HEAT, 1;
+Heat, central or small-scale, other than natural gas {RoW}| heat production, light fuel oil, at boiler 10kW, non-modulating | Cut-off, U;MJ;0.000014267;Undefined;0;0;0;ENERGY/HEAT, 2;
+
+Emissions to air
+NMVOC, non-methane volatile organic compounds;high. pop.;kg;0.0000015195;Undefined;0;0;0;AIR, 31;
+Carbon monoxide, biogenic;high. pop.;kg;0.00005712;Undefined;0;0;0;AIR, 32;
+Carbon dioxide, biogenic;high. pop.;kg;1.5152;Undefined;0;0;0;AIR, 34;
+Methane, biogenic;high. pop.;kg;0.00000051095;Undefined;0;0;0;AIR, 36;
+Particulates, < 2.5 um;high. pop.;kg;0.0000040118;Undefined;0;0;0;AIR, 38;
+Particulates, > 2.5 um, and < 10um;high. pop.;kg;0.00000002016;Undefined;0;0;0;AIR, 39;
+Dioxin, 2,3,7,8 Tetrachlorodibenzo-p-;high. pop.;kg;0.0000000000040925;Undefined;0;0;0;AIR, 40;
+Benzene;high. pop.;kg;0.000000034063;Undefined;0;0;0;AIR, 41;
+Toluene;high. pop.;kg;0.000000068127;Undefined;0;0;0;AIR, 42;
+Benzene, pentachloro-;high. pop.;kg;0.000000000186;Undefined;0;0;0;AIR, 43;
+Benzene, hexachloro-;high. pop.;kg;0.000000000073825;Undefined;0;0;0;AIR, 44;
+Phenol, pentachloro-;high. pop.;kg;0.000000000017505;Undefined;0;0;0;AIR, 45;
+Benzo(a)pyrene;high. pop.;kg;0.00000000000076926;Undefined;0;0;0;AIR, 46;
+Nitrogen oxides;high. pop.;kg;0.00038837;Undefined;0;0;0;AIR, 47;
+Ammonia;high. pop.;kg;0.00000060946;Undefined;0;0;0;AIR, 48;
+Dinitrogen monoxide;high. pop.;kg;0.000028223;Undefined;0;0;0;AIR, 49;
+Cyanide;high. pop.;kg;0.0000062403;Undefined;0;0;0;AIR, 50;
+Barium (II);high. pop.;kg;0.000000028665;Undefined;0;0;0;AIR, 51;
+Cadmium (II);high. pop.;kg;0.00000000003293;Undefined;0;0;0;AIR, 52;
+Copper, ion;high. pop.;kg;0.000000000094332;Undefined;0;0;0;AIR, 53;
+Manganese (II);high. pop.;kg;0.00000000002861;Undefined;0;0;0;AIR, 54;
+Lead (II);high. pop.;kg;0.00000000019284;Undefined;0;0;0;AIR, 55;
+Zinc (II);high. pop.;kg;0.0000000070288;Undefined;0;0;0;AIR, 56;
+Strontium (II);high. pop.;kg;0.000000000067414;Undefined;0;0;0;AIR, 57;
+Iron (II);high. pop.;kg;0.000000000018458;Undefined;0;0;0;AIR, 58;
+Calcium (II);high. pop.;kg;0.0000024397;Undefined;0;0;0;AIR, 59;
+Aluminium;high. pop.;kg;0.000000000021375;Undefined;0;0;0;AIR, 60;
+Potassium (I);high. pop.;kg;0.000014336;Undefined;0;0;0;AIR, 61;
+Magnesium;high. pop.;kg;0.000000041479;Undefined;0;0;0;AIR, 62;
+Sodium (I);high. pop.;kg;0.00000031979;Undefined;0;0;0;AIR, 63;
+Heat, waste;high. pop.;MJ;11.963;Undefined;0;0;0;AIR, 64;
+Water;high. pop.;kg;0.00061642;Undefined;0;0;0;AIR, 71;
+Sulfur dioxide;high. pop.;kg;0.0000012944;Undefined;0;0;0;AIR, 79;
+
+Emissions to water
+BOD5 (Biological Oxygen Demand), CH;river;kg;0.0003177;Undefined;0;0;0;WATER, 1;
+COD (Chemical Oxygen Demand), CH;river;kg;0.0003571;Undefined;0;0;0;WATER, 2;
+TOC, Total Organic Carbon;river;kg;0.00014765;Undefined;0;0;0;WATER, 3;
+DOC, Dissolved Organic Carbon;river;kg;0.00014765;Undefined;0;0;0;WATER, 4;
+Nitrate;river;kg;0.000029385;Undefined;0;0;0;WATER, 5;
+Barium (II);river;kg;0.0000000038302;Undefined;0;0;0;WATER, 6;
+Cadmium (II);river;kg;0.00000000001576;Undefined;0;0;0;WATER, 7;
+Copper, ion;river;kg;0.00000000014729;Undefined;0;0;0;WATER, 8;
+Manganese (II);river;kg;0.000000000023973;Undefined;0;0;0;WATER, 9;
+Lead (II);river;kg;0.00000000015484;Undefined;0;0;0;WATER, 10;
+Zinc (II);river;kg;0.00000000061663;Undefined;0;0;0;WATER, 11;
+Iron (II);river;kg;0.0000000021546;Undefined;0;0;0;WATER, 12;
+Iron, ion;river;kg;0.00000000018927;Undefined;0;0;0;WATER, 13;
+Calcium (II);river;kg;0.0000062656;Undefined;0;0;0;WATER, 14;
+Aluminium;river;kg;0.0000000030707;Undefined;0;0;0;WATER, 15;
+Potassium (I);river;kg;0.00089226;Undefined;0;0;0;WATER, 16;
+Magnesium;river;kg;0.00000027825;Undefined;0;0;0;WATER, 17;
+COD (Chemical Oxygen Demand), CH;groundwater, long-term;kg;0.0085891;Undefined;0;0;0;WATER, 20;
+TOC, Total Organic Carbon;groundwater, long-term;kg;0.0023332;Undefined;0;0;0;WATER, 21;
+DOC, Dissolved Organic Carbon;groundwater, long-term;kg;0.0023332;Undefined;0;0;0;WATER, 22;
+Nitrate;groundwater, long-term;kg;0.000065486;Undefined;0;0;0;WATER, 26;
+Barium (II);groundwater, long-term;kg;0.0000055415;Undefined;0;0;0;WATER, 27;
+Cadmium (II);groundwater, long-term;kg;0.000000010816;Undefined;0;0;0;WATER, 28;
+Copper, ion;groundwater, long-term;kg;0.00000097212;Undefined;0;0;0;WATER, 29;
+Manganese (II);groundwater, long-term;kg;0.00000011935;Undefined;0;0;0;WATER, 30;
+Lead (II);groundwater, long-term;kg;0.0000016489;Undefined;0;0;0;WATER, 31;
+Zinc (II);groundwater, long-term;kg;0.0000047137;Undefined;0;0;0;WATER, 32;
+Strontium (II);groundwater, long-term;kg;0.00000067162;Undefined;0;0;0;WATER, 33;
+Iron, ion;groundwater, long-term;kg;0.0000058357;Undefined;0;0;0;WATER, 34;
+Calcium (II);groundwater, long-term;kg;0.00026465;Undefined;0;0;0;WATER, 35;
+Aluminium;groundwater, long-term;kg;0.000024866;Undefined;0;0;0;WATER, 36;
+Potassium (I);groundwater, long-term;kg;0.0019766;Undefined;0;0;0;WATER, 37;
+Magnesium;groundwater, long-term;kg;0.000036893;Undefined;0;0;0;WATER, 38;
+Sodium (I);groundwater, long-term;kg;0.000025614;Undefined;0;0;0;WATER, 39;
+Heat, waste;river;MJ;2.8606;Undefined;0;0;0;WATER, 40;
+Water;river;kg;0.000044596;Undefined;0;0;0;WATER, 41;
+Sulfate;river;kg;0.00007182;Undefined;0;0;0;WATER, 42;
+Sulfate;groundwater, long-term;kg;0.00026894;Undefined;0;0;0;WATER, 48;
+
+Emissions to soil
+
+Final waste flows
+Waste mass, total, placed in landfill;(unspecified);kg;0.015429;Undefined;0;0;0;FWF, 1;
+Organic carbon, placed in landfill;(unspecified);kg;0.002347;Undefined;0;0;0;FWF, 2;
+
+Non material emissions
+
+Social issues
+
+Economic issues
+
+Waste to treatment
+Waste cement, hydrated {RoW}| treatment of waste cement, hydrated, residual material landfill | Cut-off, U;kg;0.0022512;Undefined;0;0;0;WASTE, 2;
+
+Input parameters
+
+Calculated parameters
+
+End
+
+Database Input parameters
+
+End
+
+Database Calculated parameters
+
+End
+
+Project Input parameters
+
+End
+
+Project Calculated parameters
+
+End

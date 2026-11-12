@@ -59,5 +59,11 @@ from .exporters_adapter import (
     export_lci_consolidated_csv,
     export_expediente_nom070_zip
 )
+from .simapro_adapter import (
+    is_simapro_csv,
+    parse_simapro_csv,
+    simapro_process_to_econode_node,
+    serialize_econode_to_simapro_csv
+)
 from .google_oauth_adapter import verify_google_id_token, get_configured_client_id, resolve_role_for_email
 from .crypto_signer import compute_model_sha256, sign_audit_dossier

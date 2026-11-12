@@ -185,6 +185,7 @@
       return api.post("/api/systems/create", payload);
     },
     importCsv: (csvStr) => api.post("/api/systems/import-csv", { csv: csvStr }),
+    importSimaProToSystem: (sysId, csvStr) => api.post(`/api/systems/${sysId}/import-simapro`, { csv: csvStr }),
 
     // Catalog LCI
     searchCatalog: (q = "", categoryId = null, limit = 50, source = "all") => {
@@ -9599,6 +9600,39 @@
       inputSearch.addEventListener("input", () => renderDashboardTable());
     }
 
+    // Importar SimaPro CSV desde el Dashboard
+    const btnDashImpSimaPro = document.getElementById("btnDashImportSimaPro");
+    const inputDashSimaPro = document.getElementById("inputDashSimaProFile");
+    if (btnDashImpSimaPro && inputDashSimaPro) {
+      btnDashImpSimaPro.addEventListener("click", () => inputDashSimaPro.click());
+      inputDashSimaPro.addEventListener("change", async (e) => {
+        if (!e.target.files || !e.target.files[0]) return;
+        const file = e.target.files[0];
+        try {
+          const fileContent = await file.text();
+          if (window.EconodeDrive && window.EconodeDrive.hasToken()) {
+            try {
+              const cleanName = file.name.replace(/\.[^/.]+$/, "");
+              await window.EconodeDrive.uploadSimaProFile(cleanName, "SIMAPRO", file.name, fileContent);
+              showNotification("Archivo CSV respaldado en Google Drive.");
+            } catch (driveErr) {
+              console.warn("Respaldo Google Drive omitido:", driveErr);
+            }
+          }
+          const res = await api.importCsv(fileContent);
+          showNotification(res.message || "Importacion SimaPro completada exitosamente.");
+          await loadDashboard();
+          if (res.systems_created && res.systems_created.length > 0) {
+            await openSystem(res.systems_created[0]);
+          }
+        } catch (err) {
+          alert("Error al importar SimaPro CSV: " + err.message);
+        } finally {
+          inputDashSimaPro.value = "";
+        }
+      });
+    }
+
     // Canvas Botones & Modos Sankey
     const btnBack = document.getElementById("btnBackToDashboard");
     if (btnBack) btnBack.addEventListener("click", () => showView("dashboard"));
@@ -9895,9 +9929,23 @@
       });
     }
     if (btnExpSimaPro) {
-      btnExpSimaPro.addEventListener("click", () => {
+      btnExpSimaPro.addEventListener("click", async () => {
         if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/simapro${getAuthTokenQuery()}`;
+        const sysId = getSysId();
+        window.location.href = `/api/systems/${sysId}/export/simapro${getAuthTokenQuery()}`;
+        if (window.EconodeDrive && window.EconodeDrive.hasToken() && state.activeSystem) {
+          try {
+            const resp = await fetch(`/api/systems/${sysId}/export/simapro${getAuthTokenQuery()}`);
+            if (resp.ok) {
+              const csvText = await resp.text();
+              const fileName = `SimaPro_System_${sysId}_export.csv`;
+              await window.EconodeDrive.uploadSimaProFile(state.activeSystem.name || "Sistema", state.activeSystem.code || "SIMAPRO", fileName, csvText);
+              showNotification("Exportacion SimaPro respaldada en Google Drive.");
+            }
+          } catch (e) {
+            console.warn("Respaldo exportacion SimaPro a Drive omitido:", e);
+          }
+        }
       });
     }
     if (btnExpLciCsv) {
@@ -9998,6 +10046,41 @@
     const btnPaletteBlank = document.getElementById("btnPaletteCreateBlank");
     if (btnPaletteBlank) {
       btnPaletteBlank.addEventListener("click", () => openProcessEditor(null));
+    }
+
+    // Importar SimaPro CSV a este lienzo
+    const btnPalImpSimaPro = document.getElementById("btnPaletteImportSimaPro");
+    const inputPalSimaPro = document.getElementById("inputPaletteSimaProFile");
+    if (btnPalImpSimaPro && inputPalSimaPro) {
+      btnPalImpSimaPro.addEventListener("click", () => inputPalSimaPro.click());
+      inputPalSimaPro.addEventListener("change", async (e) => {
+        if (!e.target.files || !e.target.files[0]) return;
+        const file = e.target.files[0];
+        const sysId = state.activeSystem ? state.activeSystem.id : null;
+        if (!sysId) {
+          alert("Debes tener un sistema producto activo para importar procesos a este lienzo.");
+          inputPalSimaPro.value = "";
+          return;
+        }
+        try {
+          const fileContent = await file.text();
+          if (window.EconodeDrive && window.EconodeDrive.hasToken()) {
+            try {
+              await window.EconodeDrive.uploadSimaProFile(state.activeSystem.name || "Sistema", state.activeSystem.code || "SIMAPRO", file.name, fileContent);
+              showNotification("Archivo CSV respaldado en Google Drive.");
+            } catch (driveErr) {
+              console.warn("Respaldo Google Drive omitido:", driveErr);
+            }
+          }
+          const res = await api.importSimaProToSystem(sysId, fileContent);
+          showNotification(res.message || "Procesos SimaPro incorporados al lienzo exitosamente.");
+          await openSystem(sysId, false);
+        } catch (err) {
+          alert("Error al importar SimaPro a este lienzo: " + err.message);
+        } finally {
+          inputPalSimaPro.value = "";
+        }
+      });
     }
 
     // Cierre de modales con tecla Escape y eliminación de nodo seleccionado con Delete/Backspace

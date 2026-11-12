@@ -37,6 +37,7 @@ from application import (
     get_dashboard_systems_use_case,
     create_system_wizard_use_case,
     import_systems_csv_use_case,
+    import_simapro_to_system_use_case,
     get_system_canvas_use_case,
     save_system_canvas_use_case,
     delete_product_system_use_case,
@@ -533,8 +534,8 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self.wfile.write(zip_bytes)
                     elif fmt in ("simapro", "simapro_csv"):
                         csv_txt = export_simapro_csv(conn, sys_id)
-                        csv_b = csv_txt.encode("utf-8")
-                        self._set_headers(200, "text/csv", {
+                        csv_b = ("\ufeff" + csv_txt).encode("utf-8")
+                        self._set_headers(200, "text/csv; charset=utf-8", {
                             "Content-Disposition": f'attachment; filename="SimaPro_System_{sys_id}.csv"',
                             "Content-Length": str(len(csv_b))
                         })
@@ -708,6 +709,20 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         csv_str = DEFAULT_TEMPLATE_CSV
                 try:
                     res = import_systems_csv_use_case(conn, csv_str, user=user)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Import SimaPro Process to Existing System Canvas
+            elif path.startswith("/api/systems/") and path.endswith("/import-simapro"):
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                sys_id = int(path.split("/")[3])
+                csv_str = body.get("csv", "")
+                try:
+                    res = import_simapro_to_system_use_case(conn, sys_id, csv_str, user=user)
                     self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)

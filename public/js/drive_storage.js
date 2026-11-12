@@ -412,6 +412,60 @@
     }
   }
 
+  /**
+   * Sube un archivo CSV de SimaPro como respaldo a la carpeta del proyecto en Google Drive.
+   * 
+   * @param {string} projectName - Nombre del sistema producto
+   * @param {string} projectCode - Codigo o SKU del sistema
+   * @param {string} fileName - Nombre del archivo CSV
+   * @param {string|Blob} csvContent - Contenido del CSV o archivo Blob
+   */
+  async function uploadSimaProFile(projectName, projectCode, fileName, csvContent) {
+    const proj = await createProjectFolder(projectName, projectCode);
+    const token = await getAccessToken();
+
+    const metadata = {
+      name: fileName,
+      mimeType: "text/csv",
+      parents: [proj.folderId],
+      description: "Archivo de intercambio SimaPro CSV respaldado en Google Drive por ECONODE Studio"
+    };
+
+    const boundary = "-------314159265358979323846";
+    const d = "\r\n--" + boundary + "\r\n";
+    const cd = "\r\n--" + boundary + "--";
+
+    const metaHeader = d + "Content-Type: application/json; charset=UTF-8\r\n\r\n" + JSON.stringify(metadata);
+    const fileHeader = d + "Content-Type: text/csv; charset=UTF-8\r\n\r\n";
+
+    const blobContent = typeof csvContent === "string" ? new Blob([csvContent], { type: "text/csv; charset=utf-8" }) : csvContent;
+
+    const multipartRequestBody = new Blob([
+      metaHeader,
+      fileHeader,
+      blobContent,
+      cd
+    ], { type: "multipart/related; boundary=" + boundary });
+
+    const res = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,size", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + token
+      },
+      body: multipartRequestBody
+    });
+
+    if (!res.ok) {
+      let errText = "Error al subir CSV de SimaPro a Google Drive (" + res.status + ")";
+      try {
+        const errJson = await res.json();
+        errText = errJson?.error?.message || errText;
+      } catch (e) {}
+      throw new Error(errText);
+    }
+    return await res.json();
+  }
+
   // Exportar API global
   window.EconodeDrive = {
     hasToken,
@@ -423,6 +477,7 @@
     loadProjectModel,
     shareProjectFolder,
     uploadEvidenceFile,
+    uploadSimaProFile,
     listProjects
   };
 

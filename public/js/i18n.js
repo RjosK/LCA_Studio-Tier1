@@ -143,6 +143,7 @@ const I18N_DICTIONARY = {
  "dash.title": "Portafolio de Sistemas Producto",
  "dash.subtitle": "Modelos de ciclo de vida activos, balances de masa y estado de verificación normativa",
  "dash.import_btn": " Importar CSV / openLCA",
+ "dash.btn_import_simapro": "+ Importar SimaPro",
  "dash.new_btn": "+ Nuevo Sistema Producto",
  "dash.kpi_systems": "Sistemas Producto Activos",
  "dash.kpi_systems_sub": "2 en auditoría · 1 verificado · 1 borrador",
@@ -407,7 +408,11 @@ const I18N_DICTIONARY = {
  "canvas.export_model": "Exportar Modelo",
  "canvas.export_dropdown_title": "Exportar modelo a formatos industriales",
  "canvas.export_lci_csv": "LCI Consolidado",
- "canvas.create_blank": "+ Crear Proceso en Blanco",
+ "canvas.create_blank": "+ En Blanco",
+ "canvas.import_simapro": "+ SimaPro CSV",
+ "simapro.import_success": "Importacion SimaPro completada exitosamente.",
+ "simapro.import_canvas_success": "Procesos SimaPro incorporados al lienzo exitosamente.",
+ "simapro.drive_backup_success": "Archivo CSV respaldado en Google Drive.",
 
  // Exportaciones Industriales
  "export.openlca": "openLCA ",
@@ -678,6 +683,7 @@ const I18N_DICTIONARY = {
  "dash.title": "Product System Portfolio",
  "dash.subtitle": "Active life cycle models, mass balances and normative verification status",
  "dash.import_btn": " Import CSV / openLCA",
+ "dash.btn_import_simapro": "+ Import SimaPro",
  "dash.new_btn": "+ New Product System",
  "dash.kpi_systems": "Active Product Systems",
  "dash.kpi_systems_sub": "2 under audit · 1 verified · 1 draft",
@@ -942,7 +948,11 @@ const I18N_DICTIONARY = {
  "canvas.export_model": "Export Model",
  "canvas.export_dropdown_title": "Export model to industrial formats",
  "canvas.export_lci_csv": "Consolidated LCI",
- "canvas.create_blank": "+ Create Blank Process",
+ "canvas.create_blank": "+ Blank",
+ "canvas.import_simapro": "+ SimaPro CSV",
+ "simapro.import_success": "SimaPro import completed successfully.",
+ "simapro.import_canvas_success": "SimaPro processes added to canvas successfully.",
+ "simapro.drive_backup_success": "CSV file backed up to Google Drive.",
 
  // Industrial Exports
  "export.openlca": "openLCA ",

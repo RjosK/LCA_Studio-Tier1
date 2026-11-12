@@ -19,6 +19,7 @@ ecoinvent_cutoff.db
 *.db-journal
 *.db-wal
 *.db-shm
+econode_studio/data/econode_dev.db
 
 # Bóveda temporal local
 econode_studio/data/documents/*

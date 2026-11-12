@@ -18,6 +18,7 @@ import sqlite3
 from typing import Dict, List, Any, Optional, Tuple
 
 from .seed_example_system import OFFICIAL_SYSTEM_SPEC
+from .simapro_adapter import serialize_econode_to_simapro_csv
 
 # -----------------------------------------------------------------------------
 # Unidades y Propiedades de Flujo Estándar Canónicas de openLCA
@@ -732,37 +733,29 @@ def export_ilcd_xml_zip(conn: sqlite3.Connection, system_id: int) -> bytes:
 # -----------------------------------------------------------------------------
 # 3. EXPORTADOR SIMAPRO CSV
 # -----------------------------------------------------------------------------
-def export_simapro_csv(conn: sqlite3.Connection, system_id: int) -> str:
-    """Genera una matriz SimaPro estructurada por bloques ({Processes}, {Products}, {Materials/fuels})."""
-    sys_spec = OFFICIAL_SYSTEM_SPEC
-    lines = [
-        "{SimaPro 9.5 CSV Format}",
-        "{Project: ECONODE Studio Tier 1 Industrial LCA}",
-        f"{{Date: {datetime.datetime.now().strftime('%d/%m/%Y %H:%M:%S')}}}",
-        ""
-    ]
-    for p in sys_spec["processes"]:
-        lines.append("{Process}")
-        lines.append(f"Name\t{p['name']}")
-        lines.append(f"Category type\t{p.get('category', 'Processing')}")
-        lines.append(f"Infrastructure process\tNo")
-        lines.append("Status\tApproved")
-        lines.append("")
-        lines.append("{Products}")
-        lines.append(f"{p['reference_flow']['name']}\t{p['reference_flow']['amount']}\t{p['reference_flow']['unit']}\t100%\tnot defined")
-        lines.append("")
-        lines.append("{Materials/fuels}")
-        for inp in p.get("inputs", []):
-            lines.append(f"{inp['name']}\t{inp['amount']}\t{inp['unit']}\tStandard\tUnspecified")
-        lines.append("")
-        lines.append("{Emissions to air}")
-        for out in p.get("outputs", []):
-            if out.get("is_elementary"):
-                lines.append(f"{out['name']}\t{out['amount']}\t{out['unit']}\tUnspecified")
-        lines.append("")
-        lines.append("{End of process}")
-        lines.append("--------------------------------------------------------------------------------")
-    return "\n".join(lines)
+def export_simapro_csv(conn: Optional[sqlite3.Connection], system_id: int) -> str:
+    """Genera archivo oficial SimaPro CSV 9.0.0 estructurado por bloques con soporte completo para SimaPro 9.x y 10.x."""
+    processes = []
+    sys_name = "ECONODE Studio Tier 1 Industrial LCA"
+    if conn and system_id:
+        try:
+            cur = conn.execute("SELECT parameters_json, name FROM product_systems WHERE id = ?;", (system_id,))
+            row = cur.fetchone()
+            if row:
+                if row[1]:
+                    sys_name = str(row[1])
+                if row[0]:
+                    p_data = json.loads(row[0]) if isinstance(row[0], str) else (row[0] or {})
+                    if isinstance(p_data, dict) and "canvas_nodes" in p_data and p_data["canvas_nodes"]:
+                        processes = p_data["canvas_nodes"]
+        except Exception as e:
+            print(f"[export_simapro_csv] Aviso leyendo nodos de DB: {e}")
+            processes = []
+
+    if not processes:
+        processes = OFFICIAL_SYSTEM_SPEC.get("processes", [])
+
+    return serialize_econode_to_simapro_csv(processes, project_name=sys_name, simapro_version="9.5.0.0")
 
 # -----------------------------------------------------------------------------
 # 4. INVENTARIO LCI CONSOLIDADO CSV
