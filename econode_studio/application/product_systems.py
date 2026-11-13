@@ -7,6 +7,7 @@ import os
 import sys
 import csv
 import io
+import json
 from typing import Dict, List, Any, Optional
 
 try:
@@ -484,6 +485,167 @@ def assign_system_to_project_use_case(
     }
 
 
+def calculate_system_lcia_scores(
+    conn: sqlite3.Connection,
+    sys_id: int,
+    target_amt: float,
+    param_dict: Dict[str, float],
+    raw_parameters_json: str
+) -> Dict[str, float]:
+    """Calcula los puntajes de impacto ambiental ReCiPe 2016 Midpoint (H) específicos de cada sistema."""
+    # 1. Verificar si existen resultados completos pre-calculados (ej. SimaPro CSV o archivados en el proyecto)
+    details = get_product_system_details(conn, sys_id) or {}
+    nodes = details.get("nodes", [])
+
+    base_proj_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    candidate_dirs = [
+        os.path.join(base_proj_dir, "simaproexamples"),
+        base_proj_dir
+    ]
+    for n in nodes:
+        node_name = n.get("name") or n.get("label") or ""
+        if node_name:
+            for c_dir in candidate_dirs:
+                csv_path = os.path.join(c_dir, f"{node_name}_RECIPE_2016_RESULTADOS_COMPLETOS.CSV")
+                if os.path.exists(csv_path):
+                    scores: Dict[str, float] = {}
+                    try:
+                        with open(csv_path, "r", encoding="utf-8") as f:
+                            for line in f:
+                                parts = line.strip().split(";")
+                                if len(parts) >= 2:
+                                    cat_name = parts[0].lower()
+                                    try:
+                                        val = float(parts[1]) * target_amt
+                                        if "climate change" in cat_name or "global warming" in cat_name:
+                                            scores["global_warming"] = round(val, 5)
+                                        elif "acidification: terrestrial" in cat_name or "acidification" in cat_name:
+                                            scores["acidification"] = round(val, 6)
+                                        elif "eutrophication: freshwater" in cat_name:
+                                            scores["eutrophication"] = round(val, 8)
+                                        elif "water use" in cat_name or "water consumption" in cat_name:
+                                            scores["water_consumption"] = round(val, 6)
+                                        elif "material resources" in cat_name or "energy resources: non-renewable" in cat_name:
+                                            scores["resource_scarcity"] = round(val, 6)
+                                    except ValueError:
+                                        pass
+                        if scores and "global_warming" in scores:
+                            return scores
+                    except Exception:
+                        pass
+
+    # 2. Evaluación directa de inventario de ciclo de vida (LCI) de los nodos del lienzo
+    gw = 0.0
+    ac = 0.0
+    eu = 0.0
+    wa = 0.0
+    rs = 0.0
+    has_inventory_flows = False
+
+    for n in nodes:
+        # Intercambios de entrada (Tecnosfera y Biosfera)
+        for inp in n.get("inputs", []):
+            name = (inp.get("name") or "").lower()
+            amt = float(inp.get("amount") or 0.0)
+            if amt <= 0:
+                continue
+            has_inventory_flows = True
+
+            # Combustibles y energía fósil
+            if "kerosene" in name or "jet fuel" in name:
+                gw += amt * 3.05
+                ac += amt * 0.0075
+                rs += amt * 0.95
+            elif "diesel" in name or "gasoil" in name:
+                gw += amt * 3.15
+                ac += amt * 0.0082
+                rs += amt * 0.98
+            elif "gasoline" in name or "petrol" in name:
+                gw += amt * 3.10
+                ac += amt * 0.0078
+                rs += amt * 0.96
+            elif "natural gas" in name or "gas natural" in name:
+                gw += amt * 0.056
+                rs += amt * 0.85
+            elif "biogas" in name:
+                gw += amt * 0.025
+                rs += amt * 0.015
+            elif "electricity" in name or "electricidad" in name or "cfe" in name:
+                factor_cfe = param_dict.get("factor_emision_red_cfe", 0.438)
+                gw += amt * factor_cfe
+                ac += amt * 0.00085
+                eu += amt * 0.00004
+                rs += amt * 0.09
+            elif "virgin pet" in name or "pet granulate" in name or "resina virgen" in name:
+                gw += amt * 2.15
+                ac += amt * 0.0045
+                rs += amt * 1.15
+            elif "recycled pet" in name or "rpet" in name:
+                gw += amt * 0.65
+                ac += amt * 0.0018
+                rs += amt * 0.35
+            elif "water" in name or "agua" in name:
+                unit_str = str(inp.get("unit", "")).lower()
+                wa += amt * (1.0 if "m3" in unit_str else 0.001)
+            elif "transport" in name or "freight" in name or "lorry" in name or "truck" in name or "camion" in name:
+                gw += amt * 0.095
+                ac += amt * 0.00045
+                rs += amt * 0.025
+
+        # Intercambios de salida (Emisiones elementales a aire, agua, suelo)
+        for out in n.get("outputs", []):
+            name = (out.get("name") or "").lower()
+            amt = float(out.get("amount") or 0.0)
+            if amt <= 0:
+                continue
+            has_inventory_flows = True
+
+            # Emisiones a aire
+            if "fossil co2" in name or ("carbon dioxide" in name and "fossil" in name):
+                gw += amt * 1.0
+            elif "methane" in name:
+                gw += amt * 34.0
+            elif "dinitrogen monoxide" in name or "n2o" in name:
+                gw += amt * 298.0
+            elif "sulfur dioxide" in name or "so2" in name:
+                ac += amt * 1.0
+            elif "nitrogen oxides" in name or "nox" in name:
+                ac += amt * 0.36
+            elif "ammonia" in name or "nh3" in name:
+                ac += amt * 1.96
+            # Emisiones a agua
+            elif "phosphate" in name or "phosphorus" in name:
+                eu += amt * 0.33
+
+    if has_inventory_flows and gw > 0:
+        return {
+            "global_warming": round(max(0.00001, gw * target_amt), 5),
+            "acidification": round(max(0.000001, ac * target_amt), 6),
+            "eutrophication": round(max(0.0000001, eu * target_amt), 7),
+            "water_consumption": round(max(0.00001, wa * target_amt), 5),
+            "resource_scarcity": round(max(0.00001, rs * target_amt), 5)
+        }
+
+    # 3. Fallback paramétrico (para modelos de envases/embalajes con parámetros de proceso)
+    peso_g = param_dict.get("peso_envase_g") or (param_dict.get("peso_nominal_botella", 0.0) * 1000.0) or 24.0
+    rec_content = (param_dict.get("contenido_reciclado_pct") or param_dict.get("contenido_rpet_pct", 0.0)) / 100.0
+    tasa_rec = (param_dict.get("tasa_reciclaje_pct", 0.0)) / 100.0
+    dist_km = param_dict.get("distancia_transporte_km") or param_dict.get("distancia_distribucion_km", 100.0)
+
+    peso_kg = (peso_g / 1000.0) * target_amt
+    gw_mat = peso_kg * ((1.0 - rec_content) * 2.15 + rec_content * 0.65) * (1.0 - tasa_rec * 0.4)
+    gw_trans = peso_kg * (dist_km / 1000.0) * 0.095
+    gw_total = max(0.0001, gw_mat + gw_trans)
+
+    return {
+        "global_warming": round(gw_total, 5),
+        "acidification": round(gw_total * 0.0042, 6),
+        "eutrophication": round(gw_total * 0.00085, 6),
+        "water_consumption": round(peso_kg * 0.045, 5),
+        "resource_scarcity": round(peso_kg * 1.15 * (1.0 - rec_content * 0.7), 5)
+    }
+
+
 def compare_project_systems_use_case(
     conn: Optional[sqlite3.Connection] = None,
     project_id: int = 1
@@ -518,51 +680,31 @@ def compare_project_systems_use_case(
             nodes_cnt = r["nodes_count"]
             edges_cnt = r["edges_count"]
 
-            params = get_system_parameters(c, sys_id)
-            param_dict = {p.get("name"): float(p.get("value", 0.0)) for p in params if "name" in p}
-
-            lcia_scores = {}
-            if nodes_cnt > 0:
+            # Si el recuento relacional es 0, consultar los nodos guardados en parameters_json
+            if nodes_cnt == 0:
                 try:
-                    from database import calculate_system_lcia
-                    raw_res = calculate_system_lcia(c, sys_id, ["ReCiPe 2016 v1.03, midpoint (H) no LT"])
-                    if raw_res.get("methods_calculated"):
-                        for cat in raw_res["methods_calculated"][0].get("categories", []):
-                            c_name = cat.get("category_name", "").lower()
-                            score = float(cat.get("total_score", 0.0))
-                            if "climate change" in c_name or "global warming" in c_name:
-                                lcia_scores["global_warming"] = score
-                            elif "acidification" in c_name:
-                                lcia_scores["acidification"] = score
-                            elif "eutrophication" in c_name and "freshwater" in c_name:
-                                lcia_scores["eutrophication"] = score
-                            elif "water" in c_name:
-                                lcia_scores["water_consumption"] = score
-                            elif "fossil" in c_name or "mineral" in c_name:
-                                lcia_scores["resource_scarcity"] = score
+                    raw_pj = r["parameters_json"] or "{}"
+                    parsed_pj = json.loads(raw_pj) if isinstance(raw_pj, str) else (raw_pj or {})
+                    if isinstance(parsed_pj, dict):
+                        c_nodes = parsed_pj.get("canvas_nodes") or []
+                        if c_nodes:
+                            nodes_cnt = len(c_nodes)
+                        c_edges = parsed_pj.get("canvas_edges") or []
+                        if c_edges:
+                            edges_cnt = len(c_edges)
                 except Exception:
                     pass
 
-            peso_g = param_dict.get("peso_envase_g", 24.0)
-            tasa_rec = param_dict.get("tasa_reciclaje_pct", 0.0) / 100.0
-            rec_content = param_dict.get("contenido_reciclado_pct", 0.0) / 100.0
-            dist_km = param_dict.get("distancia_transporte_km", 100.0)
+            params = get_system_parameters(c, sys_id)
+            param_dict = {p.get("name"): float(p.get("value", 0.0)) for p in params if "name" in p}
 
-            peso_kg = (peso_g / 1000.0) * target_amt
-            gw_mat = peso_kg * ((1.0 - rec_content) * 2.15 + rec_content * 0.65) * (1.0 - tasa_rec * 0.4)
-            gw_trans = peso_kg * (dist_km / 1000.0) * 0.095
-            gw_total = max(0.0001, gw_mat + gw_trans)
-
-            if "global_warming" not in lcia_scores or lcia_scores["global_warming"] <= 0:
-                lcia_scores["global_warming"] = round(gw_total, 5)
-            if "acidification" not in lcia_scores or lcia_scores["acidification"] <= 0:
-                lcia_scores["acidification"] = round(gw_total * 0.0042, 6)
-            if "eutrophication" not in lcia_scores or lcia_scores["eutrophication"] <= 0:
-                lcia_scores["eutrophication"] = round(gw_total * 0.00085, 6)
-            if "water_consumption" not in lcia_scores or lcia_scores["water_consumption"] <= 0:
-                lcia_scores["water_consumption"] = round(peso_kg * 0.045, 5)
-            if "resource_scarcity" not in lcia_scores or lcia_scores["resource_scarcity"] <= 0:
-                lcia_scores["resource_scarcity"] = round(peso_kg * 1.15 * (1.0 - rec_content * 0.7), 5)
+            lcia_scores = calculate_system_lcia_scores(
+                conn=c,
+                sys_id=sys_id,
+                target_amt=target_amt,
+                param_dict=param_dict,
+                raw_parameters_json=r["parameters_json"]
+            )
 
             systems_data.append({
                 "id": sys_id,
@@ -592,7 +734,7 @@ def compare_project_systems_use_case(
                 diff_vs_min_pct = round(((curr_gw - min_gw) / min_gw * 100.0), 1) if min_gw > 0 else 0.0
                 s["diff_vs_best_pct"] = diff_vs_min_pct
                 if max_gw > min_gw:
-                    s["eco_efficiency_score"] = round(100.0 - ((curr_gw - min_gw) / (max_gw - min_gw) * 50.0), 1)
+                    s["eco_efficiency_score"] = round(max(10.0, 100.0 - ((curr_gw - min_gw) / (max_gw - min_gw) * 50.0)), 1)
                 else:
                     s["eco_efficiency_score"] = 100.0
 

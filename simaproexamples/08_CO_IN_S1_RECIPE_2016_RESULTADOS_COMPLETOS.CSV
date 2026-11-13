@@ -1,0 +1,19 @@
+Categoria de Impacto;Puntaje Total Acumulado (Cradle-to-Grave);Unidad;Impacto Directo Proceso;% Directo;Impacto Cadena Upstream;% Cadena Upstream;Principal Proceso Contribuyente;% Contribucion Top 1
+Acidification: terrestrial;0.00016739;kg SO2-Eq;0.00014230;85.01%;0.00002508;14.99%;08_CO_IN_S1 Cotton Incineration {GLO};85.01%
+Climate change;0.02478123;kg CO2-Eq;0.00842783;34.01%;0.01635341;65.99%;08_CO_IN_S1 Cotton Incineration {GLO};34.01%
+Ecotoxicity: freshwater;0.00003467;kg 1,4-DCB-Eq;0.00002889;83.32%;0.00000578;16.68%;08_CO_IN_S1 Cotton Incineration {GLO};83.32%
+Ecotoxicity: marine;0.00004974;kg 1,4-DCB-Eq;0.00003345;67.24%;0.00001630;32.76%;08_CO_IN_S1 Cotton Incineration {GLO};67.24%
+Ecotoxicity: terrestrial;0.01433479;kg 1,4-DCB-Eq;0.00000174;0.01%;0.01433305;99.99%;ferronickel production | ferronickel | Cutoff, U {GLO};33.34%
+Energy resources: non-renewable, fossil;0.00000000;kg oil-Eq;0.00000000;0.00%;0.00000000;0.00%;N/A;0%
+Eutrophication: freshwater;0.00000001;kg P-Eq;0.00000000;0.00%;0.00000001;100.00%;activated bentonite production | activated bentonite | Cutoff, U {RoW};16.79%
+Eutrophication: marine;0.00000647;kg N-Eq;0.00000637;98.40%;0.00000010;1.60%;08_CO_IN_S1 Cotton Incineration {GLO};98.40%
+Human toxicity: carcinogenic;0.00047547;kg 1,4-DCB-Eq;0.00038056;80.04%;0.00009492;19.96%;08_CO_IN_S1 Cotton Incineration {GLO};80.04%
+Human toxicity: non-carcinogenic;0.18269597;kg 1,4-DCB-Eq;0.18183865;99.53%;0.00085732;0.47%;08_CO_IN_S1 Cotton Incineration {GLO};99.53%
+Ionising radiation;0.00001311;kBq Co-60-Eq;0.00000000;0.00%;0.00001311;100.00%;uranium mine operation, underground | uranium ore, as U | Cutoff, U {RNA};19.98%
+Land use;0.00002744;m2*a crop-Eq;0.00002744;100.00%;0.00000000;0.00%;08_CO_IN_S1 Cotton Incineration {GLO};100.00%
+Material resources: metals/minerals;0.00000420;kg Cu-Eq;0.00000420;100.00%;0.00000000;0.00%;08_CO_IN_S1 Cotton Incineration {GLO};100.00%
+Ozone depletion;0.00000031;kg CFC-11-Eq;0.00000031;99.28%;0.00000000;0.72%;08_CO_IN_S1 Cotton Incineration {GLO};99.28%
+Particulate matter formation;0.00005893;kg PM2.5-Eq;0.00004725;80.19%;0.00001167;19.81%;08_CO_IN_S1 Cotton Incineration {GLO};80.19%
+Photochemical oxidant formation: human health;0.00041448;kg NOx-Eq;0.00038866;93.77%;0.00002582;6.23%;08_CO_IN_S1 Cotton Incineration {GLO};93.77%
+Photochemical oxidant formation: terrestrial ecosystems;0.00041596;kg NOx-Eq;0.00038883;93.48%;0.00002713;6.52%;08_CO_IN_S1 Cotton Incineration {GLO};93.48%
+Water use;0.00076083;m3;0.00066102;86.88%;0.00009982;13.12%;08_CO_IN_S1 Cotton Incineration {GLO};86.88%

@@ -10711,10 +10711,13 @@
 
     modal.style.display = "flex";
     modal.classList.add("active");
+    if (window.I18n && typeof window.I18n.applyTranslations === "function") {
+      window.I18n.applyTranslations();
+    }
     container.innerHTML = `
       <div style="text-align: center; padding: 48px 20px; color: var(--text-muted); font-size: 12px;">
-        <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Calculando balance de masa e impacto ambiental comparativo (LCIA)...</div>
-        <div style="font-size: 11.5px; color: #64748B;">Resolviendo matrices de inventario ecoinvent 3.12 y factores ReCiPe 2016 Midpoint (H)</div>
+        <div style="font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">${window.I18n.t("proj.loading_comparison", "Calculando balance de masa e impacto ambiental comparativo (LCIA)...")}</div>
+        <div style="font-size: 11.5px; color: #64748B;">${window.I18n.t("proj.loading_sub", "Resolviendo matrices de inventario ecoinvent 3.12 y factores ReCiPe 2016 Midpoint (H)")}</div>
       </div>
     `;
 
@@ -10724,12 +10727,12 @@
       const systems = data.systems || [];
       const cats = data.comparison_categories || [];
 
-      if (titleEl) titleEl.textContent = `${proj.name || 'Proyecto'} · Comparativa de Sistemas`;
+      if (titleEl) titleEl.textContent = `${proj.name || 'Proyecto'} · ${window.I18n.t("proj.compare_title", "Comparativa de Sistemas")}`;
       if (codeEl) codeEl.textContent = proj.code || "PRJ";
-      if (descEl) descEl.textContent = proj.description || `${systems.length} sistemas producto modelados`;
+      if (descEl) descEl.textContent = proj.description || `${systems.length} ${window.I18n.t("dash.systems_count_badge", "sistemas")} modelados`;
 
       if (systems.length === 0) {
-        container.innerHTML = `<div style="text-align: center; padding: 36px; color: var(--text-muted); font-size: 12px;">Este proyecto no tiene sistemas asignados aún. Asigna o crea sistemas para ejecutar la comparativa.</div>`;
+        container.innerHTML = `<div style="text-align: center; padding: 36px; color: var(--text-muted); font-size: 12px;">${window.I18n.t("proj.no_systems_in_project", "Este proyecto no tiene sistemas asignados aún. Asigna o crea sistemas para ejecutar la comparativa.")}</div>`;
         return;
       }
 
@@ -10745,7 +10748,7 @@
               <div style="background: #FFFFFF; border: 1.5px solid ${isBest ? '#10B981' : '#E2E8F0'}; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative;">
                 ${isBest ? `
                   <div style="position: absolute; top: 12px; right: 12px; background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3);">
-                    ${window.I18n.t("proj.best_carbon_badge", "Menor Huella")}
+                    ${window.I18n.t("proj.best_carbon_badge", "Menor Huella de Carbono")}
                   </div>
                 ` : `
                   <div style="position: absolute; top: 12px; right: 12px; background: #F1F5F9; color: #64748B; font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 12px;">
@@ -10757,19 +10760,19 @@
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: #F8FAFC; padding: 10px 12px; border-radius: 8px; margin-bottom: 10px; font-size: 11px;">
                   <div>
-                    <span style="color: #64748B;">Huella Carbono:</span>
+                    <span style="color: #64748B;">${window.I18n.t("proj.carbon_footprint", "Huella Carbono")}:</span>
                     <div style="font-size: 13px; font-weight: 700; color: ${isBest ? '#059669' : '#0F172A'}; font-family: monospace;">${gw} kg CO2</div>
                   </div>
                   <div>
-                    <span style="color: #64748B;">Eficiencia Eco:</span>
+                    <span style="color: #64748B;">${window.I18n.t("proj.eco_score", "Eficiencia Eco")}:</span>
                     <div style="font-size: 13px; font-weight: 700; color: #0284C7; font-family: monospace;">${score} / 100</div>
                   </div>
                 </div>
 
                 <div style="display: flex; justify-content: space-between; font-size: 10.5px; color: #64748B;">
                   <span>UF: ${s.target_amount} ${escapeHtml(s.unit)}</span>
-                  <span>Procesos: ${s.nodes_count || 0}</span>
-                  <a href="javascript:void(0)" onmouseenter="window.EconodeApp.prefetchSystem(${s.id})" onclick="window.EconodeApp.closeCompareProjectModal(); window.EconodeApp.openSystem(${s.id});" style="color: #0284C7; font-weight: 600; text-decoration: none;">Ver Lienzo &rarr;</a>
+                  <span>${window.I18n.t("proj.processes_count", "Procesos")}: ${s.nodes_count || 0}</span>
+                  <a href="javascript:void(0)" onmouseenter="window.EconodeApp.prefetchSystem(${s.id})" onclick="window.EconodeApp.closeCompareProjectModal(); window.EconodeApp.openSystem(${s.id});" style="color: #0284C7; font-weight: 600; text-decoration: none;">${window.I18n.t("proj.view_canvas", "Ver Lienzo")} &rarr;</a>
                 </div>
               </div>
             `;
@@ -10781,15 +10784,15 @@
       let tableHtml = `
         <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.03);">
           <div style="padding: 12px 16px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
-            <strong style="font-size: 12.5px; color: #0F172A;">Matriz Comparativa de Categorías de Impacto (LCIA ReCiPe 2016)</strong>
-            <span style="font-size: 11px; color: #64748B;">Valores normalizados por Unidad Funcional</span>
+            <strong style="font-size: 12.5px; color: #0F172A;">${window.I18n.t("proj.matrix_title", "Matriz Comparativa de Categorías de Impacto (LCIA ReCiPe 2016)")}</strong>
+            <span style="font-size: 11px; color: #64748B;">${window.I18n.t("proj.normalized_notice", "Valores normalizados por Unidad Funcional")}</span>
           </div>
           <div style="overflow-x: auto;">
             <table class="data-table" style="margin: 0; width: 100%;">
               <thead>
                 <tr style="background: #FAFBFD;">
-                  <th style="font-size: 11px; width: 32%;">Categoría Ambiental</th>
-                  <th style="font-size: 11px; width: 14%;">Unidad</th>
+                  <th style="font-size: 11px; width: 32%;">${window.I18n.t("proj.env_category", "Categoría Ambiental")}</th>
+                  <th style="font-size: 11px; width: 14%;">${window.I18n.t("proj.unit", "Unidad")}</th>
                   ${systems.map(s => `<th style="font-size: 11px; text-align: right; min-width: 140px;">${escapeHtml(s.name)}</th>`).join("")}
                 </tr>
               </thead>
