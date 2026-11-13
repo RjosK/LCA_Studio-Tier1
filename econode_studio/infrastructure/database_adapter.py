@@ -690,67 +690,11 @@ def assign_system_to_project(conn: sqlite3.Connection, system_id: int, project_i
         return False
 
 def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Optional[Dict[str, Any]]:
-    """Obtiene un sistema producto con sus nodos y enlaces."""
+    """Obtiene un sistema producto con sus nodos y enlaces (modo ultra-rápido optimizado)."""
     ensure_product_systems_columns(conn)
     sys_row = conn.execute("SELECT * FROM product_systems WHERE id = ?", (system_id,)).fetchone()
     if not sys_row:
         return None
-
-    # Nodos
-    nodes_rows = conn.execute("""
-        SELECT n.process_id, n.pos_x, n.pos_y,
-               p.code as process_code, p.name as process_name, p.location,
-               coalesce(p.reference_amount, 1.0) as ref_amount,
-               f.name as ref_flow_name, f.unit_symbol as ref_unit,
-               c.name as category_name
-        FROM product_system_nodes n
-        JOIN processes p ON n.process_id = p.id
-        LEFT JOIN flows f ON p.reference_flow_id = f.id
-        LEFT JOIN categories c ON p.category_id = c.id
-        WHERE n.system_id = ?;
-    """, (system_id,)).fetchall()
-
-    nodes = []
-    for nr in nodes_rows:
-        pid = nr["process_id"]
-        # Intercambios
-        exchanges = conn.execute("""
-            SELECT e.id, e.flow_id, e.is_input, e.exchange_type, e.amount, e.unit_symbol,
-                   fl.name as flow_name
-            FROM exchanges e
-            LEFT JOIN flows fl ON e.flow_id = fl.id
-            WHERE e.process_id = ?;
-        """, (pid,)).fetchall()
-
-        inputs = [dict(x) for x in exchanges if x["is_input"] == 1]
-        outputs = [dict(x) for x in exchanges if x["is_input"] == 0]
-
-        nodes.append({
-            "id": f"node_{pid}",
-            "process_id": pid,
-            "code": nr["process_code"],
-            "name": nr["process_name"],
-            "location": nr["location"] or "GLO",
-            "category_name": nr["category_name"] or "General",
-            "pos_x": float(nr["pos_x"] or 100),
-            "pos_y": float(nr["pos_y"] or 100),
-            "x": float(nr["pos_x"] or 100),
-            "y": float(nr["pos_y"] or 100),
-            "reference_amount": float(nr["ref_amount"]),
-            "reference_flow_name": nr["ref_flow_name"] or "Salida Principal",
-            "unit": nr["ref_unit"] or "kg",
-            "inputs": inputs,
-            "outputs": outputs
-        })
-
-    # Enlaces
-    edges_rows = conn.execute("""
-        SELECT e.source_process_id, e.target_process_id, e.flow_id, e.amount,
-               fl.name as flow_name, fl.unit_symbol
-        FROM product_system_edges e
-        LEFT JOIN flows fl ON e.flow_id = fl.id
-        WHERE e.system_id = ?;
-    """, (system_id,)).fetchall()
 
     # Parsear colaboradores
     raw_c = sys_row["collaborators_json"] if "collaborators_json" in sys_row.keys() and sys_row["collaborators_json"] else "[]"
@@ -759,7 +703,7 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
     except Exception:
         collabs = []
 
-    # 1. Si el usuario ya guardó nodos y aristas en parameters_json, tienen máxima prioridad
+    # 1. RUTA RÁPIDA: Si el usuario ya guardó nodos y aristas en parameters_json, retornar de inmediato (evita consultas costosas a exchanges)
     raw_p = sys_row["parameters_json"] if "parameters_json" in sys_row.keys() and sys_row["parameters_json"] else "{}"
     try:
         parsed_p = json.loads(raw_p) if isinstance(raw_p, str) else (raw_p or {})
@@ -818,6 +762,62 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
             }
         except Exception:
             pass
+
+    # 3. Fallback relacional únicamente si no existe parameters_json
+    nodes_rows = conn.execute("""
+        SELECT n.process_id, n.pos_x, n.pos_y,
+               p.code as process_code, p.name as process_name, p.location,
+               coalesce(p.reference_amount, 1.0) as ref_amount,
+               f.name as ref_flow_name, f.unit_symbol as ref_unit,
+               c.name as category_name
+        FROM product_system_nodes n
+        JOIN processes p ON n.process_id = p.id
+        LEFT JOIN flows f ON p.reference_flow_id = f.id
+        LEFT JOIN categories c ON p.category_id = c.id
+        WHERE n.system_id = ?;
+    """, (system_id,)).fetchall()
+
+    nodes = []
+    for nr in nodes_rows:
+        pid = nr["process_id"]
+        # Intercambios
+        exchanges = conn.execute("""
+            SELECT e.id, e.flow_id, e.is_input, e.exchange_type, e.amount, e.unit_symbol,
+                   fl.name as flow_name
+            FROM exchanges e
+            LEFT JOIN flows fl ON e.flow_id = fl.id
+            WHERE e.process_id = ?;
+        """, (pid,)).fetchall()
+
+        inputs = [dict(x) for x in exchanges if x["is_input"] == 1]
+        outputs = [dict(x) for x in exchanges if x["is_input"] == 0]
+
+        nodes.append({
+            "id": f"node_{pid}",
+            "process_id": pid,
+            "code": nr["process_code"],
+            "name": nr["process_name"],
+            "location": nr["location"] or "GLO",
+            "category_name": nr["category_name"] or "General",
+            "pos_x": float(nr["pos_x"] or 100),
+            "pos_y": float(nr["pos_y"] or 100),
+            "x": float(nr["pos_x"] or 100),
+            "y": float(nr["pos_y"] or 100),
+            "reference_amount": float(nr["ref_amount"]),
+            "reference_flow_name": nr["ref_flow_name"] or "Salida Principal",
+            "unit": nr["ref_unit"] or "kg",
+            "inputs": inputs,
+            "outputs": outputs
+        })
+
+    # Enlaces
+    edges_rows = conn.execute("""
+        SELECT e.source_process_id, e.target_process_id, e.flow_id, e.amount,
+               fl.name as flow_name, fl.unit_symbol
+        FROM product_system_edges e
+        LEFT JOIN flows fl ON e.flow_id = fl.id
+        WHERE e.system_id = ?;
+    """, (system_id,)).fetchall()
 
     return {
         "id": sys_row["id"],

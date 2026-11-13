@@ -253,13 +253,27 @@ body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  transition: all 0.15s ease;
+  transition: transform 0.06s cubic-bezier(0, 0, 0.2, 1), background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
   border: 1px solid transparent;
   outline: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.btn:active {
-  transform: scale(0.98);
+.btn:active, button:active, .nav-btn:active, .segmented-btn:active, .btn-zoom-action:active {
+  transform: scale(0.97) !important;
+}
+
+.apple-spinner-micro {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.8px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.65s linear infinite;
+  vertical-align: -1px;
 }
 
 .btn-primary {

@@ -1000,7 +1000,7 @@
         <tr style="${isOfficial ? 'background: rgba(5, 150, 105, 0.03);' : ''} ${isChildOfProject ? 'background: #FAFBFD;' : ''}">
           <td style="${isChildOfProject ? 'padding-left: 38px; position: relative;' : 'padding-left: 18px;'}">
             ${isChildOfProject ? `<span style="position: absolute; left: 20px; top: 16px; width: 10px; height: 12px; border-left: 1.5px solid #CBD5E1; border-bottom: 1.5px solid #CBD5E1; border-bottom-left-radius: 3px;"></span>` : ''}
-            <strong style="color: var(--text-primary); cursor: pointer; font-size: 12.5px;" onclick="window.EconodeApp.openSystem(${sys.id})">${escapeHtml(sys.name)}</strong>
+            <strong style="color: var(--text-primary); cursor: pointer; font-size: 12.5px;" onclick="window.EconodeApp.openSystem(${sys.id}, true, this)">${escapeHtml(sys.name)}</strong>
             <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">
               ${escapeHtml(sys.category || "Polímeros")} · ${escapeHtml(sys.geography || "[MX]")}
               ${isOfficial ? `<span class="badge-pill badge-emerald" style="font-size: 8px;">OFICIAL 3 PROCESOS</span>` : ''}
@@ -1016,7 +1016,7 @@
               <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 10px; font-weight: 500; font-size: 11px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155;">
                 ${window.I18n.t("app.vault_btn", "Bóveda")}
               </button>
-              <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openSystem(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 12px; font-weight: 600; font-size: 11px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15);">
+              <button class="btn btn-primary btn-sm btn-open-system" onclick="window.EconodeApp.openSystem(${sys.id}, true, this)" style="border-radius: 7px; height: 28px; padding: 0 12px; font-weight: 600; font-size: 11px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15); cursor: pointer;">
                 ${window.I18n.t("app.open_canvas_btn", "Abrir Lienzo")} &rarr;
               </button>
               <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openAssignProjectModal(${sys.id}, ${sys.project_id || 'null'}, '${escape(sys.name)}')" style="border-radius: 7px; height: 28px; padding: 0 9px; font-weight: 500; font-size: 10.5px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #475569;" title="${sys.project_name ? 'Cambiar de proyecto o desasociar a sistema solito' : 'Asignar a un proyecto contenedor'}">
@@ -1149,23 +1149,53 @@
     tbody.innerHTML = rowsHtml;
   }
 
-  async function openSystem(sysId, navigateToCanvas = true) {
+  async function openSystem(sysId, navigateToCanvas = true, triggerBtn = null) {
     // 1. Cancelar cualquier auto-guardado previo para evitar sobreescritura cruzada
     if (autoSaveCanvasTimer) {
       clearTimeout(autoSaveCanvasTimer);
       autoSaveCanvasTimer = null;
     }
 
-    // 2. Limpieza inmediata y sincrona del estado para aislamiento estricto
-    state.selectedNode = null;
-    state.connectingFromNode = null;
-    state.connectingToNode = null;
-    state.canvasNodes = [];
-    state.canvasEdges = [];
-    state.paletteProcesses = [];
+    // 2. Feedback táctil inmediato en botón disparador si existe
+    if (triggerBtn && triggerBtn instanceof HTMLElement) {
+      triggerBtn.disabled = true;
+      triggerBtn.style.opacity = "0.75";
+      triggerBtn.setAttribute("data-prev-content", triggerBtn.innerHTML);
+      const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
+      triggerBtn.innerHTML = `<span class="apple-spinner-micro"></span> ${isEn ? "Opening..." : "Abriendo..."}`;
+    }
 
+    // 3. Obtener metadatos cacheados para transición visual instantánea (0ms de latencia)
+    const cachedSys = (state.systems || []).find(s => s.id === sysId);
+    if (cachedSys) {
+      state.activeSystem = cachedSys;
+      const navTitle = document.getElementById("navProjectTitle");
+      if (navTitle) navTitle.textContent = `Reporte: ${cachedSys.name}`;
+      const canvasTitle = document.getElementById("canvasSystemTitle");
+      if (canvasTitle) canvasTitle.textContent = `${cachedSys.name} (${cachedSys.code || "SKU"})`;
+    } else if (!state.activeSystem) {
+      state.activeSystem = { id: sysId, name: "Sistema Producto", code: "" };
+    }
+
+    // 4. Transición visual instantánea al Lienzo y activación de overlay de carga suave
+    const overlay = document.getElementById("canvasLoadingOverlay");
+    if (navigateToCanvas) {
+      if (overlay) {
+        const loadingText = document.getElementById("canvasLoadingText");
+        const sysLabel = (cachedSys && cachedSys.name) ? cachedSys.name : "sistema";
+        if (loadingText) loadingText.textContent = `Cargando ${sysLabel}...`;
+        overlay.style.display = "flex";
+      }
+      showView("canvas");
+    }
+
+    // 5. Carga concurrente y paralela del lienzo y comentarios
     try {
-      const res = await api.getSystemCanvas(sysId);
+      const [res, commentsRes] = await Promise.all([
+        api.getSystemCanvas(sysId),
+        api.getComments(sysId).catch(() => ({ items: [] }))
+      ]);
+
       if (res && res.system) {
         try { localStorage.setItem("econode_active_system_id", String(sysId)); } catch (e) {}
         state.activeSystem = res.system;
@@ -1183,6 +1213,13 @@
         });
         state.canvasEdges = res.system.edges || [];
         state.systemParameters = res.system.parameters || [];
+
+        // Parsear comentarios concurrentes
+        const isOfficialSys = (sysId === 21 || sysId === 1 || res.system.code === "SYS-PET-CIRCULAR-01");
+        state.comments = ((commentsRes && commentsRes.items) || []).filter(c => {
+          if (isOfficialSys) return c.system_id === 21 || c.system_id === 1;
+          return c.system_id === sysId;
+        });
 
         // Actualizar títulos
         const navTitle = document.getElementById("navProjectTitle");
@@ -1208,13 +1245,12 @@
             const ownerShort = rawOwner.split(" ")[0] + (rawOwner.split(" ")[1] ? " " + rawOwner.split(" ")[1][0] + "." : "");
             const collabs = res.system.collaborators || [];
             const collabsChips = collabs.map(c => {
-              const icon = c.role === "auditor" ? "" : c.role === "client" ? "" : "";
               const roleTitle = c.role === "auditor" ? "Auditor" : c.role === "client" ? "Cliente" : "Colab";
               const cName = c.display_name || c.name || "Colab";
               const cShort = cName.split(" ")[0] + (cName.split(" ")[1] ? " " + cName.split(" ")[1][0] + "." : "");
               const colorBg = c.role === "auditor" ? "rgba(16, 185, 129, 0.12)" : c.role === "client" ? "rgba(139, 92, 246, 0.12)" : "rgba(14, 165, 233, 0.12)";
               const colorText = c.role === "auditor" ? "#059669" : c.role === "client" ? "#7C3AED" : "#0284C7";
-              return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">${icon} ${cShort} (${roleTitle})</span>`;
+              return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 9.5px; padding: 1px 5px; border-radius: 4px; font-weight: 600;">${cShort} (${roleTitle})</span>`;
             }).join("");
             const inviteBtn = `<button class="btn btn-secondary btn-sm" style="padding: 1px 6px; font-size: 9px; border-radius: 4px; margin-left: 2px;" onclick="window.EconodeApp.openInviteModal(${res.system.id}, '${escape(res.system.name)}')" title="Invitar auditor o cliente a este proyecto">+ Invitar</button>`;
             canvasTeam.innerHTML = `
@@ -1270,20 +1306,30 @@
           inspectNode(null);
         }
         renderPaletteProcesses();
+        renderCanvasStage();
+        renderCanvasEdges();
+        if (state.canvasViewMode === "table") {
+          renderCanvasTableView();
+        } else if (state.canvasViewMode === "parameters") {
+          renderSystemParametersTable();
+        }
+
         const reportTitle = document.getElementById("reportMainTitle");
         if (reportTitle) {
           reportTitle.textContent = res.system.name;
         }
-
-        // Cargar comentarios estrictamente pertenecientes a este sistema producto
-        await loadSystemComments();
-
-        if (navigateToCanvas) {
-          showView("canvas");
-        }
       }
     } catch (err) {
       console.error("Error al abrir sistema:", err);
+      showNotification("Error al cargar el sistema: " + (err.message || "Error desconocido"));
+    } finally {
+      if (overlay) overlay.style.display = "none";
+      if (triggerBtn && triggerBtn instanceof HTMLElement) {
+        triggerBtn.disabled = false;
+        triggerBtn.style.opacity = "1";
+        const prev = triggerBtn.getAttribute("data-prev-content");
+        if (prev) triggerBtn.innerHTML = prev;
+      }
     }
   }
 
