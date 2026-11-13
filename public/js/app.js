@@ -1232,6 +1232,19 @@
         } else {
           const seenPids = new Set();
           state.paletteProcesses = [];
+
+          // 1. Cargar procesos del catálogo guardados en el sistema producto
+          if (Array.isArray(res.system.palette) && res.system.palette.length > 0) {
+            res.system.palette.forEach(p => {
+              const pid = String(p.process_id !== undefined ? p.process_id : p.id);
+              if (!seenPids.has(pid)) {
+                seenPids.add(pid);
+                state.paletteProcesses.push(p);
+              }
+            });
+          }
+
+          // 2. Asegurar que los nodos en el lienzo también existan en el catálogo
           (state.canvasNodes || []).forEach(n => {
             const pid = String(n.process_id !== undefined ? n.process_id : n.id);
             if (!seenPids.has(pid)) {
@@ -2763,10 +2776,22 @@
     list.innerHTML = filtered
       .map(
         (p) => {
-          const connected = isNodeConnected(p);
-          const badgeConn = connected ? 
-            `<span style="font-size: 8px; font-weight: 600; color: #0284C7; background: rgba(14, 165, 233, 0.1); padding: 1px 4px; border-radius: 3px;"> En diagrama</span>` :
-            `<span style="font-size: 8px; font-weight: 600; color: #D97706; background: rgba(245, 158, 11, 0.1); padding: 1px 4px; border-radius: 3px;">⏳ Por conectar</span>`;
+          const onCanvas = (state.canvasNodes || []).some(n => {
+            const nid = String(n.id);
+            const npid = String(n.process_id !== undefined ? n.process_id : "");
+            const pid = String(p.id);
+            const ppid = String(p.process_id !== undefined ? p.process_id : "");
+            return nid === pid || npid === ppid || (ppid && nid === `node_${ppid}`) || (pid && npid === pid);
+          });
+          const connected = onCanvas && isNodeConnected(p);
+          let badgeConn = "";
+          if (connected) {
+            badgeConn = `<span style="font-size: 8px; font-weight: 600; color: #0284C7; background: rgba(14, 165, 233, 0.1); padding: 1px 4px; border-radius: 3px;">En diagrama</span>`;
+          } else if (onCanvas) {
+            badgeConn = `<span style="font-size: 8px; font-weight: 600; color: #D97706; background: rgba(245, 158, 11, 0.1); padding: 1px 4px; border-radius: 3px;">En lienzo (por conectar)</span>`;
+          } else {
+            badgeConn = `<span style="font-size: 8px; font-weight: 600; color: var(--text-muted); background: var(--bg-surface); padding: 1px 4px; border-radius: 3px;">En catalogo</span>`;
+          }
 
           return `
       <div class="palette-item" draggable="true" style="padding: 8px 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-sm); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;" data-json='${JSON.stringify(p)}' data-id="${p.id}">
@@ -2781,8 +2806,8 @@
           </div>
         </div>
         <div style="display: flex; gap: 4px; align-items: center;">
-          <button class="btn btn-secondary btn-sm" title="Editar entradas y salidas" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.openProcessEditor('${p.id}')"></button>
-          <button class="btn btn-secondary btn-sm" title="Colocar en lienzo" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.addPaletteNode('${p.id}')">+</button>
+          <button class="btn btn-secondary btn-sm" title="Editar entradas y salidas" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.openProcessEditor('${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></button>
+          <button class="btn btn-secondary btn-sm" title="${onCanvas ? "Enfocar en lienzo" : "Colocar en lienzo"}" style="padding: 2px 6px; font-size: 10px;" onclick="window.EconodeApp.addPaletteNode('${p.id}')">+</button>
           <button class="btn btn-secondary btn-sm" title="Eliminar proceso del sistema" style="padding: 2px 6px; font-size: 10px; color: #EF4444;" onclick="window.EconodeApp.tableDeleteProcess('${p.id}')"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
         </div>
       </div>
@@ -4137,7 +4162,8 @@
       });
       await api.saveSystemCanvas(sysId, {
         nodes: nodesToSave,
-        edges: state.canvasEdges || []
+        edges: state.canvasEdges || [],
+        palette: state.paletteProcesses || []
       });
       if (!isAuto) {
         showNotification("Lienzo guardado exitosamente en base de datos.");
@@ -10981,27 +11007,25 @@
       const removedPid = removedNode && removedNode.process_id !== undefined ? String(removedNode.process_id) : "";
       const removedClean = (removedPid || removedId).replace(/\D/g, "") || cleanNumeric;
 
-      // 2. Retirar también del catálogo (paleta) si no es el modelo oficial
-      const isOfficialSys = state.activeSystem && (state.activeSystem.id === 21 || state.activeSystem.code === "SYS-PET-CIRCULAR-01");
-      if (state.paletteProcesses) {
-        if (!isOfficialSys) {
-          state.paletteProcesses = state.paletteProcesses.filter(p => {
-            const pid = String(p.id);
-            const ppid = String(p.process_id !== undefined ? p.process_id : "");
-            const match = pid === removedId || pid === targetId || ppid === removedPid ||
-                          (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean));
-            return !match;
-          });
-        } else {
-          state.paletteProcesses.forEach(p => {
-            const pid = String(p.id);
-            const ppid = String(p.process_id !== undefined ? p.process_id : "");
-            if (pid === removedId || pid === targetId || ppid === removedPid ||
-                (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean))) {
-              delete p._placedOnCanvas;
-            }
-          });
+      // 2. Preservar SIEMPRE el proceso en el catálogo (paleta), marcándolo como disponible para el lienzo
+      if (!state.paletteProcesses) state.paletteProcesses = [];
+      let foundInPalette = false;
+      state.paletteProcesses.forEach(p => {
+        const pid = String(p.id);
+        const ppid = String(p.process_id !== undefined ? p.process_id : "");
+        const match = pid === removedId || pid === targetId || ppid === removedPid ||
+                      (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean));
+        if (match) {
+          delete p._placedOnCanvas;
+          foundInPalette = true;
         }
+      });
+
+      // Si no estaba explícitamente en la lista de paleta pero estaba en el lienzo, conservarlo en el catálogo
+      if (!foundInPalette && removedNode) {
+        const unplaced = JSON.parse(JSON.stringify(removedNode));
+        delete unplaced._placedOnCanvas;
+        state.paletteProcesses.push(unplaced);
       }
 
       // 3. Quitar TODAS las conexiones conectadas a este nodo (sin excepciones)
@@ -11059,6 +11083,10 @@
       const found = procs.find(p => String(p.id) === searchStr || String(p.process_id) === searchStr);
       if (found) {
         found._placedOnCanvas = true;
+        if (state.paletteProcesses) {
+          const pItem = state.paletteProcesses.find(p => String(p.id) === searchStr || String(p.process_id) === searchStr);
+          if (pItem) pItem._placedOnCanvas = true;
+        }
         const already = state.canvasNodes.find(n => String(n.id) === String(found.id) || String(n.process_id) === String(found.process_id));
         if (!already) {
           state.canvasNodes.push({

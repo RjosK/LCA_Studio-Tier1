@@ -311,15 +311,16 @@ def get_system_canvas_use_case(conn: Optional[sqlite3.Connection] = None, system
 
 
 def save_system_canvas_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1, payload: Optional[Dict[str, Any]] = None):
-    """Guarda la posición de los nodos y conexiones del lienzo."""
+    """Guarda la posición de los nodos, conexiones y catálogo del lienzo."""
     payload = payload or {}
     nodes = payload.get("nodes", [])
     edges = payload.get("edges", [])
+    palette = payload.get("palette", None)
     if conn is None:
         with get_active_db_connection() as c:
-            save_system_canvas(c, system_id, nodes, edges)
+            save_system_canvas(c, system_id, nodes, edges, palette)
     else:
-        save_system_canvas(conn, system_id, nodes, edges)
+        save_system_canvas(conn, system_id, nodes, edges, palette)
 
 
 def delete_product_system_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1) -> bool:

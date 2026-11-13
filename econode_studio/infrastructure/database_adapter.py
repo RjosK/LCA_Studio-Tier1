@@ -766,6 +766,7 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
         if isinstance(parsed_p, dict) and "canvas_nodes" in parsed_p and parsed_p["canvas_nodes"] is not None:
             saved_nodes = parsed_p["canvas_nodes"]
             saved_edges = parsed_p.get("canvas_edges", [])
+            saved_palette = parsed_p.get("palette_processes", [])
             for n in saved_nodes:
                 nx = float(n.get("x") if n.get("x") is not None else n.get("pos_x", 60))
                 ny = float(n.get("y") if n.get("y") is not None else n.get("pos_y", 140))
@@ -789,6 +790,7 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "collaborators": collabs,
                 "nodes": saved_nodes,
                 "edges": saved_edges,
+                "palette": saved_palette,
                 "parameters": get_system_parameters(conn, system_id)
             }
     except Exception:
@@ -834,8 +836,8 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
         "parameters": get_system_parameters(conn, system_id)
     }
 
-def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]):
-    """Guarda las posiciones de los nodos y los enlaces en el lienzo."""
+def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]], palette: Optional[List[Dict[str, Any]]] = None):
+    """Guarda las posiciones de los nodos, enlaces y catalogo en el lienzo."""
     ensure_product_systems_columns(conn)
     with conn:
         # 1. Normalizar nodos con coordenadas exactas x, y, pos_x, pos_y
@@ -852,7 +854,7 @@ def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dic
                 node_copy["id"] = f"node_{node_copy.get('process_id', 100001)}"
             normalized_nodes.append(node_copy)
 
-        # 2. Guardar en parameters_json del sistema producto para preservación total
+        # 2. Guardar en parameters_json del sistema producto para preservacion total
         cur = conn.execute("SELECT parameters_json FROM product_systems WHERE id = ?;", (system_id,))
         row = cur.fetchone()
         params = {}
@@ -863,6 +865,8 @@ def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dic
                 params = {}
         params["canvas_nodes"] = normalized_nodes
         params["canvas_edges"] = edges or []
+        if palette is not None:
+            params["palette_processes"] = palette
         conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params, ensure_ascii=False), system_id))
 
         # 3. Mantener consistencia relacional en product_system_nodes
