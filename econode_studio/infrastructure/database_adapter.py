@@ -290,6 +290,12 @@ def ensure_product_systems_columns(conn: Any):
                         conn.execute(f"ALTER TABLE product_systems ADD COLUMN IF NOT EXISTS {col_name} {col_def};")
                     except Exception:
                         pass
+                try:
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_project ON product_systems(project_id);")
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_owner_email ON product_systems(owner_email);")
+                    conn.execute("CREATE INDEX IF NOT EXISTS idx_product_system_nodes_sys ON product_system_nodes(system_id);")
+                except Exception:
+                    pass
             _PRODUCT_SYSTEMS_COLUMNS_CHECKED = True
         except Exception as e:
             pass
@@ -331,6 +337,12 @@ def ensure_product_systems_columns(conn: Any):
             for col_name, col_def in new_cols:
                 if col_name not in cols:
                     conn.execute(f"ALTER TABLE product_systems ADD COLUMN {col_name} {col_def};")
+            try:
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_project ON product_systems(project_id);")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_owner_email ON product_systems(owner_email);")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_product_system_nodes_sys ON product_system_nodes(system_id);")
+            except Exception:
+                pass
         _PRODUCT_SYSTEMS_COLUMNS_CHECKED = True
     except Exception as e:
         pass
@@ -358,7 +370,7 @@ def list_product_systems(
     is_local_sqlite = not getattr(settings, "IS_POSTGRES", False)
     is_admin = clean_email in admin_emails or user_role == "admin"
 
-    # Consulta principal con JOIN a proyectos
+    # Consulta principal con JOIN a proyectos (optimizada: sin joins a vistas pesadas de flujos/procesos)
     query_full = """
         SELECT s.id, s.name, s.code, s.reference_process_id, s.target_amount,
                coalesce(s.description, '') as description,
@@ -368,15 +380,12 @@ def list_product_systems(
                coalesce(s.status, 'draft') as status,
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
+               coalesce(s.parameters_json, '{}') as parameters_json,
                s.project_id,
                pr.name as project_name,
-               pr.code as project_code,
-               p.name as reference_process_name,
-               f.unit_symbol as reference_unit
+               pr.code as project_code
         FROM product_systems s
         LEFT JOIN projects pr ON s.project_id = pr.id
-        LEFT JOIN processes p ON s.reference_process_id = p.id
-        LEFT JOIN flows f ON p.reference_flow_id = f.id
     """
 
     # Consulta fallback sin JOIN a proyectos por si la tabla no está creada aún en Supabase
@@ -389,14 +398,11 @@ def list_product_systems(
                coalesce(s.status, 'draft') as status,
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
+               coalesce(s.parameters_json, '{}') as parameters_json,
                NULL as project_id,
                NULL as project_name,
-               NULL as project_code,
-               p.name as reference_process_name,
-               f.unit_symbol as reference_unit
+               NULL as project_code
         FROM product_systems s
-        LEFT JOIN processes p ON s.reference_process_id = p.id
-        LEFT JOIN flows f ON p.reference_flow_id = f.id
     """
 
     rows = []
@@ -434,13 +440,27 @@ def list_product_systems(
         except Exception as e2:
             rows = []
 
+    # Conteo agrupado en una única consulta para eliminar N+1 roundtrips a la base de datos
+    counts_map = {}
+    try:
+        c_rows = conn.execute("SELECT system_id, count(*) FROM product_system_nodes GROUP BY system_id;").fetchall()
+        counts_map = {row[0]: row[1] for row in c_rows}
+    except Exception:
+        counts_map = {}
+
     results = []
     for r in rows:
         sys_id = r["id"]
-        try:
-            nodes_count = conn.execute("SELECT count(*) FROM product_system_nodes WHERE system_id = ?", (sys_id,)).fetchone()[0]
-        except Exception:
-            nodes_count = 0
+        nodes_count = counts_map.get(sys_id, 0)
+        if nodes_count == 0 and "parameters_json" in r.keys() and r["parameters_json"]:
+            try:
+                raw_p = r["parameters_json"]
+                if isinstance(raw_p, str) and "canvas_nodes" in raw_p:
+                    p_obj = json.loads(raw_p)
+                    if isinstance(p_obj, dict) and "canvas_nodes" in p_obj and isinstance(p_obj["canvas_nodes"], list):
+                        nodes_count = len(p_obj["canvas_nodes"])
+            except Exception:
+                pass
 
         collabs = []
         raw_c = r["collaborators_json"] if "collaborators_json" in r.keys() and r["collaborators_json"] else "[]"
@@ -454,9 +474,9 @@ def list_product_systems(
             "name": r["name"],
             "code": r["code"] or f"SYS_{r['id']:04d}",
             "reference_process_id": r["reference_process_id"],
-            "reference_process_name": r["reference_process_name"] or "Proceso Principal",
+            "reference_process_name": "Proceso Principal",
             "target_amount": float(r["target_amount"] or 1.0),
-            "unit": r["reference_unit"] or "u",
+            "unit": "u",
             "description": r["description"],
             "nodes_count": nodes_count,
             "status": r["status"] if "status" in r.keys() and r["status"] else "draft",

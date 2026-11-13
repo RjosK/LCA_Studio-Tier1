@@ -595,6 +595,7 @@
       localStorage.removeItem("econode_user_id");
       localStorage.removeItem("econode_user");
       localStorage.removeItem("econode_cached_systems");
+      localStorage.removeItem("econode_cached_projects");
       localStorage.removeItem("econode_active_system_id");
       localStorage.removeItem("econode_active_view");
     } catch (e) {}
@@ -725,21 +726,32 @@
   // =========================================================================
   async function loadDashboard() {
     try {
-      // 1. Renderizado instantáneo desde caché local si existe (0ms)
+      // 1. Renderizado instantáneo desde caché local de sistemas y proyectos si existe (0ms de latencia)
       const cached = localStorage.getItem("econode_cached_systems");
-      if (cached && (!state.systems || state.systems.length === 0)) {
+      const cachedProj = localStorage.getItem("econode_cached_projects");
+      let hasRenderedCache = false;
+      if (cached) {
         try {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
             state.systems = parsed;
+            if (cachedProj) {
+              try {
+                const parsedProj = JSON.parse(cachedProj);
+                if (Array.isArray(parsedProj)) state.projects = parsedProj;
+              } catch(e) {}
+            }
             renderDashboardTable();
             renderDashboardKpis();
+            hasRenderedCache = true;
           }
         } catch(e) {}
-      } else if (!state.systems || state.systems.length === 0) {
+      }
+
+      if (!hasRenderedCache && (!state.systems || state.systems.length === 0)) {
         const tbody = document.getElementById("tableSystemsBody");
         if (tbody) {
-          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted); font-size: 11.5px;">Cargando portafolio de proyectos...</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 28px; color: var(--text-muted); font-size: 11.5px;"><span class="apple-spinner-micro" style="margin-right: 6px;"></span>Cargando portafolio de proyectos y sistemas...</td></tr>`;
         }
       }
 
@@ -777,6 +789,14 @@
       if (freshProjects !== null) {
         state.projects = freshProjects;
         try { localStorage.setItem("econode_cached_projects", JSON.stringify(freshProjects)); } catch(e) {}
+      } else if (!state.projects || state.projects.length === 0) {
+        const fallbackProj = localStorage.getItem("econode_cached_projects");
+        if (fallbackProj) {
+          try {
+            const p = JSON.parse(fallbackProj);
+            if (Array.isArray(p)) state.projects = p;
+          } catch(e) {}
+        }
       }
 
       updateProjectSelectOptions();
