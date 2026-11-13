@@ -23,6 +23,9 @@ except (ImportError, ValueError):
 
 from .db_connection import get_db_connection
 
+_PRODUCT_SYSTEMS_COLUMNS_CHECKED = False
+_CUSTOM_TABLES_ENSURED = False
+
 def get_active_db_connection() -> Any:
     """Retorna una conexión activa optimizada con soporte dual para Supabase PostgreSQL y SQLite."""
     return get_db_connection(ECOINVENT_DB_PATH)
@@ -30,7 +33,11 @@ def get_active_db_connection() -> Any:
 # -----------------------------------------------------------------------------
 def ensure_custom_tables_and_views(conn: Any):
     """Garantiza la infraestructura de procesos y flujos propios creados por el usuario."""
+    global _CUSTOM_TABLES_ENSURED
+    if _CUSTOM_TABLES_ENSURED:
+        return
     if getattr(settings, "IS_POSTGRES", False):
+        _CUSTOM_TABLES_ENSURED = True
         return
     try:
         conn.executescript("""
@@ -96,6 +103,7 @@ def ensure_custom_tables_and_views(conn: Any):
             cf.description
         FROM custom_flows cf;
         """)
+        _CUSTOM_TABLES_ENSURED = True
     except Exception as e:
         pass
 
@@ -243,6 +251,9 @@ def delete_user_custom_flow(conn: sqlite3.Connection, flow_id: Any) -> bool:
 
 def ensure_product_systems_columns(conn: Any):
     """Garantiza la existencia de columnas de propietario, metadatos y proyectos en product_systems (SQLite y PostgreSQL)."""
+    global _PRODUCT_SYSTEMS_COLUMNS_CHECKED
+    if _PRODUCT_SYSTEMS_COLUMNS_CHECKED:
+        return
     if getattr(settings, "IS_POSTGRES", False):
         try:
             with conn:
@@ -279,6 +290,7 @@ def ensure_product_systems_columns(conn: Any):
                         conn.execute(f"ALTER TABLE product_systems ADD COLUMN IF NOT EXISTS {col_name} {col_def};")
                     except Exception:
                         pass
+            _PRODUCT_SYSTEMS_COLUMNS_CHECKED = True
         except Exception as e:
             pass
         return
@@ -319,6 +331,7 @@ def ensure_product_systems_columns(conn: Any):
             for col_name, col_def in new_cols:
                 if col_name not in cols:
                     conn.execute(f"ALTER TABLE product_systems ADD COLUMN {col_name} {col_def};")
+        _PRODUCT_SYSTEMS_COLUMNS_CHECKED = True
     except Exception as e:
         pass
 
@@ -720,6 +733,14 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 n["pos_y"] = ny
                 if "id" not in n:
                     n["id"] = f"node_{n.get('process_id', 100001)}"
+            if isinstance(parsed_p, dict) and "parameters" in parsed_p and isinstance(parsed_p["parameters"], list):
+                if len(parsed_p["parameters"]) > 0 or system_id != 21:
+                    sys_params = parsed_p["parameters"]
+                else:
+                    sys_params = get_system_parameters(conn, system_id)
+            else:
+                sys_params = get_system_parameters(conn, system_id)
+
             return {
                 "id": sys_row["id"],
                 "name": sys_row["name"],
@@ -735,7 +756,7 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "nodes": saved_nodes,
                 "edges": saved_edges,
                 "palette": saved_palette,
-                "parameters": get_system_parameters(conn, system_id)
+                "parameters": sys_params
             }
     except Exception:
         pass
