@@ -361,7 +361,13 @@
         setTimeout(() => { if (window.initGoogleAuthUI) window.initGoogleAuthUI(viewName); }, 80);
       }
     }
-    if (viewName === "dashboard") loadDashboard();
+    if (viewName === "dashboard") {
+      if (autoSaveCanvasTimer) {
+        clearTimeout(autoSaveCanvasTimer);
+        autoSaveCanvasTimer = null;
+      }
+      loadDashboard();
+    }
     if (viewName === "canvas") {
       switchCanvasViewMode(state.canvasViewMode || "visual");
     }
@@ -1144,19 +1150,25 @@
   }
 
   async function openSystem(sysId, navigateToCanvas = true) {
+    // 1. Cancelar cualquier auto-guardado previo para evitar sobreescritura cruzada
+    if (autoSaveCanvasTimer) {
+      clearTimeout(autoSaveCanvasTimer);
+      autoSaveCanvasTimer = null;
+    }
+
+    // 2. Limpieza inmediata y sincrona del estado para aislamiento estricto
+    state.selectedNode = null;
+    state.connectingFromNode = null;
+    state.connectingToNode = null;
+    state.canvasNodes = [];
+    state.canvasEdges = [];
+    state.paletteProcesses = [];
+
     try {
       const res = await api.getSystemCanvas(sysId);
       if (res && res.system) {
         try { localStorage.setItem("econode_active_system_id", String(sysId)); } catch (e) {}
         state.activeSystem = res.system;
-
-        // Reset total del lienzo y paleta para aislamiento estricto entre sistemas
-        state.selectedNode = null;
-        state.connectingFromNode = null;
-        state.connectingToNode = null;
-        state.canvasNodes = [];
-        state.canvasEdges = [];
-        state.paletteProcesses = [];
 
         state.canvasNodes = (res.system.nodes || []).map(n => {
           const nx = (n.x !== undefined && n.x !== null) ? Number(n.x) : ((n.pos_x !== undefined && n.pos_x !== null) ? Number(n.pos_x) : 60);
@@ -1216,7 +1228,7 @@
 
         // Catálogo (paleta) estrictamente aislado por sistema producto
         if (isOfficial) {
-          initDefaultPalette();
+          initDefaultPalette(true);
         } else {
           const seenPids = new Set();
           state.paletteProcesses = [];
@@ -2447,8 +2459,8 @@
     }
   }
 
-  function initDefaultPalette() {
-    if (state.paletteProcesses && state.paletteProcesses.length > 0) return;
+  function initDefaultPalette(force = false) {
+    if (!force && state.paletteProcesses && state.paletteProcesses.length > 0) return;
     state.paletteProcesses = [
       {
         id: "palette_inyeccion",
@@ -4107,16 +4119,25 @@
   }
 
   async function saveCanvas(isAuto = false) {
-    const sysId = state.activeSystem ? state.activeSystem.id : 21;
+    if (!state.activeSystem || !state.activeSystem.id) {
+      return;
+    }
+    const sysId = state.activeSystem.id;
     try {
-      const allProcs = getAllSystemProcesses();
-      allProcs.forEach(n => {
-        if (n.x !== undefined) n.pos_x = n.x;
-        if (n.y !== undefined) n.pos_y = n.y;
+      const nodesToSave = (state.canvasNodes || []).map(n => {
+        const px = (n.x !== undefined && n.x !== null) ? Number(n.x) : ((n.pos_x !== undefined && n.pos_x !== null) ? Number(n.pos_x) : 60);
+        const py = (n.y !== undefined && n.y !== null) ? Number(n.y) : ((n.pos_y !== undefined && n.pos_y !== null) ? Number(n.pos_y) : 140);
+        return {
+          ...n,
+          x: px,
+          y: py,
+          pos_x: px,
+          pos_y: py
+        };
       });
       await api.saveSystemCanvas(sysId, {
-        nodes: allProcs,
-        edges: state.canvasEdges
+        nodes: nodesToSave,
+        edges: state.canvasEdges || []
       });
       if (!isAuto) {
         showNotification("Lienzo guardado exitosamente en base de datos.");
@@ -10960,16 +10981,27 @@
       const removedPid = removedNode && removedNode.process_id !== undefined ? String(removedNode.process_id) : "";
       const removedClean = (removedPid || removedId).replace(/\D/g, "") || cleanNumeric;
 
-      // 2. Desactivar flag _placedOnCanvas en la paleta si existe
+      // 2. Retirar también del catálogo (paleta) si no es el modelo oficial
+      const isOfficialSys = state.activeSystem && (state.activeSystem.id === 21 || state.activeSystem.code === "SYS-PET-CIRCULAR-01");
       if (state.paletteProcesses) {
-        state.paletteProcesses.forEach(p => {
-          const pid = String(p.id);
-          const ppid = String(p.process_id !== undefined ? p.process_id : "");
-          if (pid === removedId || pid === targetId || ppid === removedPid ||
-              (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean))) {
-            delete p._placedOnCanvas;
-          }
-        });
+        if (!isOfficialSys) {
+          state.paletteProcesses = state.paletteProcesses.filter(p => {
+            const pid = String(p.id);
+            const ppid = String(p.process_id !== undefined ? p.process_id : "");
+            const match = pid === removedId || pid === targetId || ppid === removedPid ||
+                          (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean));
+            return !match;
+          });
+        } else {
+          state.paletteProcesses.forEach(p => {
+            const pid = String(p.id);
+            const ppid = String(p.process_id !== undefined ? p.process_id : "");
+            if (pid === removedId || pid === targetId || ppid === removedPid ||
+                (removedClean && (pid === removedClean || pid === `node_${removedClean}` || ppid === removedClean))) {
+              delete p._placedOnCanvas;
+            }
+          });
+        }
       }
 
       // 3. Quitar TODAS las conexiones conectadas a este nodo (sin excepciones)
