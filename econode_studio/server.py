@@ -91,6 +91,30 @@ from application import (
     export_expediente_nom070_zip,
     export_system_pdf_bytes
 )
+try:
+    from application.ghg_service import (
+        list_inventories_use_case,
+        get_inventory_by_id_use_case,
+        create_inventory_use_case,
+        delete_inventory_use_case,
+        add_entry_to_inventory_use_case,
+        delete_entry_from_inventory_use_case,
+        get_scope_taxonomy_use_case,
+        search_emission_factors,
+        list_distinct_sources
+    )
+except (ImportError, ValueError):
+    from econode_studio.application.ghg_service import (
+        list_inventories_use_case,
+        get_inventory_by_id_use_case,
+        create_inventory_use_case,
+        delete_inventory_use_case,
+        add_entry_to_inventory_use_case,
+        delete_entry_from_inventory_use_case,
+        get_scope_taxonomy_use_case,
+        search_emission_factors,
+        list_distinct_sources
+    )
 from infrastructure import get_active_db_connection, get_configured_client_id, get_user_by_id
 
 WEB_DIR = os.path.join(os.path.dirname(STUDIO_DIR), "public")
@@ -333,6 +357,63 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self._send_json(res)
                     except Exception as e:
                         self._send_error_json(str(e), 400)
+                    return
+
+                # --- Modulo GHG Protocol ---
+                # Listar Inventarios Corporativos GEI
+                elif path == "/api/ghg/inventories":
+                    try:
+                        inventories = list_inventories_use_case()
+                        self._send_json({"status": "success", "count": len(inventories), "items": inventories})
+                    except Exception as e:
+                        self._send_error_json(str(e), 500)
+                    return
+
+                # Detalle y Resumen Contable de Inventario GEI
+                elif path.startswith("/api/ghg/inventories/") and not path.endswith("/entries"):
+                    try:
+                        inv_id = int(path.split("/")[4])
+                        inv = get_inventory_by_id_use_case(inv_id)
+                        if not inv:
+                            self._send_error_json("Inventario GEI no encontrado", 404)
+                        else:
+                            self._send_json({"status": "success", "inventory": inv})
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
+                    return
+
+                # Taxonomia Oficial de Categorias GHG Protocol
+                elif path == "/api/ghg/taxonomy":
+                    self._send_json({"status": "success", "taxonomy": get_scope_taxonomy_use_case()})
+                    return
+
+                # Buscador Universal de Factores de Emision (DEFRA, EPA, CRE, USEEIO, ADEME)
+                elif path == "/api/ghg/emission-factors":
+                    q = query.get("q", [""])[0] or query.get("query", [""])[0]
+                    scope = query.get("scope", ["ALL"])[0]
+                    source = query.get("source", ["ALL"])[0]
+                    geo = query.get("geo", ["ALL"])[0]
+                    limit = int(query.get("limit", [50])[0])
+                    offset = int(query.get("offset", [0])[0])
+                    try:
+                        factors, total = search_emission_factors(query=q, scope=scope, source=source, geo=geo, limit=limit, offset=offset)
+                        self._send_json({
+                            "status": "success",
+                            "total": total,
+                            "count": len(factors),
+                            "items": factors
+                        })
+                    except Exception as e:
+                        self._send_error_json(str(e), 500)
+                    return
+
+                # Fuentes de Datos de Factores de Emision Disponibles
+                elif path == "/api/ghg/sources":
+                    try:
+                        sources = list_distinct_sources()
+                        self._send_json({"status": "success", "sources": sources})
+                    except Exception as e:
+                        self._send_error_json(str(e), 500)
                     return
 
                 # Canvas details for a system (Requiere Autenticación)
@@ -830,6 +911,52 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     res = create_project_use_case(conn, body, user=user)
                     self._send_json(res)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # --- Modulo GHG Protocol POST ---
+            # Crear Inventario Corporativo GEI
+            elif path == "/api/ghg/inventories" or path == "/api/ghg/inventories/create":
+                try:
+                    res = create_inventory_use_case(body)
+                    self._send_json({"status": "success", "inventory": res})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Eliminar Inventario Corporativo GEI
+            elif path == "/api/ghg/inventories/delete" or (path.startswith("/api/ghg/inventories/") and "/entries/" not in path and path.endswith("/delete")):
+                parts = path.split("/")
+                inv_id = int(body.get("inventory_id") or (parts[4] if len(parts) > 4 and parts[4] != "delete" else 0))
+                if not inv_id:
+                    self._send_error_json("ID de inventario no especificado", 400)
+                    return
+                try:
+                    ok = delete_inventory_use_case(inv_id)
+                    self._send_json({"status": "success", "deleted_id": inv_id, "message": "Inventario eliminado exitosamente."})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Agregar Registro de Emision / Actividad a un Inventario
+            elif path.startswith("/api/ghg/inventories/") and path.endswith("/entries"):
+                inv_id = int(path.split("/")[4])
+                try:
+                    res = add_entry_to_inventory_use_case(inv_id, body)
+                    self._send_json({"status": "success", "inventory": res})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Eliminar Registro de Emision de un Inventario
+            elif path.startswith("/api/ghg/inventories/") and "/entries/" in path and path.endswith("/delete"):
+                parts = path.split("/")
+                inv_id = int(parts[4])
+                entry_id = int(parts[6])
+                try:
+                    res = delete_entry_from_inventory_use_case(inv_id, entry_id)
+                    self._send_json({"status": "success", "inventory": res})
                 except Exception as e:
                     self._send_error_json(str(e), 400)
                 return

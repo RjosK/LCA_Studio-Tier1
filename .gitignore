@@ -37,3 +37,6 @@ supabase/data/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Temporary scratch scripts
+scratch/

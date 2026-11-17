@@ -728,9 +728,11 @@ def compare_project_systems_use_case(
             gw_vals = [s["lcia_scores"]["global_warming"] for s in systems_data]
             min_gw = min(gw_vals)
             max_gw = max(gw_vals)
+            is_tie = (len(systems_data) > 1 and abs(max_gw - min_gw) < 1e-6)
             for s in systems_data:
                 curr_gw = s["lcia_scores"]["global_warming"]
-                s["is_best_carbon"] = (curr_gw == min_gw)
+                s["is_best_carbon"] = (curr_gw == min_gw and not is_tie)
+                s["is_tied_best"] = is_tie
                 diff_vs_min_pct = round(((curr_gw - min_gw) / min_gw * 100.0), 1) if min_gw > 0 else 0.0
                 s["diff_vs_best_pct"] = diff_vs_min_pct
                 if max_gw > min_gw:

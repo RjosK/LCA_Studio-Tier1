@@ -67,7 +67,20 @@
     paramGroupFilter: "all", // "all" | "<group_name>"
     paramTypeFilter: "all", // "all" | "independent" | "dependent"
     paramSearchQuery: "", // Filtro de búsqueda en tiempo real
-    editingParameter: null // Parámetro en edición activa
+    editingParameter: null, // Parámetro en edición activa
+    // Inventario Corporativo GEI & Factores de Emisión (GHG Protocol)
+    ghgInventories: [],
+    activeGhgInventory: null,
+    ghgTaxonomy: null,
+    ghgActiveTab: "summary",
+    ghgEmissionFactors: [],
+    ghgFactorsFilterSource: "ALL",
+    ghgFactorsFilterScope: "ALL",
+    ghgFactorsSearchQuery: "",
+    ghgAddEntryScope: "SCOPE_1",
+    ghgSelectedFactor: null,
+    ghgSpendFactors: [],
+    ghgSelectedSpendFactor: null
   };
 
   // =========================================================================
@@ -266,7 +279,26 @@
     createProject: (data) => api.post("/api/projects/create", data),
     deleteProject: (projId) => api.post("/api/projects/delete", { project_id: projId }),
     assignSystemToProject: (sysId, projId) => api.post(`/api/systems/${sysId}/assign-project`, { project_id: projId }),
-    compareProject: (projId) => api.get(`/api/projects/${projId}/compare`)
+    compareProject: (projId) => api.get(`/api/projects/${projId}/compare`),
+
+    // GHG Protocol & Scope 1/2/3 Corporate Inventories
+    getGhgTaxonomy: () => api.get("/api/ghg/taxonomy"),
+    listGhgInventories: () => api.get("/api/ghg/inventories"),
+    getGhgInventory: (id) => api.get(`/api/ghg/inventories/${id}`),
+    createGhgInventory: (data) => api.post("/api/ghg/inventories", data),
+    deleteGhgInventory: (id) => api.post(`/api/ghg/inventories/${id}/delete`, {}),
+    addGhgEntry: (invId, data) => api.post(`/api/ghg/inventories/${invId}/entries`, data),
+    deleteGhgEntry: (invId, entryId) => api.post(`/api/ghg/inventories/${invId}/entries/${entryId}/delete`, {}),
+    searchGhgEmissionFactors: (params = {}) => {
+      const sp = new URLSearchParams();
+      if (params.q) sp.append("q", params.q);
+      if (params.source && params.source !== "ALL") sp.append("source", params.source);
+      if (params.category && params.category !== "ALL") sp.append("category", params.category);
+      if (params.limit) sp.append("limit", params.limit);
+      const qs = sp.toString();
+      return api.get(`/api/ghg/emission-factors${qs ? '?' + qs : ''}`);
+    },
+    getGhgEmissionSources: () => api.get("/api/ghg/sources")
   };
 
   // =========================================================================
@@ -280,7 +312,8 @@
     canvas: document.getElementById("viewCanvas"),
     catalog: document.getElementById("viewCatalog"),
     report: document.getElementById("viewReport"),
-    audit: document.getElementById("viewAudit")
+    audit: document.getElementById("viewAudit"),
+    ghg: document.getElementById("viewGhg")
   };
 
   function showView(viewName) {
@@ -290,7 +323,7 @@
     if (!views[viewName]) return;
 
     // Protección de rutas: si intenta entrar a Studio sin autenticación, enviar a login
-    const isStudioRoute = ["dashboard", "canvas", "catalog", "report", "audit"].includes(viewName);
+    const isStudioRoute = ["dashboard", "canvas", "catalog", "report", "audit", "ghg"].includes(viewName);
     if (isStudioRoute && !state.isAuthenticated) {
       showNotification("Por favor inicia sesión con tu perfil para ingresar al Studio.");
       viewName = "login";
@@ -304,7 +337,7 @@
     }
 
     state.currentView = viewName;
-    if (state.isAuthenticated && ["dashboard", "canvas", "catalog", "report", "audit"].includes(viewName)) {
+    if (state.isAuthenticated && ["dashboard", "canvas", "catalog", "report", "audit", "ghg"].includes(viewName)) {
       try { localStorage.setItem("econode_active_view", viewName); } catch (e) {}
     }
 
@@ -374,6 +407,7 @@
     if (viewName === "catalog") loadCatalog();
     if (viewName === "report") loadReport();
     if (viewName === "audit") loadAuditChecklist();
+    if (viewName === "ghg") loadGhgInventoryModule();
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -8806,6 +8840,914 @@
     }
   }
 
+  function closeModal(id) {
+    const m = document.getElementById(id);
+    if (m) {
+      m.style.display = "none";
+      m.classList.remove("active");
+    }
+  }
+
+  // =========================================================================
+  // 10.1 INVENTARIO CORPORATIVO GEI & GHG PROTOCOL (ALCANCES 1, 2 Y 3)
+  // =========================================================================
+  let ghgListenersConfigured = false;
+  let ghgFactorDebounceTimer = null;
+
+  async function loadGhgInventoryModule() {
+    setupGhgModuleListeners();
+
+    // 1. Cargar taxonomía oficial GHG Protocol si no está en memoria
+    if (!state.ghgTaxonomy) {
+      try {
+        const taxData = await api.getGhgTaxonomy();
+        state.ghgTaxonomy = taxData.taxonomy || {};
+      } catch (err) {
+        console.warn("No se pudo cargar taxonomía GHG Protocol:", err);
+      }
+    }
+
+    // 2. Cargar inventarios del usuario
+    try {
+      const invList = await api.listGhgInventories();
+      state.ghgInventories = invList.inventories || [];
+
+      const selectEl = document.getElementById("ghgInventorySelect");
+      if (selectEl) {
+        if (state.ghgInventories.length === 0) {
+          selectEl.innerHTML = '<option value="">Sin inventarios registrados</option>';
+        } else {
+          selectEl.innerHTML = state.ghgInventories.map(inv => `
+            <option value="${inv.id}">${escapeHtml(inv.organization_name)} (${inv.reporting_year}) - ${escapeHtml(inv.consolidation_approach)}</option>
+          `).join("");
+        }
+      }
+
+      const savedInvId = localStorage.getItem("econode_active_ghg_inv");
+      let targetInvId = null;
+      if (savedInvId && state.ghgInventories.some(i => String(i.id) === String(savedInvId))) {
+        targetInvId = parseInt(savedInvId, 10);
+      } else if (state.ghgInventories.length > 0) {
+        targetInvId = state.ghgInventories[0].id;
+      }
+
+      if (targetInvId) {
+        if (selectEl) selectEl.value = targetInvId;
+        await loadActiveGhgInventory(targetInvId);
+      } else {
+        renderGhgEmptyState();
+      }
+
+      // 3. Pre-cargar factores y sectores monetarios
+      searchGhgFactorsTab();
+      populateGhgSpendSectors();
+      populateGhgProductSystems();
+    } catch (err) {
+      console.error("Error al inicializar módulo GHG Protocol:", err);
+      showNotification("Error al cargar inventarios GHG Protocol: " + err.message);
+    }
+  }
+
+  function setupGhgModuleListeners() {
+    if (ghgListenersConfigured) return;
+    ghgListenersConfigured = true;
+
+    // Selector de inventario activo
+    const selectInv = document.getElementById("ghgInventorySelect");
+    if (selectInv) {
+      selectInv.addEventListener("change", (e) => {
+        const val = e.target.value;
+        if (val) loadActiveGhgInventory(parseInt(val, 10));
+      });
+    }
+
+    // Botones de acción del encabezado
+    const btnNewInv = document.getElementById("btnOpenNewGhgInventoryModal");
+    if (btnNewInv) btnNewInv.addEventListener("click", openNewGhgInventoryModal);
+
+    const btnFactorsTab = document.getElementById("btnOpenGhgFactorsTab");
+    if (btnFactorsTab) btnFactorsTab.addEventListener("click", () => switchGhgTab("factors"));
+
+    const btnDelInv = document.getElementById("btnDeleteCurrentGhgInventory");
+    if (btnDelInv) btnDelInv.addEventListener("click", deleteCurrentGhgInventory);
+
+    const btnQuickAdd = document.getElementById("btnQuickAddEntry");
+    if (btnQuickAdd) btnQuickAdd.addEventListener("click", () => openAddGhgEntryModal("SCOPE_1"));
+
+    // Pestañas segmentadas
+    document.querySelectorAll(".ghg-nav-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-ghg-tab");
+        if (tab) switchGhgTab(tab);
+      });
+    });
+
+    // Guardar inventario
+    const btnSubmitInv = document.getElementById("btnSubmitNewGhgInventory");
+    if (btnSubmitInv) btnSubmitInv.addEventListener("click", submitNewGhgInventory);
+
+    // Guardar entrada / fuente de emisión
+    const btnSubmitEntry = document.getElementById("btnSubmitNewGhgEntry");
+    if (btnSubmitEntry) btnSubmitEntry.addEventListener("click", submitNewGhgEntry);
+
+    // Cambio de alcance en modal de agregar fuente
+    const selectScope = document.getElementById("selectEntryScope");
+    if (selectScope) {
+      selectScope.addEventListener("change", (e) => {
+        onGhgModalScopeChange(e.target.value);
+      });
+    }
+
+    // Buscador en pestaña de catálogo de factores
+    const inputSearch = document.getElementById("inputGhgFactorSearch");
+    if (inputSearch) {
+      inputSearch.addEventListener("input", () => {
+        clearTimeout(ghgFactorDebounceTimer);
+        ghgFactorDebounceTimer = setTimeout(searchGhgFactorsTab, 250);
+      });
+    }
+    const selectScopeFilter = document.getElementById("selectGhgFactorScope");
+    if (selectScopeFilter) selectScopeFilter.addEventListener("change", searchGhgFactorsTab);
+    const selectSourceFilter = document.getElementById("selectGhgFactorSource");
+    if (selectSourceFilter) selectSourceFilter.addEventListener("change", searchGhgFactorsTab);
+  }
+
+  function switchGhgTab(tabName) {
+    state.ghgActiveTab = tabName;
+    document.querySelectorAll(".ghg-nav-tab").forEach(btn => {
+      btn.classList.toggle("active", btn.getAttribute("data-ghg-tab") === tabName);
+    });
+
+    const panes = {
+      summary: document.getElementById("ghgPaneSummary"),
+      scope1: document.getElementById("ghgPaneScope1"),
+      scope2: document.getElementById("ghgPaneScope2"),
+      scope3: document.getElementById("ghgPaneScope3"),
+      factors: document.getElementById("ghgPaneFactors")
+    };
+
+    Object.keys(panes).forEach(k => {
+      if (panes[k]) panes[k].style.display = (k === tabName) ? "block" : "none";
+    });
+
+    if (tabName === "factors") {
+      searchGhgFactorsTab();
+    }
+  }
+
+  async function loadActiveGhgInventory(invId) {
+    try {
+      const data = await api.getGhgInventory(invId);
+      const inv = data.inventory;
+      state.activeGhgInventory = inv;
+      localStorage.setItem("econode_active_ghg_inv", String(invId));
+      renderGhgView(inv);
+    } catch (err) {
+      console.error("Error al cargar inventario GEI:", err);
+      showNotification("Error al cargar inventario: " + err.message);
+    }
+  }
+
+  function renderGhgEmptyState() {
+    const kpiEls = {
+      ghgKpiScope1: "0.00 t CO2e",
+      ghgScope1Pct: "0.0%",
+      ghgKpiScope2Location: "0.00 t CO2e",
+      ghgKpiScope2Market: "0.00 t",
+      ghgScope2Pct: "0.0%",
+      ghgKpiScope3: "0.00 t CO2e",
+      ghgScope3Pct: "0.0%",
+      ghgKpiScope3Upstream: "0.00 t",
+      ghgKpiScope3Downstream: "0.00 t",
+      ghgKpiTotalMarket: "0.00 t CO2e",
+      ghgKpiTotalLocation: "0.00 t",
+      ghgKpiNetReduction: "0.00 t",
+      ghgStatusBadge: "Borrador"
+    };
+    Object.keys(kpiEls).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = kpiEls[id];
+    });
+
+    const bodySummary = document.getElementById("ghgSummaryEntriesTableBody");
+    if (bodySummary) {
+      bodySummary.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 32px;">No hay inventarios creados. Haz clic en "+ Nuevo Inventario GEI" para comenzar.</td></tr>`;
+    }
+    const bodyS1 = document.getElementById("ghgScope1TableBody");
+    if (bodyS1) bodyS1.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Sin fuentes registradas en Alcance 1.</td></tr>`;
+    const bodyS2 = document.getElementById("ghgScope2TableBody");
+    if (bodyS2) bodyS2.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Sin consumos eléctricos registrados en Alcance 2.</td></tr>`;
+    const accContainer = document.getElementById("ghgScope3AccordionContainer");
+    if (accContainer) accContainer.innerHTML = `<div style="text-align: center; color: var(--text-muted); padding: 24px;">Seleccione un inventario para explorar las 15 categorías de Alcance 3.</div>`;
+  }
+
+  function renderGhgView(inv) {
+    if (!inv) return;
+    const summary = inv.summary || {};
+
+    // 1. Tarjetas KPI Ejecutivas
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    };
+
+    setVal("ghgKpiScope1", `${Number(summary.scope_1_total || 0).toFixed(2)} t CO2e`);
+    setVal("ghgScope1Pct", `${Number(summary.scope_1_share_pct || 0).toFixed(1)}%`);
+    setVal("ghgKpiScope2Location", `${Number(summary.scope_2_location_total || 0).toFixed(2)} t CO2e`);
+    setVal("ghgKpiScope2Market", `${Number(summary.scope_2_market_total || 0).toFixed(2)} t`);
+    setVal("ghgScope2Pct", `${Number(summary.scope_2_share_pct || 0).toFixed(1)}%`);
+    setVal("ghgKpiScope3", `${Number(summary.scope_3_total || 0).toFixed(2)} t CO2e`);
+    setVal("ghgScope3Pct", `${Number(summary.scope_3_share_pct || 0).toFixed(1)}%`);
+    setVal("ghgKpiScope3Upstream", `${Number(summary.scope_3_upstream_total || 0).toFixed(2)} t`);
+    setVal("ghgKpiScope3Downstream", `${Number(summary.scope_3_downstream_total || 0).toFixed(2)} t`);
+    setVal("ghgKpiTotalMarket", `${Number(summary.total_market_based || 0).toFixed(2)} t CO2e`);
+    setVal("ghgKpiTotalLocation", `${Number(summary.total_location_based || 0).toFixed(2)} t`);
+    setVal("ghgKpiNetReduction", `${Number(summary.net_reduction_i_rec || 0).toFixed(2)} t`);
+    setVal("ghgStatusBadge", inv.status === "completed" ? "Completado" : "Borrador");
+
+    // 2. Tablas de Fuentes por Alcance
+    const entries = inv.entries || [];
+    renderGhgSummaryTable(entries);
+    renderGhgScope1Table(entries);
+    renderGhgScope2Table(entries);
+    renderGhgScope3Accordion(entries, summary);
+  }
+
+  function renderGhgSummaryTable(entries) {
+    const tbody = document.getElementById("ghgSummaryEntriesTableBody");
+    if (!tbody) return;
+
+    if (!entries || entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">No hay fuentes de emisión registradas en este inventario. Presiona "+ Registrar Fuente" para agregar la primera.</td></tr>`;
+      return;
+    }
+
+    const scopeColors = {
+      SCOPE_1: { badge: "badge-red", label: "Scope 1", bg: "#FEE2E2", col: "#DC2626" },
+      SCOPE_2: { badge: "badge-amber", label: "Scope 2", bg: "#FEF3C7", col: "#D97706" },
+      SCOPE_3: { badge: "badge-blue", label: "Scope 3", bg: "#DBEAFE", col: "#2563EB" }
+    };
+
+    tbody.innerHTML = entries.map(e => {
+      const sc = scopeColors[e.scope] || { badge: "badge-blue", label: e.scope, bg: "#E2E8F0", col: "#475569" };
+      const tons = Number(e.emissions_t_co2e || 0).toFixed(3);
+      const catLabel = e.category_label || e.category || "-";
+      const calcLabel = e.calculation_type === "spend_based" ? "Monetario (USEEIO)" : (e.calculation_type === "product_system_lca" ? "LCA Tier 1" : "Actividad Física");
+      const dqi = e.data_quality_tier || "Tier 1";
+
+      return `
+        <tr>
+          <td><span class="badge-pill" style="background: ${sc.bg}; color: ${sc.col}; font-weight: 700; font-size: 9.5px;">${sc.label}</span></td>
+          <td style="font-size: 11px; max-width: 170px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(catLabel)}">${escapeHtml(catLabel)}</td>
+          <td><strong style="color: var(--text-primary); font-size: 11.5px;">${escapeHtml(e.activity_description || "")}</strong></td>
+          <td><span style="font-size: 10.5px; color: var(--text-muted);">${calcLabel}</span></td>
+          <td style="font-family: monospace; font-size: 11px;">${e.activity_amount} ${escapeHtml(e.activity_unit || "")}</td>
+          <td style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${e.applied_factor_value} <span style="font-size: 9.5px;">${escapeHtml(e.applied_factor_unit || "")}</span></td>
+          <td style="font-family: monospace; font-weight: 700; font-size: 12px; color: #0F172A;">${tons}</td>
+          <td><span class="badge-pill" style="background: #F1F5F9; color: #475569; font-size: 9.5px;">${dqi}</span></td>
+          <td>
+            <button class="btn btn-sm" style="color: #EF4444; background: transparent; padding: 2px 6px; font-size: 11px;" onclick="window.EconodeApp.deleteGhgEntry(${e.id})" title="Eliminar registro">Eliminar</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function renderGhgScope1Table(entries) {
+    const tbody = document.getElementById("ghgScope1TableBody");
+    if (!tbody) return;
+
+    const s1Entries = (entries || []).filter(e => e.scope === "SCOPE_1");
+    if (s1Entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">Sin fuentes registradas en Alcance 1 (Combustión fija, móvil o fugitivas).</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = s1Entries.map(e => `
+      <tr>
+        <td><span class="badge-pill" style="background: #FEE2E2; color: #DC2626; font-size: 9.5px; font-weight: 600;">${escapeHtml(e.category_label || e.category)}</span></td>
+        <td><strong>${escapeHtml(e.activity_description)}</strong></td>
+        <td style="font-family: monospace;">${e.activity_amount} ${escapeHtml(e.activity_unit || "")}</td>
+        <td style="font-family: monospace; color: var(--text-muted); font-size: 11px;">${e.applied_factor_value} ${escapeHtml(e.applied_factor_unit || "")} <span style="font-size: 9.5px; color: #94A3B8;">(${escapeHtml(e.applied_factor_source || "")})</span></td>
+        <td style="font-family: monospace; font-weight: 700; color: #DC2626;">${Number(e.emissions_t_co2e || 0).toFixed(3)}</td>
+        <td>
+          <button class="btn btn-sm" style="color: #EF4444; background: transparent; padding: 2px 6px;" onclick="window.EconodeApp.deleteGhgEntry(${e.id})">Eliminar</button>
+        </td>
+      </tr>
+    `).join("");
+  }
+
+  function renderGhgScope2Table(entries) {
+    const tbody = document.getElementById("ghgScope2TableBody");
+    if (!tbody) return;
+
+    const s2Entries = (entries || []).filter(e => e.scope === "SCOPE_2");
+    if (s2Entries.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 20px;">Sin consumos eléctricos registrados en Alcance 2.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = s2Entries.map(e => {
+      const isMarket = (e.scope_2_reporting_type || "").toLowerCase() === "market_based";
+      const inst = e.contractual_instrument || "none";
+      const instBadge = inst === "i_rec" ? '<span class="badge-pill badge-emerald">I-REC Renovable (0.0 t)</span>'
+        : (inst === "cel" ? '<span class="badge-pill badge-blue">CEL México</span>'
+        : (inst === "ppa" ? '<span class="badge-pill badge-emerald">PPA Limpio</span>' : '<span class="badge-pill" style="background:#F1F5F9; color:#64748B;">Red Convencional</span>'));
+
+      return `
+        <tr>
+          <td><span class="badge-pill" style="background: ${isMarket ? '#ECFDF5' : '#FEF3C7'}; color: ${isMarket ? '#059669' : '#D97706'}; font-weight: 700; font-size: 9.5px;">${isMarket ? 'Market-Based' : 'Location-Based'}</span></td>
+          <td><strong>${escapeHtml(e.activity_description)}</strong></td>
+          <td style="font-family: monospace;">${e.activity_amount} kWh</td>
+          <td>${instBadge}</td>
+          <td style="font-family: monospace; color: var(--text-muted); font-size: 11px;">${e.applied_factor_value} kg CO2e/kWh</td>
+          <td style="font-family: monospace; font-weight: 700; color: ${isMarket ? '#059669' : '#D97706'};">${Number(e.emissions_t_co2e || 0).toFixed(3)}</td>
+          <td>
+            <button class="btn btn-sm" style="color: #EF4444; background: transparent; padding: 2px 6px;" onclick="window.EconodeApp.deleteGhgEntry(${e.id})">Eliminar</button>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function renderGhgScope3Accordion(entries, summary) {
+    const container = document.getElementById("ghgScope3AccordionContainer");
+    if (!container) return;
+
+    const s3Entries = (entries || []).filter(e => e.scope === "SCOPE_3");
+    const categoriesTaxonomy = (state.ghgTaxonomy && state.ghgTaxonomy.categories && state.ghgTaxonomy.categories.SCOPE_3)
+      ? state.ghgTaxonomy.categories.SCOPE_3
+      : [
+          { key: "SCOPE_3_CAT_1", label: "Cat 1: Bienes y Servicios Adquiridos", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_2", label: "Cat 2: Bienes de Capital", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_3", label: "Cat 3: Combustibles y Energía no en Scope 1/2", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_4", label: "Cat 4: Transporte y Distribución Upstream", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_5", label: "Cat 5: Residuos Generados en Operaciones", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_6", label: "Cat 6: Viajes de Negocios", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_7", label: "Cat 7: Desplazamiento de Empleados (Conmutación)", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_8", label: "Cat 8: Activos Arrendados Upstream", boundary: "upstream" },
+          { key: "SCOPE_3_CAT_9", label: "Cat 9: Transporte y Distribución Downstream", boundary: "downstream" },
+          { key: "SCOPE_3_CAT_10", label: "Cat 10: Procesamiento de Productos Vendidos", boundary: "downstream" },
+          { key: "SCOPE_3_CAT_11", label: "Cat 11: Uso de Productos Vendidos", boundary: "downstream" },
+          { key: "SCOPE_3_CAT_12", label: "Cat 12: Tratamiento Fin de Vida de Productos Vendidos", boundary: "downstream" },
+          { key: "SCOPE_3_CAT_13", label: "Cat 13: Activos Arrendados Downstream", boundary: "downstream" },
+          { key: "SCOPE_3_CAT_14", label: "Cat 14: Franquicias", boundary: "downstream" },
+          { key: "SCOPE_3_CAT_15", label: "Cat 15: Inversiones", boundary: "downstream" }
+        ];
+
+    const s3Total = summary.scope_3_total || 0;
+
+    container.innerHTML = categoriesTaxonomy.map(cat => {
+      const catEntries = s3Entries.filter(e => e.category === cat.key);
+      const catSubtotal = catEntries.reduce((sum, e) => sum + Number(e.emissions_t_co2e || 0), 0);
+      const catPct = s3Total > 0 ? ((catSubtotal / s3Total) * 100).toFixed(1) : "0.0";
+      const isUpstream = (cat.boundary || "").toLowerCase() === "upstream";
+      const hasEntries = catEntries.length > 0;
+
+      return `
+        <div style="background: var(--bg-card); border: 1px solid ${hasEntries ? '#93C5FD' : 'var(--border-color)'}; border-radius: var(--radius-md); overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
+          <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: ${hasEntries ? 'rgba(219, 234, 254, 0.25)' : 'var(--bg-subtle)'}; cursor: pointer;" onclick="window.EconodeApp.toggleGhgAccordion('${cat.key}')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="badge-pill ${isUpstream ? 'badge-blue' : 'badge-amber'}" style="font-size: 9.5px; text-transform: uppercase;">${cat.boundary || 'Scope 3'}</span>
+              <strong style="font-size: 12px; color: var(--text-primary);">${escapeHtml(cat.label)}</strong>
+              ${hasEntries ? `<span class="badge-pill" style="background: #2563EB; color: #FFFFFF; font-size: 9px; padding: 1px 6px;">${catEntries.length} fuentes</span>` : ''}
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="text-align: right;">
+                <span style="font-family: monospace; font-size: 13px; font-weight: 700; color: #0F172A;">${catSubtotal.toFixed(3)} t CO2e</span>
+                <span style="font-size: 10px; color: var(--text-muted); margin-left: 6px;">(${catPct}%)</span>
+              </div>
+              <span id="arrow_${cat.key}" style="font-size: 12px; color: var(--text-muted); transition: transform 0.2s;">&#9660;</span>
+            </div>
+          </div>
+
+          <div id="body_${cat.key}" style="display: ${hasEntries ? 'block' : 'none'}; padding: 14px 16px; border-top: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-size: 11px; color: var(--text-muted);">Fuentes registradas bajo ${escapeHtml(cat.label)}:</span>
+              <button class="btn btn-secondary btn-sm" style="font-size: 10.5px; height: 26px;" onclick="window.EconodeApp.openAddGhgEntryModal('SCOPE_3', '${cat.key}')">+ Agregar a esta categoría</button>
+            </div>
+
+            ${hasEntries ? `
+              <div class="table-responsive">
+                <table class="data-table" style="font-size: 11px; margin: 0;">
+                  <thead>
+                    <tr>
+                      <th>Actividad / Proveedor / Operación</th>
+                      <th>Método</th>
+                      <th>Dato Actividad</th>
+                      <th>Factor GWP</th>
+                      <th>Emisiones (t CO2e)</th>
+                      <th>Acción</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${catEntries.map(ce => `
+                      <tr>
+                        <td><strong>${escapeHtml(ce.activity_description)}</strong></td>
+                        <td><span style="font-size: 10px; color: var(--text-muted);">${ce.calculation_type === 'spend_based' ? 'Spend USEEIO' : (ce.calculation_type === 'product_system_lca' ? 'LCA Tier 1' : 'Actividad')}</span></td>
+                        <td style="font-family: monospace;">${ce.activity_amount} ${escapeHtml(ce.activity_unit || '')}</td>
+                        <td style="font-family: monospace; font-size: 10.5px; color: var(--text-muted);">${ce.applied_factor_value} ${escapeHtml(ce.applied_factor_unit || '')}</td>
+                        <td style="font-family: monospace; font-weight: 700; color: #2563EB;">${Number(ce.emissions_t_co2e || 0).toFixed(3)}</td>
+                        <td>
+                          <button class="btn btn-sm" style="color: #EF4444; background: transparent; padding: 1px 4px; font-size: 10.5px;" onclick="window.EconodeApp.deleteGhgEntry(${ce.id})">Eliminar</button>
+                        </td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            ` : `
+              <div style="text-align: center; color: var(--text-muted); font-size: 11px; padding: 10px 0;">
+                No hay actividades registradas en esta categoría aún.
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }).join("");
+  }
+
+  function toggleGhgAccordion(catKey) {
+    const body = document.getElementById("body_" + catKey);
+    const arrow = document.getElementById("arrow_" + catKey);
+    if (!body) return;
+    const isHidden = (body.style.display === "none");
+    body.style.display = isHidden ? "block" : "none";
+    if (arrow) arrow.style.transform = isHidden ? "rotate(180deg)" : "rotate(0deg)";
+  }
+
+  // --- MODAL: CREAR NUEVO INVENTARIO GEI ---
+  function openNewGhgInventoryModal() {
+    const modal = document.getElementById("modalNewGhgInventory");
+    if (!modal) return;
+    const orgInput = document.getElementById("inputNewGhgOrg");
+    if (orgInput && state.activeUser) {
+      orgInput.value = state.activeUser.organization || "BioPack Industrial S.A. de C.V.";
+    }
+    modal.style.display = "flex";
+    modal.classList.add("active");
+  }
+
+  async function submitNewGhgInventory() {
+    const orgInput = document.getElementById("inputNewGhgOrg");
+    const yearInput = document.getElementById("inputNewGhgYear");
+    const countryInput = document.getElementById("selectNewGhgCountry");
+    const consolInput = document.getElementById("selectNewGhgConsolidation");
+    const descInput = document.getElementById("inputNewGhgDesc");
+
+    const orgName = (orgInput ? orgInput.value.trim() : "") || "Empresa Corporativa";
+    const year = parseInt(yearInput ? yearInput.value : "2024", 10) || 2024;
+    const country = countryInput ? countryInput.value : "MX";
+    const consolidation = consolInput ? consolInput.value : "operational_control";
+    const desc = descInput ? descInput.value.trim() : "";
+
+    const user = state.activeUser || {};
+    try {
+      const res = await api.createGhgInventory({
+        organization_name: orgName,
+        reporting_year: year,
+        country: country,
+        consolidation_approach: consolidation,
+        description: desc,
+        created_by_user_id: user.id || 1,
+        created_by_name: user.display_name || "Carla Méndez"
+      });
+
+      closeModal("modalNewGhgInventory");
+      showNotification(`Inventario GEI "${orgName} (${year})" creado exitosamente.`);
+      await loadGhgInventoryModule();
+      if (res.inventory && res.inventory.id) {
+        await loadActiveGhgInventory(res.inventory.id);
+      }
+    } catch (err) {
+      console.error("Error al crear inventario:", err);
+      alert("Error al crear inventario: " + err.message);
+    }
+  }
+
+  async function deleteCurrentGhgInventory() {
+    if (!state.activeGhgInventory) {
+      showNotification("No hay un inventario seleccionado para eliminar.");
+      return;
+    }
+    const inv = state.activeGhgInventory;
+    const ok = confirm(`¿Está seguro de eliminar el inventario corporativo de "${inv.organization_name} (${inv.reporting_year})"? Esta acción eliminará todas las fuentes asociadas.`);
+    if (!ok) return;
+
+    try {
+      await api.deleteGhgInventory(inv.id);
+      showNotification("Inventario eliminado exitosamente.");
+      state.activeGhgInventory = null;
+      localStorage.removeItem("econode_active_ghg_inv");
+      await loadGhgInventoryModule();
+    } catch (err) {
+      console.error("Error al eliminar inventario:", err);
+      showNotification("Error al eliminar inventario: " + err.message);
+    }
+  }
+
+  // --- MODAL: REGISTRAR FUENTE DE EMISIÓN ---
+  async function openAddGhgEntryModal(targetScope = "SCOPE_1", targetCategory = null) {
+    const modal = document.getElementById("modalAddGhgEntry");
+    if (!modal) return;
+
+    if (!state.activeGhgInventory) {
+      showNotification("Primero debes seleccionar o crear un inventario GEI corporativo.");
+      return;
+    }
+
+    const selectScope = document.getElementById("selectEntryScope");
+    if (selectScope) selectScope.value = targetScope;
+
+    onGhgModalScopeChange(targetScope, targetCategory);
+
+    // Resetear campos a valores predeterminados
+    const nameInput = document.getElementById("inputEntryName");
+    if (nameInput) nameInput.value = "";
+    const amtInput = document.getElementById("inputEntryAmount");
+    if (amtInput) amtInput.value = "1000";
+
+    // Marcar radio activity_based por defecto
+    const radios = document.getElementsByName("calcTypeRadio");
+    radios.forEach(r => { r.checked = (r.value === "activity_based"); });
+    onGhgCalcTypeChange();
+
+    modal.style.display = "flex";
+    modal.classList.add("active");
+  }
+
+  function onGhgModalScopeChange(scope, preselectedCategory = null) {
+    const catSelect = document.getElementById("selectEntryCategory");
+    const containerMarket = document.getElementById("ghgContainerMarketInstrument");
+
+    if (containerMarket) {
+      containerMarket.style.display = (scope === "SCOPE_2") ? "block" : "none";
+    }
+
+    if (!catSelect) return;
+
+    let categories = [];
+    if (state.ghgTaxonomy && state.ghgTaxonomy.categories && state.ghgTaxonomy.categories[scope]) {
+      categories = state.ghgTaxonomy.categories[scope];
+    } else {
+      if (scope === "SCOPE_1") {
+        categories = [
+          { key: "stationary_combustion", label: "Combustión Fija (Calderas / Generadores)" },
+          { key: "mobile_combustion", label: "Combustión Móvil (Vehículos Propios)" },
+          { key: "fugitive_emissions", label: "Emisiones Fugitivas (Refrigerantes / Fugas)" },
+          { key: "process_emissions", label: "Emisiones de Proceso Industrial" }
+        ];
+      } else if (scope === "SCOPE_2") {
+        categories = [
+          { key: "purchased_electricity_location", label: "Electricidad Red (Método Ubicación)" },
+          { key: "purchased_electricity_market", label: "Electricidad Mercado (I-RECs / PPA)" },
+          { key: "purchased_steam", label: "Vapor Adquirido" },
+          { key: "purchased_cooling", label: "Enfriamiento Adquirido" }
+        ];
+      } else {
+        categories = [
+          { key: "SCOPE_3_CAT_1", label: "Cat 1: Bienes y Servicios Adquiridos" },
+          { key: "SCOPE_3_CAT_2", label: "Cat 2: Bienes de Capital" },
+          { key: "SCOPE_3_CAT_3", label: "Cat 3: Combustibles y Energía Upstream" },
+          { key: "SCOPE_3_CAT_4", label: "Cat 4: Transporte y Distribución Upstream" },
+          { key: "SCOPE_3_CAT_5", label: "Cat 5: Residuos Generados en Operaciones" },
+          { key: "SCOPE_3_CAT_6", label: "Cat 6: Viajes de Negocios" },
+          { key: "SCOPE_3_CAT_7", label: "Cat 7: Desplazamiento de Empleados" },
+          { key: "SCOPE_3_CAT_8", label: "Cat 8: Activos Arrendados Upstream" },
+          { key: "SCOPE_3_CAT_9", label: "Cat 9: Transporte Downstream" },
+          { key: "SCOPE_3_CAT_10", label: "Cat 10: Procesamiento de Productos Vendidos" },
+          { key: "SCOPE_3_CAT_11", label: "Cat 11: Uso de Productos Vendidos" },
+          { key: "SCOPE_3_CAT_12", label: "Cat 12: Fin de Vida de Productos Vendidos" },
+          { key: "SCOPE_3_CAT_13", label: "Cat 13: Activos Arrendados Downstream" },
+          { key: "SCOPE_3_CAT_14", label: "Cat 14: Franquicias" },
+          { key: "SCOPE_3_CAT_15", label: "Cat 15: Inversiones" }
+        ];
+      }
+    }
+
+    catSelect.innerHTML = categories.map(c => `
+      <option value="${c.key}">${escapeHtml(c.label)}</option>
+    `).join("");
+
+    if (preselectedCategory) {
+      catSelect.value = preselectedCategory;
+    }
+
+    populateGhgActivityFactors(scope);
+    previewGhgEmissions();
+  }
+
+  async function populateGhgActivityFactors(scope) {
+    const factorSelect = document.getElementById("selectEntryFactor");
+    if (!factorSelect) return;
+
+    try {
+      const data = await api.searchGhgEmissionFactors({ scope: scope === "ALL" ? "" : scope, limit: 100 });
+      const factors = data.factors || [];
+      state.ghgEmissionFactors = factors;
+
+      if (factors.length === 0) {
+        factorSelect.innerHTML = '<option value="">Sin factores disponibles para este alcance</option>';
+      } else {
+        factorSelect.innerHTML = factors.map(f => `
+          <option value="${f.id}" data-factor="${f.gwp_factor_kg_co2e}" data-unit="${escapeHtml(f.unit)}">
+            ${escapeHtml(f.name)} (${f.gwp_factor_kg_co2e} kg CO2e/${escapeHtml(f.unit)}) - ${escapeHtml(f.source)}
+          </option>
+        `).join("");
+      }
+
+      onGhgFactorSelectChange();
+    } catch (err) {
+      console.warn("Error al buscar factores de actividad:", err);
+    }
+  }
+
+  function onGhgFactorSelectChange() {
+    const select = document.getElementById("selectEntryFactor");
+    const unitInput = document.getElementById("inputEntryUnit");
+    if (!select || !select.selectedOptions || select.selectedOptions.length === 0) return;
+    const opt = select.selectedOptions[0];
+    const unit = opt.getAttribute("data-unit");
+    if (unit && unitInput) {
+      unitInput.value = unit;
+    }
+    previewGhgEmissions();
+  }
+
+  async function populateGhgSpendSectors() {
+    const select = document.getElementById("selectEntrySpendSector");
+    if (!select) return;
+
+    try {
+      const data = await api.searchGhgEmissionFactors({ source: "USEEIO_2024", limit: 60 });
+      const factors = data.factors || [];
+      state.ghgSpendFactors = factors;
+
+      select.innerHTML = factors.map(f => `
+        <option value="${f.id}" data-factor="${f.gwp_factor_kg_co2e}">
+          ${escapeHtml(f.name)} (${f.gwp_factor_kg_co2e} kg CO2e/$ USD)
+        </option>
+      `).join("");
+    } catch (err) {
+      console.warn("Error al cargar sectores spend-based:", err);
+    }
+  }
+
+  function onGhgSpendSectorChange() {
+    previewGhgEmissions();
+  }
+
+  function populateGhgProductSystems() {
+    const select = document.getElementById("selectEntryProductSystem");
+    if (!select) return;
+
+    const systems = state.systems || [];
+    if (systems.length === 0) {
+      select.innerHTML = '<option value="">No hay sistemas producto modelados en el lienzo</option>';
+      return;
+    }
+
+    select.innerHTML = systems.map(s => `
+      <option value="${s.id}">
+        ${escapeHtml(s.name)} (${escapeHtml(s.code || 'SYS')}) - UF: ${s.target_amount || 1} ${escapeHtml(s.unit || 'u')}
+      </option>
+    `).join("");
+  }
+
+  function onGhgProductSystemSelectChange() {
+    previewGhgEmissions();
+  }
+
+  function onGhgCalcTypeChange() {
+    let calcType = "activity_based";
+    const checked = document.querySelector('input[name="calcTypeRadio"]:checked');
+    if (checked) calcType = checked.value;
+
+    const boxActivity = document.getElementById("ghgContainerActivity");
+    const boxSpend = document.getElementById("ghgContainerSpend");
+    const boxLca = document.getElementById("ghgContainerLca");
+
+    if (boxActivity) boxActivity.style.display = (calcType === "activity_based") ? "block" : "none";
+    if (boxSpend) boxSpend.style.display = (calcType === "spend_based") ? "block" : "none";
+    if (boxLca) boxLca.style.display = (calcType === "product_system_lca") ? "block" : "none";
+
+    previewGhgEmissions();
+  }
+
+  function previewGhgEmissions() {
+    let calcType = "activity_based";
+    const checked = document.querySelector('input[name="calcTypeRadio"]:checked');
+    if (checked) calcType = checked.value;
+
+    const scopeSelect = document.getElementById("selectEntryScope");
+    const currentScope = scopeSelect ? scopeSelect.value : "SCOPE_1";
+
+    let kgCo2e = 0.0;
+
+    if (calcType === "activity_based") {
+      const amtInput = document.getElementById("inputEntryAmount");
+      const amt = parseFloat(amtInput ? amtInput.value : "0") || 0.0;
+      const factorSelect = document.getElementById("selectEntryFactor");
+      let factor = 0.0;
+      if (factorSelect && factorSelect.selectedOptions && factorSelect.selectedOptions[0]) {
+        factor = parseFloat(factorSelect.selectedOptions[0].getAttribute("data-factor") || "0") || 0.0;
+      }
+
+      // Comprobar instrumento contractual de Scope 2
+      if (currentScope === "SCOPE_2") {
+        const instSelect = document.getElementById("selectEntryContractualInstrument");
+        const inst = instSelect ? instSelect.value : "none";
+        if (inst === "i_rec" || inst === "ppa") {
+          factor = 0.0; // 100% energia renovable con certificado
+        }
+      }
+
+      kgCo2e = amt * factor;
+    } else if (calcType === "spend_based") {
+      const spendInput = document.getElementById("inputEntrySpendAmount");
+      const spendAmt = parseFloat(spendInput ? spendInput.value : "0") || 0.0;
+      const currSelect = document.getElementById("selectEntryCurrency");
+      const curr = currSelect ? currSelect.value : "MXN";
+
+      const sectorSelect = document.getElementById("selectEntrySpendSector");
+      let factor = 0.35; // Default sector medio
+      if (sectorSelect && sectorSelect.selectedOptions && sectorSelect.selectedOptions[0]) {
+        factor = parseFloat(sectorSelect.selectedOptions[0].getAttribute("data-factor") || "0.35") || 0.35;
+      }
+
+      // Convertir a USD segun tipo de cambio aproximado
+      let amtUsd = spendAmt;
+      if (curr === "MXN") amtUsd = spendAmt / 20.0;
+      else if (curr === "EUR") amtUsd = spendAmt * 1.08;
+
+      kgCo2e = amtUsd * factor;
+    } else if (calcType === "product_system_lca") {
+      const lcaInput = document.getElementById("inputEntryLcaAmount");
+      const lcaAmt = parseFloat(lcaInput ? lcaInput.value : "0") || 0.0;
+      const sysSelect = document.getElementById("selectEntryProductSystem");
+      const sysId = sysSelect ? parseInt(sysSelect.value, 10) : null;
+
+      let epdFactor = 0.05183; // Factor por defecto
+      if (sysId && state.systems) {
+        const found = state.systems.find(s => s.id === sysId);
+        if (found && found.lcia_scores && found.lcia_scores.global_warming) {
+          epdFactor = found.lcia_scores.global_warming;
+        }
+      }
+      kgCo2e = lcaAmt * epdFactor;
+    }
+
+    const tCo2e = kgCo2e / 1000.0;
+    const prevKg = document.getElementById("ghgPreviewKg");
+    const prevTons = document.getElementById("ghgPreviewTons");
+    if (prevKg) prevKg.textContent = `${kgCo2e.toFixed(2)} kg CO2e`;
+    if (prevTons) prevTons.textContent = `${tCo2e.toFixed(3)} t CO2e`;
+  }
+
+  async function submitNewGhgEntry() {
+    if (!state.activeGhgInventory) {
+      showNotification("No hay un inventario corporativo activo.");
+      return;
+    }
+    const invId = state.activeGhgInventory.id;
+
+    const scopeSelect = document.getElementById("selectEntryScope");
+    const catSelect = document.getElementById("selectEntryCategory");
+    const nameInput = document.getElementById("inputEntryName");
+
+    const scope = scopeSelect ? scopeSelect.value : "SCOPE_1";
+    const category = catSelect ? catSelect.value : "general";
+    const catOpt = catSelect && catSelect.selectedOptions ? catSelect.selectedOptions[0] : null;
+    const catLabel = catOpt ? catOpt.text : category;
+    const name = (nameInput ? nameInput.value.trim() : "") || `Actividad ${catLabel}`;
+
+    let calcType = "activity_based";
+    const checked = document.querySelector('input[name="calcTypeRadio"]:checked');
+    if (checked) calcType = checked.value;
+
+    const payload = {
+      scope: scope,
+      category: category,
+      category_label: catLabel,
+      activity_description: name,
+      calculation_type: calcType,
+      data_quality_tier: "Tier 1"
+    };
+
+    if (calcType === "activity_based") {
+      const amtInput = document.getElementById("inputEntryAmount");
+      const unitInput = document.getElementById("inputEntryUnit");
+      const factorSelect = document.getElementById("selectEntryFactor");
+
+      payload.activity_amount = parseFloat(amtInput ? amtInput.value : "0") || 0.0;
+      payload.activity_unit = unitInput ? unitInput.value.trim() : "u";
+
+      if (factorSelect && factorSelect.value) {
+        payload.emission_factor_id = parseInt(factorSelect.value, 10);
+      }
+      if (scope === "SCOPE_2") {
+        const instSelect = document.getElementById("selectEntryContractualInstrument");
+        const inst = instSelect ? instSelect.value : "none";
+        payload.contractual_instrument = inst;
+        payload.scope_2_reporting_type = (inst !== "none") ? "market_based" : "location_based";
+        if (inst === "i_rec" || inst === "ppa") {
+          payload.applied_factor_value = 0.0;
+        }
+      }
+    } else if (calcType === "spend_based") {
+      const spendInput = document.getElementById("inputEntrySpendAmount");
+      const currSelect = document.getElementById("selectEntryCurrency");
+      const sectorSelect = document.getElementById("selectEntrySpendSector");
+
+      payload.spend_amount = parseFloat(spendInput ? spendInput.value : "0") || 0.0;
+      payload.spend_currency = currSelect ? currSelect.value : "MXN";
+      payload.activity_amount = payload.spend_amount;
+      payload.activity_unit = payload.spend_currency;
+
+      if (sectorSelect && sectorSelect.value) {
+        payload.emission_factor_id = parseInt(sectorSelect.value, 10);
+      }
+    } else if (calcType === "product_system_lca") {
+      const lcaInput = document.getElementById("inputEntryLcaAmount");
+      const sysSelect = document.getElementById("selectEntryProductSystem");
+
+      payload.activity_amount = parseFloat(lcaInput ? lcaInput.value : "0") || 0.0;
+      payload.activity_unit = "Functional Units";
+      if (sysSelect && sysSelect.value) {
+        payload.product_system_id = parseInt(sysSelect.value, 10);
+      }
+    }
+
+    try {
+      await api.addGhgEntry(invId, payload);
+      closeModal("modalAddGhgEntry");
+      showNotification(`Fuente "${name}" agregada con éxito al inventario.`);
+      await loadActiveGhgInventory(invId);
+    } catch (err) {
+      console.error("Error al registrar fuente:", err);
+      alert("Error al registrar fuente: " + err.message);
+    }
+  }
+
+  async function deleteGhgEntry(entryId) {
+    if (!state.activeGhgInventory) return;
+    const ok = confirm("¿Desea eliminar este registro de emisión del inventario?");
+    if (!ok) return;
+
+    try {
+      await api.deleteGhgEntry(state.activeGhgInventory.id, entryId);
+      showNotification("Fuente eliminada del inventario.");
+      await loadActiveGhgInventory(state.activeGhgInventory.id);
+    } catch (err) {
+      console.error("Error al eliminar entrada:", err);
+      showNotification("Error al eliminar fuente: " + err.message);
+    }
+  }
+
+  // --- CATÁLOGO DE FACTORES GWP TAB ---
+  async function searchGhgFactorsTab() {
+    const tbody = document.getElementById("ghgFactorsTableBody");
+    if (!tbody) return;
+
+    const input = document.getElementById("inputGhgFactorSearch");
+    const selectScope = document.getElementById("selectGhgFactorScope");
+    const selectSource = document.getElementById("selectGhgFactorSource");
+
+    const q = input ? input.value.trim() : "";
+    const scope = selectScope ? selectScope.value : "ALL";
+    const source = selectSource ? selectSource.value : "ALL";
+
+    try {
+      const data = await api.searchGhgEmissionFactors({
+        q: q,
+        scope: scope === "ALL" ? "" : scope,
+        source: source === "ALL" ? "" : source,
+        limit: 100
+      });
+      const factors = data.factors || [];
+
+      if (factors.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No se encontraron factores con los filtros seleccionados.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = factors.map(f => `
+        <tr>
+          <td><strong style="color: var(--text-primary); font-size: 11.5px;">${escapeHtml(f.name)}</strong></td>
+          <td><span class="badge-pill badge-blue" style="font-size: 9.5px;">${escapeHtml(f.source)}</span></td>
+          <td><span style="font-size: 10.5px; color: var(--text-muted);">${escapeHtml(f.scope_category)}</span></td>
+          <td><span style="font-family: monospace; font-size: 10.5px;">${escapeHtml(f.geography)}</span></td>
+          <td style="font-family: monospace; font-size: 11px;">${escapeHtml(f.unit)}</td>
+          <td style="font-family: monospace; font-weight: 700; color: #0F172A; font-size: 12px;">${f.gwp_factor_kg_co2e}</td>
+          <td style="font-size: 11px; color: var(--text-muted);">${f.year}</td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      console.warn("Error al buscar catálogo de factores:", err);
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: #EF4444; padding: 20px;">Error al consultar catálogo: ${escapeHtml(err.message)}</td></tr>`;
+    }
+  }
+
   // =========================================================================
   // 11. MODALES: CONEXIÓN DE NODOS, WIZARD, IMPORT CENTER & AJUSTES
   // =========================================================================
@@ -9561,1008 +10503,6 @@
         bubble.style.display = "none";
         return;
       }
-      const selectedText = sel.toString().trim();
-      if (selectedText.length < 2) {
-        bubble.style.display = "none";
-        return;
-      }
-
-      state.pendingHighlightText = selectedText;
-      const rect = range.getBoundingClientRect();
-      const bubbleWidth = 260;
-      const leftPos = Math.max(10, Math.min(window.innerWidth - bubbleWidth - 20, rect.left + rect.width / 2 - bubbleWidth / 2 + window.scrollX));
-      const topPos = Math.max(10, rect.top + window.scrollY - 44);
-
-      bubble.style.left = `${leftPos}px`;
-      bubble.style.top = `${topPos}px`;
-      bubble.style.display = "flex";
-    });
-
-    // Botones de la barra flotante estilo Notion
-    const bBold = document.getElementById("bubbleBold");
-    const bItalic = document.getElementById("bubbleItalic");
-    const bUnderline = document.getElementById("bubbleUnderline");
-    const bYellow = document.getElementById("bubbleYellow");
-    const bGreen = document.getElementById("bubbleGreen");
-    const bClear = document.getElementById("bubbleClear");
-    const bQuote = document.getElementById("bubbleQuote");
-
-    if (bBold) bBold.addEventListener("click", () => document.execCommand("bold", false, null));
-    if (bItalic) bItalic.addEventListener("click", () => document.execCommand("italic", false, null));
-    if (bUnderline) bUnderline.addEventListener("click", () => document.execCommand("underline", false, null));
-    if (bYellow) bYellow.addEventListener("click", () => document.execCommand("hiliteColor", false, "#FEF08A"));
-    if (bGreen) bGreen.addEventListener("click", () => document.execCommand("hiliteColor", false, "#BBF7D0"));
-    if (bClear) bClear.addEventListener("click", () => document.execCommand("removeFormat", false, null));
-    if (bQuote) {
-      bQuote.addEventListener("click", () => {
-        if (!state.pendingHighlightText) return;
-        const input = document.getElementById("inputNewComment");
-        if (input) {
-          input.value = `[Sobre texto: "${state.pendingHighlightText}"]: `;
-          input.focus();
-          showNotification("Cita agregada al panel de auditoría.");
-        }
-        bubble.style.display = "none";
-      });
-    }
-
-    setupReportEditorToolbar();
-  }
-
-  function setupReportEditorToolbar() {
-    const btnBold = document.getElementById("btnFmtBold");
-    const btnItalic = document.getElementById("btnFmtItalic");
-    const btnUnderline = document.getElementById("btnFmtUnderline");
-    const btnHiYellow = document.getElementById("btnFmtHighlightYellow");
-    const btnHiGreen = document.getElementById("btnFmtHighlightGreen");
-    const btnClearHi = document.getElementById("btnFmtClearHighlight");
-    const btnInsertNote = document.getElementById("btnFmtInsertNote");
-    const btnSaveEdits = document.getElementById("btnSaveReportEdits");
-
-    if (btnBold) btnBold.addEventListener("click", () => document.execCommand("bold", false, null));
-    if (btnItalic) btnItalic.addEventListener("click", () => document.execCommand("italic", false, null));
-    if (btnUnderline) btnUnderline.addEventListener("click", () => document.execCommand("underline", false, null));
-
-    if (btnHiYellow) {
-      btnHiYellow.addEventListener("click", () => {
-        document.execCommand("hiliteColor", false, "#FEF08A");
-      });
-    }
-
-    if (btnHiGreen) {
-      btnHiGreen.addEventListener("click", () => {
-        document.execCommand("hiliteColor", false, "#BBF7D0");
-      });
-    }
-
-    if (btnClearHi) {
-      btnClearHi.addEventListener("click", () => {
-        document.execCommand("removeFormat", false, null);
-      });
-    }
-
-    if (btnInsertNote) {
-      btnInsertNote.addEventListener("click", () => {
-        const sel = window.getSelection();
-        if (!sel || !sel.rangeCount) return;
-        const noteHtml = `<span style="background: #FEFCE8; border: 1px solid #FEF08A; border-radius: 4px; padding: 2px 6px; font-size: 10.5px; color: #854D0E; font-weight: 600; margin: 0 4px;">[Nota: Revisión técnica NOM-070]</span>&nbsp;`;
-        document.execCommand("insertHTML", false, noteHtml);
-      });
-    }
-
-    if (btnSaveEdits) {
-      btnSaveEdits.addEventListener("click", () => {
-        const bodyEl = document.getElementById("reportDocumentBody");
-        if (bodyEl) {
-          const sysId = state.activeSystem ? state.activeSystem.id : 21;
-          localStorage.setItem(`econode_report_${sysId}`, bodyEl.innerHTML);
-          showNotification("Reporte técnico guardado localmente exitosamente.");
-        }
-      });
-    }
-
-    // Cargar contenido guardado previamente si existe
-    const sysId = state.activeSystem ? state.activeSystem.id : 21;
-    const saved = localStorage.getItem(`econode_report_${sysId}`);
-    const bodyEl = document.getElementById("reportDocumentBody");
-    if (saved && bodyEl && saved.length > 50) {
-      bodyEl.innerHTML = saved;
-    }
-  }
-
-  // =========================================================================
-  // 12. NOTIFICACIONES FLOTANTES (TOAST)
-  // =========================================================================
-  function showNotification(msg) {
-    let toast = document.getElementById("econodeToast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "econodeToast";
-      toast.style.position = "fixed";
-      toast.style.bottom = "24px";
-      toast.style.right = "24px";
-      toast.style.backgroundColor = "var(--accent-slate)";
-      toast.style.color = "#FFFFFF";
-      toast.style.padding = "10px 18px";
-      toast.style.borderRadius = "var(--radius-md)";
-      toast.style.boxShadow = "var(--shadow-lg)";
-      toast.style.fontSize = "11.5px";
-      toast.style.fontWeight = "600";
-      toast.style.zIndex = "9999";
-      toast.style.transition = "all 0.2s ease";
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(10px)";
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.style.opacity = "1";
-    toast.style.transform = "translateY(0)";
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(10px)";
-    }, 3200);
-  }
-
-  // =========================================================================
-  // 13. INICIALIZACIÓN GLOBAL & EVENT LISTENERS
-  // =========================================================================
-
-  // =========================================================================
-  // FOLD TOOLBAR INTERACTION (Recent.design Dock Stage Controller)
-  // =========================================================================
-  function setupFoldToolbarHome() {
-    const dock = document.getElementById("heroFoldToolbar");
-    if (!dock) return;
-
-    const stageCatalog = {
-      injection: {
-        title: "Proceso 100001: Inyeccion de Preformas PET",
-        badge: "Loop Termodinamico: 0.18",
-        breadcrumb: "Lienzo ACV > Inyeccion",
-        gwp: "1.428 kg CO2-eq",
-        mass: "100.0% Conservado",
-        storage: "Google Drive BYOS (0 MB Servidor)",
-        norm: "ISO 14044 Acreditado",
-        color: "#059669"
-      },
-      blowmolding: {
-        title: "Proceso 100002: Soplado y Termoformado de Botellas",
-        badge: "Consumo CFE: 0.42 kWh/u",
-        breadcrumb: "Lienzo ACV > Soplado",
-        gwp: "1.890 kg CO2-eq",
-        mass: "99.8% Conservado",
-        storage: "Google Drive BYOS (0 MB Servidor)",
-        norm: "NOM-070 Conforme",
-        color: "#0284C7"
-      },
-      distribution: {
-        title: "Proceso 100003: Transporte y Distribucion Logistica",
-        badge: "Flete Diesel UBA: 120 km",
-        breadcrumb: "Lienzo ACV > Distribucion",
-        gwp: "2.140 kg CO2-eq",
-        mass: "100.0% Validado",
-        storage: "Google Drive BYOS (0 MB Servidor)",
-        norm: "Huella EPD Lista",
-        color: "#D97706"
-      },
-      vault: {
-        title: "Boveda Soberana de Evidencias (Google Drive BYOS)",
-        badge: "Cero Bytes en Vercel",
-        breadcrumb: "Boveda > Evidencias y Facturas",
-        gwp: "Dossier 42 MB",
-        mass: "Sello SHA-256 Activo",
-        storage: "Google Drive Personal (0 MB Servidor)",
-        norm: "GDPR / ISO 27001",
-        color: "#8B5CF6"
-      },
-      audit: {
-        title: "Auditoria Normativa y Conformidad NOM-070-SE-2024",
-        badge: "18 Cláusulas Verificadas",
-        breadcrumb: "Auditoria > NOM-070",
-        gwp: "100.0% Cumplimiento",
-        mass: "Snapshot Criptografico",
-        storage: "Google Drive BYOS (0 MB Servidor)",
-        norm: "Firma Digital HMAC",
-        color: "#10B981"
-      }
-    };
-
-    // Interactive CAD Nodes Click
-    const cadNodes = [
-      { id: "nodeResin", name: "Insumo LCI: Resina PET Virgen (1.020 kg ecoinvent)" },
-      { id: "nodeEnergy", name: "Suministro Red: CFE Red 230kV (0.420 kWh)" },
-      { id: "stageNodeCore", name: "Proceso Unitario: Inyeccion y Soplado de Envases" },
-      { id: "stageNodeGwp", name: "Emision Biosfera: Huella GWP 100a (1.428 kg CO2e)" },
-      { id: "stageNodeProduct", name: "Flujo de Referencia: Envase PET 1.0L (28.0 g)" }
-    ];
-    cadNodes.forEach(n => {
-      const el = document.getElementById(n.id);
-      if (el) {
-        el.addEventListener("click", () => {
-          const breadEl = document.getElementById("heroStageBreadcrumb");
-          if (breadEl) breadEl.textContent = `Lienzo ACV: ${n.name}`;
-          document.querySelectorAll(".cad-node").forEach(cn => cn.classList.remove("is-core-active"));
-          el.classList.add("is-core-active");
-        });
-      }
-    });
-
-    const items = dock.querySelectorAll(".fold-dock-item");
-    items.forEach((btn, idx) => {
-      btn.addEventListener("click", () => {
-        items.forEach(b => b.classList.remove("active"));
-        items.forEach(b => b.classList.remove("is-active"));
-        btn.classList.add("active");
-        btn.classList.add("is-active");
-
-        const stage = btn.getAttribute("data-stage");
-        const data = stageCatalog[stage];
-        if (!data) return;
-
-        const titleEl = document.getElementById("stageNodeCoreTitle");
-        const badgeEl = document.getElementById("stageNodeCoreBadge");
-        const breadEl = document.getElementById("heroStageBreadcrumb");
-        const gwpEl = document.getElementById("stageGwpValText");
-        const massEl = document.getElementById("stageMassValText");
-        const storeEl = document.getElementById("stageStorageValText");
-        const normEl = document.getElementById("stageNormBadgeText");
-        const gwpValSvg = document.getElementById("stageNodeGwpVal");
-
-        if (titleEl) titleEl.textContent = data.title;
-        if (badgeEl) {
-          badgeEl.textContent = data.badge;
-          badgeEl.style.fill = data.color;
-        }
-        if (breadEl) breadEl.textContent = data.breadcrumb;
-        if (gwpEl) {
-          gwpEl.textContent = data.gwp;
-          gwpEl.style.color = data.color;
-        }
-        if (massEl) massEl.textContent = data.mass;
-        if (storeEl) storeEl.textContent = data.storage;
-        if (normEl) normEl.innerHTML = `<span class="stage-norm-pulse" style="background:${data.color};"></span><span>${data.norm}</span>`;
-        if (gwpValSvg) gwpValSvg.textContent = data.gwp;
-      });
-
-      // Navegación por teclado (Apple HIG Segmented Controls / Tab Bars)
-      btn.addEventListener("keydown", (e) => {
-        const btnList = Array.from(items);
-        let nextIdx = -1;
-        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-          e.preventDefault();
-          nextIdx = (idx + 1) % btnList.length;
-        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-          e.preventDefault();
-          nextIdx = (idx - 1 + btnList.length) % btnList.length;
-        } else if (e.key === "Home") {
-          e.preventDefault();
-          nextIdx = 0;
-        } else if (e.key === "End") {
-          e.preventDefault();
-          nextIdx = btnList.length - 1;
-        }
-        if (nextIdx >= 0) {
-          btnList[nextIdx].focus();
-          btnList[nextIdx].click();
-        }
-      });
-    });
-  }
-
-  async function initApp() {
-    setupFoldToolbarHome();
-    // 1. Configurar Auth en segundo plano sin bloquear listeners de UI
-    initAuth().catch(err => console.warn("Background auth error:", err));
-
-    // 2. Navegación Top Navbar
-    document.querySelectorAll(".nav-btn[data-view]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const view = btn.getAttribute("data-view");
-        showView(view);
-      });
-    });
-
-    const btnHomeLogo = document.getElementById("btnNavHome");
-    if (btnHomeLogo) btnHomeLogo.addEventListener("click", () => showView("home"));
-
-    // Botones de Navegación del Landing
-    const btnNavLogin = document.getElementById("btnNavLogin");
-    const btnNavSignup = document.getElementById("btnNavSignup");
-    const btnNavEnter = document.getElementById("btnNavEnterStudio");
-    const btnHomeEnter = document.getElementById("btnHomeEnterStudio");
-    const btnHomeEx = document.getElementById("btnHomeViewExamples");
-
-    if (btnNavLogin) btnNavLogin.addEventListener("click", () => showView("login"));
-    if (btnNavSignup) btnNavSignup.addEventListener("click", () => showView("signup"));
-    if (btnNavEnter) btnNavEnter.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
-    if (btnHomeEnter) btnHomeEnter.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
-
-    const handleHomeViewExamples = (e) => {
-      if (e) e.preventDefault();
-      const target = document.getElementById("homeCases") || document.getElementById("homePricing") || document.getElementById("homeArchitecture");
-      if (target) {
-        target.scrollIntoView({ behavior: "smooth" });
-      } else {
-        showView(state.isAuthenticated ? "dashboard" : "login");
-      }
-    };
-    if (btnHomeEx) btnHomeEx.addEventListener("click", handleHomeViewExamples);
-
-    const heroBtnIniciarACV = document.getElementById("heroBtnIniciarACV");
-    if (heroBtnIniciarACV) heroBtnIniciarACV.addEventListener("click", () => showView(state.isAuthenticated ? "dashboard" : "login"));
-    const heroBtnEjemplosNOM = document.getElementById("heroBtnEjemplosNOM");
-    if (heroBtnEjemplosNOM) heroBtnEjemplosNOM.addEventListener("click", handleHomeViewExamples);
-
-    // Botón Cerrar Sesión
-    const btnLogout = document.getElementById("btnNavbarLogout");
-    if (btnLogout) btnLogout.addEventListener("click", handleLogout);
-
-    // Idioma
-    const btnEs = document.getElementById("btnLangEs");
-    const btnEn = document.getElementById("btnLangEn");
-    if (btnEs) btnEs.addEventListener("click", () => window.I18n.setLanguage("es"));
-    if (btnEn) btnEn.addEventListener("click", () => window.I18n.setLanguage("en"));
-
-    // Enlaces Login <-> Signup
-    const linkGoSignup = document.getElementById("linkGoSignup");
-    const linkGoLogin = document.getElementById("linkGoLogin");
-    if (linkGoSignup) linkGoSignup.addEventListener("click", (e) => { e.preventDefault(); showView("signup"); });
-    if (linkGoLogin) linkGoLogin.addEventListener("click", (e) => { e.preventDefault(); showView("login"); });
-
-
-
-    // Handler Universal para Google Sign-In (Login y Signup)
-    const handleGoogleAuthTrigger = () => {
-      // 1. Si existe el botón oficial renderizado de Google en la vista actual, invocar su clic
-      const activeContainer = (state.currentView === "signup")
-        ? document.getElementById("gsiSignupContainer")
-        : document.getElementById("gsiLoginContainer");
-      const nativeBtn = activeContainer ? activeContainer.querySelector("div[role='button']") : null;
-      if (nativeBtn) {
-        nativeBtn.click();
-        return;
-      }
-
-      // 2. Si GSI está cargado pero no renderizado, llamar prompt con callback de diagnóstico
-      if (window.google && window.google.accounts && window.google.accounts.id) {
-        window.google.accounts.id.prompt((notification) => {
-          if (notification && notification.isNotDisplayed()) {
-            console.warn("Google One Tap no desplegado:", notification.getNotDisplayedReason());
-          }
-        });
-      } else {
-        // En ambiente de desarrollo local / offline, prompt para verificar rol e invitación
-        const defaultEmail = state.pendingInviteEmail || "josuearenteriaz09@gmail.com";
-        const promptEmail = prompt("Ingresa correo Google Workspace para iniciar sesión (Demo/Offline):", defaultEmail);
-        if (promptEmail) {
-          api.loginGoogle("mock_google_jwt", promptEmail, state.pendingInviteToken)
-            .then(res => {
-              if (res.user) {
-                state.activeUser = res.user;
-                state.isAuthenticated = true;
-                try {
-          if (res.user.token) {
-            sessionStorage.setItem("econode_token", res.user.token);
-            localStorage.setItem("econode_token", res.user.token);
-          }
-          if (res.user.id) {
-            sessionStorage.setItem("econode_user_id", res.user.id);
-            localStorage.setItem("econode_user_id", res.user.id);
-          }
-          localStorage.setItem("econode_user", JSON.stringify(res.user));
-        } catch(e) {}
-                updateUserUI();
-                applyRolePermissions();
-                const rLabel = res.user.role === "auditor" ? "Auditor Líder" : (res.user.role === "client" ? "Cliente Productor" : "Analista ACV");
-                showNotification(`Sesión iniciada con Google Workspace: ${res.user.display_name} (${rLabel})`);
-                const hasSub = sessionStorage.getItem("econode_subscribed");
-                if (res.user.role === "analyst" && (res.user.is_new || state.currentView === "signup" || !hasSub)) {
-                  const modalSub = document.getElementById("modalSubscription");
-                  if (modalSub) {
-                    modalSub.style.display = "flex";
-                    modalSub.classList.add("active");
-                    return;
-                  }
-                }
-                showView("dashboard");
-              }
-            })
-            .catch(err => alert("Error: " + err.message));
-        }
-      }
-    };
-
-    const btnGoogle = document.getElementById("btnGoogleSignInAction");
-    if (btnGoogle) {
-      btnGoogle.addEventListener("click", handleGoogleAuthTrigger);
-    }
-    const btnGoogleSignup = document.getElementById("btnGoogleSignUpAction");
-    if (btnGoogleSignup) {
-      btnGoogleSignup.addEventListener("click", handleGoogleAuthTrigger);
-    }
-
-    const btnNavInvite = document.getElementById("btnNavInviteMember");
-    if (btnNavInvite) {
-      btnNavInvite.addEventListener("click", () => {
-        window.ECONODE.openInviteModal(null, "Espacio Global de Trabajo");
-      });
-    }
-
-    // Comprobar si el usuario llegó mediante un enlace de invitación (?invite=...)
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has("demo")) {
-        const demoRole = urlParams.get("demo") || "analyst";
-        handleDemoLogin(demoRole);
-      }
-      if (urlParams.has("invite")) {
-        const invTok = urlParams.get("invite");
-        state.pendingInviteToken = invTok;
-        try { sessionStorage.setItem("econode_pending_invite", invTok); } catch(e){}
-        api.verifyInviteToken(invTok).then(res => {
-          if (res.invitation && res.invitation.valid) {
-            const inv = res.invitation;
-            state.pendingInviteEmail = inv.email;
-            state.pendingInviteInfo = inv;
-
-            // Mostrar banners informativos en login y signup
-            const bLogin = document.getElementById("bannerLoginInvite");
-            const bLoginDesc = document.getElementById("bannerLoginInviteDesc");
-            const bSignup = document.getElementById("bannerSignupInvite");
-            const bSignupDesc = document.getElementById("bannerSignupInviteDesc");
-            const emailLoginInput = document.getElementById("inputLoginEmail");
-            const emailSignupInput = document.getElementById("inputSignupEmail");
-
-            const descText = `Has sido invitado(a) como <strong>${escapeHtml(inv.role_title)}</strong> por <strong>${escapeHtml(inv.invited_by_name)}</strong> en <strong>${escapeHtml(inv.organization)}</strong>. Continúa con Google para acceder con este rol.`;
-
-            if (bLogin) bLogin.style.display = "block";
-            if (bLoginDesc) bLoginDesc.innerHTML = descText;
-            if (bSignup) bSignup.style.display = "block";
-            if (bSignupDesc) bSignupDesc.innerHTML = descText;
-            if (emailLoginInput) emailLoginInput.value = inv.email;
-            if (emailSignupInput) emailSignupInput.value = inv.email;
-
-            showNotification(`Invitación detectada: ${inv.role_title} para ${inv.email}`);
-            showView("login");
-          }
-        }).catch(() => {});
-      }
-    } catch (e) {}
-
-    // Dashboard Filtros & Búsqueda
-    document.querySelectorAll(".table-filters .segmented-btn[data-filter]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        document.querySelectorAll(".table-filters .segmented-btn[data-filter]").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.systemFilter = btn.getAttribute("data-filter");
-        renderDashboardTable();
-      });
-    });
-
-    const inputSearch = document.getElementById("inputSearchSystems");
-    if (inputSearch) {
-      inputSearch.addEventListener("input", () => renderDashboardTable());
-    }
-
-    // Importar SimaPro CSV desde el Dashboard
-    const btnDashImpSimaPro = document.getElementById("btnDashImportSimaPro");
-    const inputDashSimaPro = document.getElementById("inputDashSimaProFile");
-    if (btnDashImpSimaPro && inputDashSimaPro) {
-      btnDashImpSimaPro.addEventListener("click", () => inputDashSimaPro.click());
-      inputDashSimaPro.addEventListener("change", async (e) => {
-        if (!e.target.files || !e.target.files[0]) return;
-        const file = e.target.files[0];
-        try {
-          const fileContent = await file.text();
-          if (window.EconodeDrive && window.EconodeDrive.hasToken()) {
-            try {
-              const cleanName = file.name.replace(/\.[^/.]+$/, "");
-              await window.EconodeDrive.uploadSimaProFile(cleanName, "SIMAPRO", file.name, fileContent);
-              showNotification("Archivo CSV respaldado en Google Drive.");
-            } catch (driveErr) {
-              console.warn("Respaldo Google Drive omitido:", driveErr);
-            }
-          }
-          const res = await api.importCsv(fileContent);
-          showNotification(res.message || "Importacion SimaPro completada exitosamente.");
-          await loadDashboard();
-          if (res.systems_created && res.systems_created.length > 0) {
-            await openSystem(res.systems_created[0]);
-          }
-        } catch (err) {
-          alert("Error al importar SimaPro CSV: " + err.message);
-        } finally {
-          inputDashSimaPro.value = "";
-        }
-      });
-    }
-
-    // Canvas Botones & Modos Sankey
-    const btnBack = document.getElementById("btnBackToDashboard");
-    if (btnBack) btnBack.addEventListener("click", () => showView("dashboard"));
-
-    const btnCanvasReport = document.getElementById("btnCanvasOpenReport");
-    if (btnCanvasReport) btnCanvasReport.addEventListener("click", () => showView("report"));
-
-    const btnSaveCanvas = document.getElementById("btnSaveCanvas");
-    if (btnSaveCanvas) btnSaveCanvas.addEventListener("click", saveCanvas);
-
-    // Sub-vistas del Lienzo: Diagrama vs Hoja de Cálculo
-    const btnViewVisual = document.getElementById("btnCanvasViewVisual");
-    const btnViewTable = document.getElementById("btnCanvasViewTable");
-    const btnSlideToTable = document.getElementById("btnSlideToTableView");
-    const btnSlideToVisual = document.getElementById("btnSlideToVisualView");
-
-    if (btnViewVisual) btnViewVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
-    if (btnViewTable) btnViewTable.addEventListener("click", () => switchCanvasViewMode("table"));
-    if (btnSlideToTable) btnSlideToTable.addEventListener("click", () => switchCanvasViewMode("table"));
-    if (btnSlideToVisual) btnSlideToVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
-
-    // Controles de Visibilidad de Paneles Laterales (Expandir/Maximizar Lienzo)
-    const btnToggleLeft = document.getElementById("btnToggleLeftSidebar");
-    const btnToggleRight = document.getElementById("btnToggleRightSidebar");
-    const btnToggleFull = document.getElementById("btnToggleFullCanvas");
-    const btnCollapseCat = document.getElementById("btnCollapseCatalog");
-    const btnCollapseInsp = document.getElementById("btnCollapseInspector");
-
-    if (btnToggleLeft) btnToggleLeft.addEventListener("click", () => toggleLeftPanel());
-    if (btnToggleRight) btnToggleRight.addEventListener("click", () => toggleRightPanel());
-    if (btnToggleFull) btnToggleFull.addEventListener("click", () => toggleFullCanvas());
-    if (btnCollapseCat) btnCollapseCat.addEventListener("click", () => toggleLeftPanel(false));
-    if (btnCollapseInsp) btnCollapseInsp.addEventListener("click", () => toggleRightPanel(false));
-
-    // Controles de Zoom del Lienzo (Toolbar & Floating Dock)
-    const btnZIn = document.getElementById("btnZoomIn");
-    const btnZOut = document.getElementById("btnZoomOut");
-    const btnZReset = document.getElementById("btnZoomReset");
-    const btnTbZIn = document.getElementById("btnTbZoomIn");
-    const btnTbZOut = document.getElementById("btnTbZoomOut");
-    const btnTbZReset = document.getElementById("btnTbZoomReset");
-
-    const doZoomIn = () => applyCanvasZoom((state.canvasZoom || 1.0) + 0.1);
-    const doZoomOut = () => applyCanvasZoom((state.canvasZoom || 1.0) - 0.1);
-    const doZoomReset = () => applyCanvasZoom(1.0);
-
-    if (btnZIn) btnZIn.addEventListener("click", doZoomIn);
-    if (btnTbZIn) btnTbZIn.addEventListener("click", doZoomIn);
-    if (btnZOut) btnZOut.addEventListener("click", doZoomOut);
-    if (btnTbZOut) btnTbZOut.addEventListener("click", doZoomOut);
-    if (btnZReset) btnZReset.addEventListener("click", doZoomReset);
-    if (btnTbZReset) btnTbZReset.addEventListener("click", doZoomReset);
-
-    // Filtros de la Hoja de Cálculo LCI
-    const inputTableSearch = document.getElementById("inputTableFilter");
-    if (inputTableSearch) {
-      inputTableSearch.addEventListener("input", (e) => {
-        state.tableFilterText = e.target.value;
-        renderCanvasTableView();
-      });
-    }
-
-    const selectFlowFilter = document.getElementById("selectTableFlowFilter");
-    if (selectFlowFilter) {
-      selectFlowFilter.addEventListener("change", (e) => {
-        const val = e.target.value;
-        state.activeSheetTab = (val === "connections") ? "connections" : "lci";
-        state.selectedSpreadsheetCell = null;
-        renderCanvasTableView();
-      });
-    }
-
-    const btnTableAddProc = document.getElementById("btnTableAddProcess");
-    if (btnTableAddProc) {
-      btnTableAddProc.addEventListener("click", () => openProcessEditor(null));
-    }
-
-    const btnTableNewFlw = document.getElementById("btnTableNewFlow");
-    if (btnTableNewFlw) {
-      btnTableNewFlw.addEventListener("click", () => openCreateCustomFlowModal());
-    }
-
-    const btnTableAddConn = document.getElementById("btnTableAddConnection");
-    if (btnTableAddConn) {
-      btnTableAddConn.addEventListener("click", openTableConnectModal);
-    }
-
-    const btnTableCsv = document.getElementById("btnTableExportCsv");
-    if (btnTableCsv) {
-      btnTableCsv.addEventListener("click", exportLciTableToCsv);
-    }
-
-    // Sankey Toggle Buttons
-    const btnSankeyNone = document.getElementById("btnSankeyModeNone");
-    const btnSankeyMass = document.getElementById("btnSankeyModeMass");
-    const btnSankeyEnergy = document.getElementById("btnSankeyModeEnergy");
-
-    const setSankeyMode = (mode) => {
-      [btnSankeyNone, btnSankeyMass, btnSankeyEnergy].forEach(b => b && b.classList.remove("active"));
-      if (mode === "none" && btnSankeyNone) btnSankeyNone.classList.add("active");
-      if (mode === "mass" && btnSankeyMass) btnSankeyMass.classList.add("active");
-      if (mode === "energy" && btnSankeyEnergy) btnSankeyEnergy.classList.add("active");
-      state.sankeyMode = mode;
-      renderCanvasStage();
-    };
-
-    if (btnSankeyNone) btnSankeyNone.addEventListener("click", () => setSankeyMode("none"));
-    if (btnSankeyMass) btnSankeyMass.addEventListener("click", () => setSankeyMode("mass"));
-    if (btnSankeyEnergy) btnSankeyEnergy.addEventListener("click", () => setSankeyMode("energy"));
-
-    // Sub-vista de Parámetros del Modelo y Modal
-    const btnParamsView = document.getElementById("btnCanvasViewParams");
-    if (btnParamsView) btnParamsView.addEventListener("click", () => switchCanvasViewMode("parameters"));
-
-    const btnParamsToVisual = document.getElementById("btnParamsToVisualView");
-    if (btnParamsToVisual) btnParamsToVisual.addEventListener("click", () => switchCanvasViewMode("visual"));
-
-    const tabSheetParams = document.getElementById("tabSheetParameters");
-    if (tabSheetParams) tabSheetParams.addEventListener("click", () => switchCanvasViewMode("parameters"));
-
-    const btnOpenNewParam = document.getElementById("btnOpenNewParamModal");
-    if (btnOpenNewParam) btnOpenNewParam.addEventListener("click", () => openParameterModal());
-
-    const btnExportParams = document.getElementById("btnExportParamsCsv");
-    if (btnExportParams) btnExportParams.addEventListener("click", exportParametersCsv);
-
-    const selParamScope = document.getElementById("selectParamScopeFilter");
-    if (selParamScope) {
-      selParamScope.addEventListener("change", (e) => {
-        state.paramScopeFilter = e.target.value;
-        state.paramGroupFilter = "all";
-        renderSystemParametersTable();
-      });
-    }
-
-    const selParamGroup = document.getElementById("selectParamGroupFilter");
-    if (selParamGroup) {
-      selParamGroup.addEventListener("change", (e) => {
-        state.paramGroupFilter = e.target.value;
-        renderSystemParametersTable();
-      });
-    }
-
-    const selParamType = document.getElementById("selectParamTypeFilter");
-    if (selParamType) {
-      selParamType.addEventListener("change", (e) => {
-        state.paramTypeFilter = e.target.value;
-        renderSystemParametersTable();
-      });
-    }
-
-    const inParamFilter = document.getElementById("inputParamFilter");
-    if (inParamFilter) {
-      inParamFilter.addEventListener("input", (e) => {
-        state.paramSearchQuery = e.target.value;
-        renderSystemParametersTable();
-      });
-    }
-
-    // Modal de Parámetros: Interacciones y Guardado
-    const btnCloseParam = document.getElementById("btnCloseParamModal");
-    if (btnCloseParam) btnCloseParam.addEventListener("click", closeParameterModal);
-
-    const btnCancelParam = document.getElementById("btnCancelParamModal");
-    if (btnCancelParam) btnCancelParam.addEventListener("click", closeParameterModal);
-
-    const btnSaveParam = document.getElementById("btnSaveParamModal");
-    if (btnSaveParam) btnSaveParam.addEventListener("click", saveParameterFromModal);
-
-    const btnParamIndep = document.getElementById("btnParamTypeIndep");
-    const btnParamDep = document.getElementById("btnParamTypeDep");
-    const paramTypeHidden = document.getElementById("paramFormType");
-    const paramValWrap = document.getElementById("paramFormValueWrapper");
-    const paramFormWrap = document.getElementById("paramFormFormulaWrapper");
-
-    if (btnParamIndep && btnParamDep) {
-      btnParamIndep.addEventListener("click", () => {
-        btnParamIndep.classList.add("active");
-        btnParamDep.classList.remove("active");
-        if (paramTypeHidden) paramTypeHidden.value = "independent";
-        if (paramValWrap) paramValWrap.style.display = "block";
-        if (paramFormWrap) paramFormWrap.style.display = "none";
-      });
-      btnParamDep.addEventListener("click", () => {
-        btnParamDep.classList.add("active");
-        btnParamIndep.classList.remove("active");
-        if (paramTypeHidden) paramTypeHidden.value = "dependent";
-        if (paramValWrap) paramValWrap.style.display = "none";
-        if (paramFormWrap) paramFormWrap.style.display = "block";
-      });
-    }
-
-    const paramFormScopeSel = document.getElementById("paramFormScope");
-    const paramProcWrap = document.getElementById("paramFormProcessWrapper");
-    if (paramFormScopeSel) {
-      paramFormScopeSel.addEventListener("change", (e) => {
-        if (paramProcWrap) {
-          paramProcWrap.style.display = (e.target.value === "local") ? "block" : "none";
-        }
-      });
-    }
-
-    // Sticky Notes Controls on Canvas
-    const btnToggleSticky = document.getElementById("btnToggleCanvasStickyNotes");
-    const labelStickyToggle = document.getElementById("labelStickyNotesToggle");
-
-    if (btnToggleSticky) {
-      btnToggleSticky.addEventListener("click", () => {
-        state.showCanvasStickyNotes = !state.showCanvasStickyNotes;
-        updateCanvasHeaderToolbar();
-        renderCanvasStage();
-        const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
-        showNotification(state.showCanvasStickyNotes ? 
-          (isEn ? "Sticky notes visible on canvas." : "Notas adhesivas visibles en lienzo.") : 
-          (isEn ? "Sticky notes hidden on canvas." : "Notas adhesivas ocultadas en lienzo."));
-      });
-    }
-
-    // Catálogo Filtros & Búsqueda
-    const selectCat = document.getElementById("selectCatalogCategory");
-    if (selectCat) {
-      selectCat.addEventListener("change", () => {
-        state.catalogFilter = selectCat.value;
-        loadCatalog();
-      });
-    }
-
-    // Tabs de Selección de Bases de Datos LCI (Apple Segmented Control)
-    const sourceTabs = document.querySelectorAll("#catalogSourceTabs .segment-btn");
-    sourceTabs.forEach(btn => {
-      btn.addEventListener("click", () => {
-        sourceTabs.forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.catalogSource = btn.dataset.source || "all";
-        loadCatalog();
-      });
-    });
-
-    const inputCatSearch = document.getElementById("inputCatalogSearch");
-    if (inputCatSearch) {
-      let debounceTimer = null;
-      inputCatSearch.addEventListener("input", () => {
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => loadCatalog(), 300);
-      });
-    }
-
-    const btnInsertCanvas = document.getElementById("btnInsertToActiveCanvas");
-    if (btnInsertCanvas) btnInsertCanvas.addEventListener("click", insertSelectedProcessToCanvas);
-
-    // Reporte: Comentarios y Exportaciones
-    const btnPostComment = document.getElementById("btnPostComment");
-    if (btnPostComment) btnPostComment.addEventListener("click", postNewComment);
-
-    const btnExpOpenLca = document.getElementById("btnExportOpenLca");
-    const btnReportExpOpenLca = document.getElementById("btnReportExportOpenLca");
-    const btnExpIlcd = document.getElementById("btnExportIlcd");
-    const btnExpSimaPro = document.getElementById("btnExportSimaPro");
-    const btnExpLciCsv = document.getElementById("btnExportLciCsv");
-    const btnExpPdf = document.getElementById("btnExportReportPdf");
-
-    const getSysId = () => state.activeSystem ? state.activeSystem.id : 21;
-
-    // Dropdown Global de Exportación en el Lienzo
-    const btnExportDropdown = document.getElementById("btnCanvasExportDropdown");
-    const exportMenu = document.getElementById("canvasExportMenu");
-    if (btnExportDropdown && exportMenu) {
-      btnExportDropdown.addEventListener("click", (e) => {
-        e.stopPropagation();
-        exportMenu.classList.toggle("show");
-      });
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest(".canvas-export-dropdown-wrapper")) {
-          exportMenu.classList.remove("show");
-        }
-      });
-    }
-
-    if (btnExpOpenLca) {
-      btnExpOpenLca.addEventListener("click", () => {
-        if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/openlca${getAuthTokenQuery()}`;
-      });
-    }
-    if (btnReportExpOpenLca) {
-      btnReportExpOpenLca.addEventListener("click", () => {
-        window.location.href = `/api/systems/${getSysId()}/export/openlca${getAuthTokenQuery()}`;
-      });
-    }
-    if (btnExpIlcd) {
-      btnExpIlcd.addEventListener("click", () => {
-        if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/ilcd${getAuthTokenQuery()}`;
-      });
-    }
-    if (btnExpSimaPro) {
-      btnExpSimaPro.addEventListener("click", async () => {
-        if (exportMenu) exportMenu.classList.remove("show");
-        const sysId = getSysId();
-        window.location.href = `/api/systems/${sysId}/export/simapro${getAuthTokenQuery()}`;
-        if (window.EconodeDrive && window.EconodeDrive.hasToken() && state.activeSystem) {
-          try {
-            const resp = await fetch(`/api/systems/${sysId}/export/simapro${getAuthTokenQuery()}`);
-            if (resp.ok) {
-              const csvText = await resp.text();
-              const fileName = `SimaPro_System_${sysId}_export.csv`;
-              await window.EconodeDrive.uploadSimaProFile(state.activeSystem.name || "Sistema", state.activeSystem.code || "SIMAPRO", fileName, csvText);
-              showNotification("Exportacion SimaPro respaldada en Google Drive.");
-            }
-          } catch (e) {
-            console.warn("Respaldo exportacion SimaPro a Drive omitido:", e);
-          }
-        }
-      });
-    }
-    if (btnExpLciCsv) {
-      btnExpLciCsv.addEventListener("click", () => {
-        if (exportMenu) exportMenu.classList.remove("show");
-        window.location.href = `/api/systems/${getSysId()}/export/csv${getAuthTokenQuery()}`;
-      });
-    }
-    if (btnExpPdf) {
-      btnExpPdf.addEventListener("click", () => {
-        window.location.href = `/api/systems/${getSysId()}/export/pdf${getAuthTokenQuery()}`;
-      });
-    }
-
-    // Checklist Botones & Multi-Norma
-    const btnSign = document.getElementById("btnSignAuditDictamen");
-    if (btnSign) btnSign.addEventListener("click", signAuditDictamen);
-
-    const btnExpAuditZip = document.getElementById("btnExportAuditZip");
-    if (btnExpAuditZip) {
-      btnExpAuditZip.addEventListener("click", () => {
-        window.location.href = `/api/systems/${getSysId()}/export/expediente`;
-      });
-    }
-
-    const selectAuditStd = document.getElementById("selectAuditStandard");
-    if (selectAuditStd) {
-      selectAuditStd.addEventListener("change", (e) => {
-        const chosenStd = e.target.value;
-        loadAuditChecklist(chosenStd);
-      });
-    }
-
-    const btnDlTemplate = document.getElementById("btnDownloadChecklistTemplate");
-    if (btnDlTemplate) {
-      btnDlTemplate.addEventListener("click", () => {
-        window.location.href = "/api/checklists/template-csv";
-      });
-    }
-
-    const btnImportChecklist = document.getElementById("btnImportChecklistCsv");
-    const inputImportChecklist = document.getElementById("inputImportChecklistFile");
-    if (btnImportChecklist && inputImportChecklist) {
-      btnImportChecklist.addEventListener("click", () => {
-        inputImportChecklist.click();
-      });
-
-      inputImportChecklist.addEventListener("change", async (e) => {
-        const file = e.target.files && e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async function () {
-          try {
-            const csvText = reader.result;
-            const stdName = prompt("Ingresa el nombre o clave de la norma a importar:", file.name.replace(".csv", ""));
-            if (!stdName) return;
-
-            const res = await api.importChecklist(csvText, {
-              standard_name: stdName,
-              organization: state.activeUser ? state.activeUser.organization : "ECONODE"
-            });
-
-            showNotification(res.message || "Checklist importado exitosamente.");
-            state.availableStandards = null;
-            if (state.auditCache) state.auditCache = {};
-            await loadAuditChecklist(res.standard_id || "nom070");
-          } catch (err) {
-            alert("Error al importar checklist: " + err.message);
-          } finally {
-            inputImportChecklist.value = "";
-          }
-        };
-        reader.readAsText(file, "UTF-8");
-      });
-    }
-
-    // Configurar Modales & Listeners
-    setupWizardModal();
-    setupInviteCollaboratorModal();
-    setupImportModal();
-    setupSettingsModal();
-    setupDocumentsModal();
-    setupConnectNodesModal();
-    setupProcessEditorModal();
-    setupAddProcessCommentModal();
-    setupSelectDbFlowModal();
-    setupCreateCustomFlowModal();
-    setupSelectProviderModal();
-    setupSubscriptionModal();
-    setupReportHighlighting();
-
-    const inputPalSearch = document.getElementById("inputPaletteSearch");
-    if (inputPalSearch) {
-      inputPalSearch.addEventListener("input", renderPaletteProcesses);
-    }
-
-    const btnPaletteBlank = document.getElementById("btnPaletteCreateBlank");
-    if (btnPaletteBlank) {
-      btnPaletteBlank.addEventListener("click", () => openProcessEditor(null));
-    }
-
-    // Importar SimaPro CSV a este lienzo
-    const btnPalImpSimaPro = document.getElementById("btnPaletteImportSimaPro");
-    const inputPalSimaPro = document.getElementById("inputPaletteSimaProFile");
-    if (btnPalImpSimaPro && inputPalSimaPro) {
-      btnPalImpSimaPro.addEventListener("click", () => inputPalSimaPro.click());
-      inputPalSimaPro.addEventListener("change", async (e) => {
-        if (!e.target.files || !e.target.files[0]) return;
-        const file = e.target.files[0];
-        const sysId = state.activeSystem ? state.activeSystem.id : null;
-        if (!sysId) {
-          alert("Debes tener un sistema producto activo para importar procesos a este lienzo.");
-          inputPalSimaPro.value = "";
-          return;
-        }
-        try {
-          const fileContent = await file.text();
-          if (window.EconodeDrive && window.EconodeDrive.hasToken()) {
-            try {
-              await window.EconodeDrive.uploadSimaProFile(state.activeSystem.name || "Sistema", state.activeSystem.code || "SIMAPRO", file.name, fileContent);
-              showNotification("Archivo CSV respaldado en Google Drive.");
-            } catch (driveErr) {
-              console.warn("Respaldo Google Drive omitido:", driveErr);
-            }
-          }
-          const res = await api.importSimaProToSystem(sysId, fileContent);
-          showNotification(res.message || "Procesos SimaPro incorporados al lienzo exitosamente.");
-          await openSystem(sysId, false);
-        } catch (err) {
-          alert("Error al importar SimaPro a este lienzo: " + err.message);
-        } finally {
-          inputPalSimaPro.value = "";
-        }
-      });
-    }
-
-    // Cierre de modales con tecla Escape y eliminación de nodo seleccionado con Delete/Backspace
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        document.querySelectorAll(".modal-overlay.active, .modal-overlay[style*='display: flex']").forEach((m) => {
-          m.style.display = "none";
-          m.classList.remove("active");
-        });
-      } else if ((e.key === "Delete" || e.key === "Backspace") && state.currentView === "canvas" && state.selectedNode) {
-        const tag = (document.activeElement && document.activeElement.tagName) || "";
-        if (tag !== "INPUT" && tag !== "TEXTAREA" && !document.activeElement.isContentEditable) {
-          e.preventDefault();
-          window.EconodeApp.removeNode(state.selectedNode.id);
-        }
-      } else if ((e.ctrlKey || e.metaKey) && state.currentView === "canvas" && state.canvasViewMode === "visual") {
-        if (e.key === "+" || e.key === "=") {
-          e.preventDefault();
-          applyCanvasZoom((state.canvasZoom || 1.0) + 0.1);
-        } else if (e.key === "-" || e.key === "_") {
-          e.preventDefault();
-          applyCanvasZoom((state.canvasZoom || 1.0) - 0.1);
-        } else if (e.key === "0") {
-          e.preventDefault();
-          applyCanvasZoom(1.0);
-        }
-      }
-    });
-
-    // Auto-ajustar conexiones SVG del lienzo cuando la ventana del navegador cambia de tamaño
-    window.addEventListener("resize", () => {
-      if (state.currentView === "canvas" && state.canvasViewMode === "visual") {
-        renderCanvasEdges();
-      }
-    });
-
-    // 14. VISTA INICIAL: Si está autenticado, restaurar sistema producto y vista previa guardada
-    if (state.isAuthenticated) {
       let savedSystemId = null;
       let savedView = null;
       try {
@@ -10742,13 +10682,19 @@
           ${systems.map(s => {
             const gw = s.lcia_scores?.global_warming || 0.0;
             const isBest = s.is_best_carbon;
+            const isTie = s.is_tied_best;
             const diffPct = s.diff_vs_best_pct || 0;
             const score = s.eco_efficiency_score || 100;
+            const borderCol = isBest ? '#10B981' : (isTie ? '#0284C7' : '#E2E8F0');
             return `
-              <div style="background: #FFFFFF; border: 1.5px solid ${isBest ? '#10B981' : '#E2E8F0'}; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative;">
+              <div style="background: #FFFFFF; border: 1.5px solid ${borderCol}; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); position: relative;">
                 ${isBest ? `
                   <div style="position: absolute; top: 12px; right: 12px; background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(16, 185, 129, 0.3);">
                     ${window.I18n.t("proj.best_carbon_badge", "Menor Huella de Carbono")}
+                  </div>
+                ` : isTie ? `
+                  <div style="position: absolute; top: 12px; right: 12px; background: rgba(2, 132, 199, 0.12); color: #0284C7; font-size: 9.5px; font-weight: 700; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(2, 132, 199, 0.3);">
+                    ${window.I18n.t("proj.tied_carbon_badge", "Huella Equivalente")}
                   </div>
                 ` : `
                   <div style="position: absolute; top: 12px; right: 12px; background: #F1F5F9; color: #64748B; font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: 12px;">
@@ -10837,6 +10783,9 @@
       `;
 
       container.innerHTML = cardsHtml + tableHtml;
+      if (window.I18n && typeof window.I18n.applyTranslations === "function") {
+        window.I18n.applyTranslations(modal);
+      }
     } catch (err) {
       container.innerHTML = `<div style="text-align: center; padding: 30px; color: #EF4444; font-size: 12px;">Error al cargar comparativa: ${escapeHtml(err.message)}</div>`;
     }
@@ -11270,6 +11219,21 @@
     getZoom: () => state.canvasZoom || 1.0,
     getNodes: () => state.canvasNodes,
     getEdges: () => state.canvasEdges,
+    closeModal: (id) => closeModal(id),
+    openNewGhgInventoryModal: () => openNewGhgInventoryModal(),
+    submitNewGhgInventory: () => submitNewGhgInventory(),
+    openAddGhgEntryModal: (scope, cat) => openAddGhgEntryModal(scope, cat),
+    submitNewGhgEntry: () => submitNewGhgEntry(),
+    deleteGhgEntry: (id) => deleteGhgEntry(id),
+    deleteCurrentGhgInventory: () => deleteCurrentGhgInventory(),
+    switchGhgTab: (tab) => switchGhgTab(tab),
+    toggleGhgAccordion: (catKey) => toggleGhgAccordion(catKey),
+    onGhgCalcTypeChange: () => onGhgCalcTypeChange(),
+    previewGhgEmissions: () => previewGhgEmissions(),
+    onGhgFactorSelectChange: () => onGhgFactorSelectChange(),
+    onGhgSpendSectorChange: () => onGhgSpendSectorChange(),
+    onGhgProductSystemSelectChange: () => onGhgProductSystemSelectChange(),
+    searchGhgFactorsTab: () => searchGhgFactorsTab(),
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();

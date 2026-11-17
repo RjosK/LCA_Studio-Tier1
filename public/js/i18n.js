@@ -12,6 +12,7 @@ const I18N_DICTIONARY = {
  "nav.catalog": "Explorador LCI",
  "nav.report": "Reporte Dinámico",
  "nav.audit": "Auditoría & Normas",
+ "nav.ghg": "GHG Protocol",
  "nav.import_files": " Importar Archivos",
  "nav.new_system": "+ Nuevo Sistema",
  "nav.btn_invite": "Invitar",
@@ -193,6 +194,8 @@ const I18N_DICTIONARY = {
  "proj.compare_title": "Comparativa de Sistemas del Proyecto",
  "proj.compare_subtitle": "Evaluación multidimensional de impacto ambiental (LCIA) ReCiPe Midpoint",
  "proj.best_carbon_badge": "Menor Huella de Carbono",
+ "proj.tied_carbon_badge": "Huella Equivalente",
+ "proj.identical_impact": "Impacto Idéntico",
  "proj.diff_vs_best": "vs mejor",
  "proj.eco_score": "Eficiencia Eco",
  "proj.carbon_footprint": "Huella Carbono",
@@ -592,6 +595,7 @@ const I18N_DICTIONARY = {
  "nav.catalog": "LCI Explorer",
  "nav.report": "Dynamic Report",
  "nav.audit": "Audit & Standards",
+ "nav.ghg": "GHG Protocol",
  "nav.import_files": " Import Files",
  "nav.new_system": "+ New System",
  "nav.btn_invite": "Invite",
@@ -773,6 +777,8 @@ const I18N_DICTIONARY = {
  "proj.compare_title": "Project Systems Comparison",
  "proj.compare_subtitle": "Multidimensional environmental impact assessment (LCIA) ReCiPe Midpoint",
  "proj.best_carbon_badge": "Lowest Carbon Footprint",
+ "proj.tied_carbon_badge": "Equivalent Footprint",
+ "proj.identical_impact": "Identical Impact",
  "proj.diff_vs_best": "vs best",
  "proj.eco_score": "Eco Efficiency",
  "proj.carbon_footprint": "Carbon Footprint",
@@ -1170,6 +1176,27 @@ function t(key, fallback = "") {
  return dict[key] || fallback || key;
 }
 
+function applyTranslations(root = document) {
+ const container = root || document;
+ container.querySelectorAll("[data-i18n]").forEach(el => {
+ const key = el.getAttribute("data-i18n");
+ const val = t(key);
+ if (val) el.textContent = val;
+ });
+
+ container.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+ const key = el.getAttribute("data-i18n-placeholder");
+ const val = t(key);
+ if (val) el.setAttribute("placeholder", val);
+ });
+
+ container.querySelectorAll("[data-i18n-title]").forEach(el => {
+ const key = el.getAttribute("data-i18n-title");
+ const val = t(key);
+ if (val) el.setAttribute("title", val);
+ });
+}
+
 function setLanguage(lang) {
  if (lang !== "es" && lang !== "en") lang = "es";
  currentLanguage = lang;
@@ -1182,26 +1209,7 @@ function setLanguage(lang) {
  if (btnEs) btnEs.classList.toggle("active", lang === "es");
  if (btnEn) btnEn.classList.toggle("active", lang === "en");
 
- // Apply to text elements with data-i18n
- document.querySelectorAll("[data-i18n]").forEach(el => {
- const key = el.getAttribute("data-i18n");
- const val = t(key);
- if (val) el.textContent = val;
- });
-
- // Apply to placeholders
- document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
- const key = el.getAttribute("data-i18n-placeholder");
- const val = t(key);
- if (val) el.setAttribute("placeholder", val);
- });
-
- // Apply to titles
- document.querySelectorAll("[data-i18n-title]").forEach(el => {
- const key = el.getAttribute("data-i18n-title");
- const val = t(key);
- if (val) el.setAttribute("title", val);
- });
+ applyTranslations(document);
 
  // Trigger app re-render of dynamic lists if app exists
  if (window.EconodeApp && typeof window.EconodeApp.onLanguageChange === "function") {
@@ -1212,6 +1220,7 @@ function setLanguage(lang) {
 window.I18n = {
  t,
  setLanguage,
+ applyTranslations,
  getCurrentLanguage: () => currentLanguage,
  dict: I18N_DICTIONARY
 };

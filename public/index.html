@@ -45,6 +45,9 @@
       <button class="nav-btn" data-view="audit" id="navBtnAudit" aria-label="Auditoría y Normas">
         <span data-i18n="nav.audit">Auditoría & Normas</span>
       </button>
+      <button class="nav-btn" data-view="ghg" id="navBtnGhg" aria-label="GHG Protocol">
+        <span data-i18n="nav.ghg">GHG Protocol</span>
+      </button>
     </nav>
 
     <!-- Navigation Links (Visible in Landing Mode) -->
@@ -1706,6 +1709,450 @@
       </table>
     </div>
   </main>
+
+  <!-- ============================================================= -->
+  <!-- 9.1 MODULO: INVENTARIO CORPORATIVO GEI (GHG PROTOCOL) (#viewGhg) -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewGhg" role="region" aria-label="Inventario Corporativo GHG Protocol" style="display: none;">
+    <!-- Encabezado de la Vista -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 14px;">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h1 style="font-size: 20px; font-weight: 700; margin: 0;">Inventario Corporativo GEI & Cadena de Valor</h1>
+          <span class="badge-pill badge-blue">GHG Protocol</span>
+        </div>
+        <p style="font-size: 11.5px; color: var(--text-muted); margin: 4px 0 0 0;">
+          Contabilidad corporativa bajo Scope 1 (Directas), Scope 2 (Doble reporte Location/Market) y Scope 3 (15 Categorías Upstream / Downstream).
+        </p>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+        <!-- Selector de Inventario Activo -->
+        <div style="display: flex; align-items: center; gap: 6px; background: var(--bg-card); padding: 3px 8px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+          <label for="ghgInventorySelect" style="font-size: 11px; font-weight: 600; color: var(--text-secondary); white-space: nowrap;">Inventario:</label>
+          <select id="ghgInventorySelect" class="form-input" style="height: 28px; padding: 2px 8px; font-size: 11px; font-weight: 600; border: none; background: transparent; cursor: pointer; min-width: 220px;">
+            <option value="">Cargando inventarios...</option>
+          </select>
+        </div>
+
+        <button class="btn btn-primary btn-sm" id="btnOpenNewGhgInventoryModal">
+          + Nuevo Inventario GEI
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btnOpenGhgFactorsTab">
+          Catálogo Factores GWP
+        </button>
+        <button class="btn btn-danger btn-sm" id="btnDeleteCurrentGhgInventory" title="Eliminar inventario activo">
+          Eliminar
+        </button>
+      </div>
+    </div>
+
+    <!-- Fichas Resumen Ejecutivo (Apple HIG Ergonomics) -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px; margin-bottom: 20px;">
+      <!-- Tarjeta Scope 1 -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: #DC2626; text-transform: uppercase; letter-spacing: 0.5px;">Alcance 1 (Directas)</span>
+          <span class="badge-pill" style="background: rgba(220, 38, 38, 0.1); color: #DC2626; font-size: 9.5px;" id="ghgScope1Pct">0.0%</span>
+        </div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;" id="ghgKpiScope1">0.00 t CO2e</div>
+        <div style="font-size: 11px; color: var(--text-muted);">Combustión fija, móvil y emisiones fugitivas</div>
+      </div>
+
+      <!-- Tarjeta Scope 2 -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: #D97706; text-transform: uppercase; letter-spacing: 0.5px;">Alcance 2 (Energía)</span>
+          <span class="badge-pill" style="background: rgba(217, 119, 6, 0.1); color: #D97706; font-size: 9.5px;" id="ghgScope2Pct">0.0%</span>
+        </div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;" id="ghgKpiScope2Location">0.00 t CO2e</div>
+        <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between;">
+          <span>Location-Based</span>
+          <span>Market: <strong id="ghgKpiScope2Market" style="color: #059669;">0.00 t</strong></span>
+        </div>
+      </div>
+
+      <!-- Tarjeta Scope 3 -->
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: #2563EB; text-transform: uppercase; letter-spacing: 0.5px;">Alcance 3 (Cadena Valor)</span>
+          <span class="badge-pill" style="background: rgba(37, 99, 235, 0.1); color: #2563EB; font-size: 9.5px;" id="ghgScope3Pct">0.0%</span>
+        </div>
+        <div style="font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px;" id="ghgKpiScope3">0.00 t CO2e</div>
+        <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between;">
+          <span>Upstream: <strong id="ghgKpiScope3Upstream">0.00 t</strong></span>
+          <span>Downstream: <strong id="ghgKpiScope3Downstream">0.00 t</strong></span>
+        </div>
+      </div>
+
+      <!-- Tarjeta Huella Total -->
+      <div style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(59, 130, 246, 0.05) 100%); border: 1.5px solid #10B981; border-radius: var(--radius-md); padding: 14px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.03);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <span style="font-size: 11px; font-weight: 700; color: #059669; text-transform: uppercase; letter-spacing: 0.5px;">Huella Corporativa Neta</span>
+          <span class="badge-pill badge-emerald" id="ghgStatusBadge">Borrador</span>
+        </div>
+        <div style="font-size: 24px; font-weight: 800; color: #0F172A; margin-bottom: 4px;" id="ghgKpiTotalMarket">0.00 t CO2e</div>
+        <div style="font-size: 11px; color: var(--text-muted); display: flex; justify-content: space-between;">
+          <span>Location: <span id="ghgKpiTotalLocation">0.00 t</span></span>
+          <span>Ahorro I-REC: <strong id="ghgKpiNetReduction" style="color: #059669;">0.00 t</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pestañas de Navegación Segmentada (Apple Segmented Tabs) -->
+    <div style="display: flex; gap: 8px; margin-bottom: 18px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; overflow-x: auto;">
+      <button class="btn btn-secondary btn-sm ghg-nav-tab active" data-ghg-tab="summary" id="tabGhgSummary" style="font-size: 11.5px; font-weight: 600;">Resumen General</button>
+      <button class="btn btn-secondary btn-sm ghg-nav-tab" data-ghg-tab="scope1" id="tabGhgScope1" style="font-size: 11.5px; font-weight: 600;">Alcance 1 (Directas)</button>
+      <button class="btn btn-secondary btn-sm ghg-nav-tab" data-ghg-tab="scope2" id="tabGhgScope2" style="font-size: 11.5px; font-weight: 600;">Alcance 2 (Energía Dual)</button>
+      <button class="btn btn-secondary btn-sm ghg-nav-tab" data-ghg-tab="scope3" id="tabGhgScope3" style="font-size: 11.5px; font-weight: 600;">Alcance 3 (15 Categorías)</button>
+      <button class="btn btn-secondary btn-sm ghg-nav-tab" data-ghg-tab="factors" id="tabGhgFactors" style="font-size: 11.5px; font-weight: 600;">Catálogo Factores GWP</button>
+    </div>
+
+    <!-- Contenido Pestaña 1: Resumen General -->
+    <div id="ghgPaneSummary" class="ghg-tab-pane">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <h2 style="font-size: 15px; font-weight: 700; margin: 0;">Fuentes de Emisión Registradas en el Inventario</h2>
+          <button class="btn btn-primary btn-sm" id="btnQuickAddEntry">+ Registrar Fuente</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" style="font-size: 11.5px;">
+            <thead>
+              <tr>
+                <th>Alcance</th>
+                <th>Categoría GHG</th>
+                <th>Actividad / Fuente</th>
+                <th>Método</th>
+                <th>Dato Actividad</th>
+                <th>Factor GWP</th>
+                <th>Emisiones (t CO2e)</th>
+                <th>Calidad</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="ghgSummaryEntriesTableBody">
+              <tr>
+                <td colspan="9" style="text-align: center; color: var(--text-muted); padding: 24px;">Seleccione o cree un inventario para visualizar las fuentes de emisión.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido Pestaña 2: Alcance 1 -->
+    <div id="ghgPaneScope1" class="ghg-tab-pane" style="display: none;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <h2 style="font-size: 15px; font-weight: 700; margin: 0;">Alcance 1: Fuentes de Emisión Directa</h2>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">Combustibles fósiles en calderas, hornos, vehículos corporativos y fugas de gases fluorados.</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openAddGhgEntryModal('SCOPE_1')">+ Agregar Fuente Alcance 1</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" style="font-size: 11.5px;">
+            <thead>
+              <tr>
+                <th>Categoría</th>
+                <th>Fuente / Equipo</th>
+                <th>Consumo</th>
+                <th>Factor Aplicado</th>
+                <th>Emisiones (t CO2e)</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="ghgScope1TableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido Pestaña 3: Alcance 2 -->
+    <div id="ghgPaneScope2" class="ghg-tab-pane" style="display: none;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div>
+            <h2 style="font-size: 15px; font-weight: 700; margin: 0;">Alcance 2: Electricidad y Energía Adquirida (Doble Contabilidad)</h2>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">Doble reporte exigido por GHG Protocol: Método Basado en la Ubicación (Red) y Método Basado en el Mercado (I-RECs/PPAs).</p>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openAddGhgEntryModal('SCOPE_2')">+ Agregar Consumo Eléctrico</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" style="font-size: 11.5px;">
+            <thead>
+              <tr>
+                <th>Tipo Reporte</th>
+                <th>Instalación / Medidor</th>
+                <th>Consumo (kWh)</th>
+                <th>Instrumento Contractual</th>
+                <th>Factor GWP</th>
+                <th>Emisiones (t CO2e)</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="ghgScope2TableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenido Pestaña 4: Alcance 3 (15 Categorias) -->
+    <div id="ghgPaneScope3" class="ghg-tab-pane" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <div>
+          <h2 style="font-size: 15px; font-weight: 700; margin: 0;">Alcance 3: Cadena de Valor (15 Categorías GHG Protocol)</h2>
+          <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">Evaluación con datos de actividad física, factores monetarios spend-based (USEEIO) o sistemas producto modelados en el lienzo.</p>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openAddGhgEntryModal('SCOPE_3')">+ Agregar Actividad Alcance 3</button>
+      </div>
+      <div id="ghgScope3AccordionContainer" style="display: flex; flex-direction: column; gap: 10px;">
+        <!-- Acordeón de 15 categorías generado dinámicamente -->
+      </div>
+    </div>
+
+    <!-- Contenido Pestaña 5: Catalogo Factores GWP -->
+    <div id="ghgPaneFactors" class="ghg-tab-pane" style="display: none;">
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-size: 15px; font-weight: 700; margin: 0;">Catálogo Universal de Factores de Emisión (GWP)</h2>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 2px 0 0 0;">Datasets verificados de DEFRA 2024, US EPA 2024, CRE México 2024, ADEME y Spend-based USEEIO.</p>
+          </div>
+          <!-- Filtros del buscador -->
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <input type="text" id="inputGhgFactorSearch" placeholder="Buscar combustible, electricidad, material..." class="form-input" style="height: 32px; width: 260px; font-size: 11.5px;">
+            <select id="selectGhgFactorScope" class="form-input" style="height: 32px; font-size: 11px;">
+              <option value="ALL">Todos los Alcances</option>
+              <option value="SCOPE_1">Alcance 1</option>
+              <option value="SCOPE_2">Alcance 2</option>
+              <option value="SCOPE_3_CAT_1">Scope 3 Cat 1 (Insumos)</option>
+              <option value="SCOPE_3_CAT_4">Scope 3 Cat 4 (Fletes)</option>
+              <option value="SCOPE_3_CAT_6">Scope 3 Cat 6 (Viajes)</option>
+            </select>
+            <select id="selectGhgFactorSource" class="form-input" style="height: 32px; font-size: 11px;">
+              <option value="ALL">Todas las Bases</option>
+              <option value="CRE_MEXICO_2024">CRE México 2024</option>
+              <option value="DEFRA_2024">DEFRA / DESNZ 2024</option>
+              <option value="EPA_2024">US EPA 2024</option>
+              <option value="USEEIO_2024">USEEIO Spend-Based</option>
+              <option value="ADEME_2024">ADEME Base Empreinte</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" style="font-size: 11.5px;">
+            <thead>
+              <tr>
+                <th>Factor / Combustible / Actividad</th>
+                <th>Base de Datos</th>
+                <th>Alcance</th>
+                <th>Geografía</th>
+                <th>Unidad</th>
+                <th>Factor GWP (kg CO2e)</th>
+                <th>Año</th>
+              </tr>
+            </thead>
+            <tbody id="ghgFactorsTableBody">
+              <!-- Resultados de búsqueda dinámicos -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: CREAR NUEVO INVENTARIO GEI (#modalNewGhgInventory) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalNewGhgInventory" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 540px;">
+      <div class="modal-header">
+        <h2 style="font-size: 16px; font-weight: 700; margin: 0;">Nuevo Inventario Corporativo GEI</h2>
+        <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeModal('modalNewGhgInventory')">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 11.5px; font-weight: 600;">Razón Social / Organización:</label>
+          <input type="text" id="inputNewGhgOrg" class="form-input" placeholder="Ej. BioPack Solutions S.A. de C.V." style="width: 100%; font-size: 12px;">
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600;">Año de Reporte:</label>
+            <input type="number" id="inputNewGhgYear" class="form-input" value="2024" min="2010" max="2035" style="width: 100%; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600;">País Principal:</label>
+            <select id="selectNewGhgCountry" class="form-input" style="width: 100%; font-size: 12px;">
+              <option value="MX">México (MX)</option>
+              <option value="US">Estados Unidos (US)</option>
+              <option value="GB">Reino Unido (GB)</option>
+              <option value="EU">Unión Europea (EU)</option>
+              <option value="GLO">Global / Multinacional</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 11.5px; font-weight: 600;">Enfoque de Consolidación (Límite Organizacional):</label>
+          <select id="selectNewGhgConsolidation" class="form-input" style="width: 100%; font-size: 12px;">
+            <option value="operational_control">Control Operacional (Recomendado GHG Protocol)</option>
+            <option value="financial_control">Control Financiero</option>
+            <option value="equity_share">Participación Accionaria (Equity Share)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label style="font-size: 11.5px; font-weight: 600;">Descripción / Alcance del Reporte:</label>
+          <textarea id="inputNewGhgDesc" class="form-input" rows="2" placeholder="Notas sobre operaciones cubiertas e instalaciones..." style="width: 100%; font-size: 11.5px;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-color);">
+        <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeModal('modalNewGhgInventory')">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btnSubmitNewGhgInventory">Crear Inventario</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- MODAL: REGISTRAR FUENTE DE EMISION (#modalAddGhgEntry) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalAddGhgEntry" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 620px;">
+      <div class="modal-header">
+        <h2 style="font-size: 16px; font-weight: 700; margin: 0;">Registrar Fuente de Emisión</h2>
+        <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeModal('modalAddGhgEntry')">&times;</button>
+      </div>
+      <div class="modal-body" style="padding: 20px;">
+        <!-- Selector de Alcance y Categoria -->
+        <div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 12px; margin-bottom: 14px;">
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600;">Alcance GHG:</label>
+            <select id="selectEntryScope" class="form-input" style="width: 100%; font-size: 12px;">
+              <option value="SCOPE_1">Alcance 1 (Directas)</option>
+              <option value="SCOPE_2">Alcance 2 (Energía)</option>
+              <option value="SCOPE_3">Alcance 3 (Cadena Valor)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600;">Categoría Específica:</label>
+            <select id="selectEntryCategory" class="form-input" style="width: 100%; font-size: 11.5px;">
+              <!-- Opciones dinámicas según el alcance -->
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 11.5px; font-weight: 600;">Nombre de la Fuente / Actividad:</label>
+          <input type="text" id="inputEntryName" class="form-input" placeholder="Ej. Caldera de vapor, Camiones de reparto, Electricidad oficinas..." style="width: 100%; font-size: 12px;">
+        </div>
+
+        <!-- Tipo de Calculo -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 11.5px; font-weight: 600;">Método de Cálculo:</label>
+          <div style="display: flex; gap: 12px; margin-top: 4px; flex-wrap: wrap;">
+            <label style="font-size: 11.5px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="calcTypeRadio" value="activity_based" checked onchange="window.EconodeApp.onGhgCalcTypeChange()">
+              Dato Actividad Física
+            </label>
+            <label style="font-size: 11.5px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="calcTypeRadio" value="spend_based" onchange="window.EconodeApp.onGhgCalcTypeChange()">
+              Gasto Monetario (Spend-based)
+            </label>
+            <label style="font-size: 11.5px; display: flex; align-items: center; gap: 4px; cursor: pointer;">
+              <input type="radio" name="calcTypeRadio" value="product_system_lca" onchange="window.EconodeApp.onGhgCalcTypeChange()">
+              Sistema Producto LCA (Lienzo)
+            </label>
+          </div>
+        </div>
+
+        <!-- Contenedor A: Actividad Fisica -->
+        <div id="ghgContainerActivity" style="display: block;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+            <div class="form-group">
+              <label style="font-size: 11.5px; font-weight: 600;">Cantidad de Consumo / Actividad:</label>
+              <input type="number" id="inputEntryAmount" class="form-input" value="1000" step="any" style="width: 100%; font-size: 12px;" oninput="window.EconodeApp.previewGhgEmissions()">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 11.5px; font-weight: 600;">Unidad:</label>
+              <input type="text" id="inputEntryUnit" class="form-input" value="litres" style="width: 100%; font-size: 12px;">
+            </div>
+          </div>
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label style="font-size: 11.5px; font-weight: 600;">Factor de Emisión (Catálogo Oficial):</label>
+            <select id="selectEntryFactor" class="form-input" style="width: 100%; font-size: 11.5px;" onchange="window.EconodeApp.onGhgFactorSelectChange()">
+              <option value="">Seleccione un factor...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Contenedor B: Spend-Based -->
+        <div id="ghgContainerSpend" style="display: none; background: #F8FAFC; border: 1px solid #E2E8F0; padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px;">
+          <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 12px; margin-bottom: 10px;">
+            <div class="form-group">
+              <label style="font-size: 11px; font-weight: 600;">Monto de Gasto Financiero:</label>
+              <input type="number" id="inputEntrySpendAmount" class="form-input" value="50000" step="any" style="width: 100%; font-size: 12px;" oninput="window.EconodeApp.previewGhgEmissions()">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 11px; font-weight: 600;">Divisa:</label>
+              <select id="selectEntryCurrency" class="form-input" style="width: 100%; font-size: 12px;" onchange="window.EconodeApp.previewGhgEmissions()">
+                <option value="MXN">Pesos Mexicanos (MXN)</option>
+                <option value="USD">Dólares EE.UU. (USD)</option>
+                <option value="EUR">Euros (EUR)</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 600;">Sector Económico USEEIO:</label>
+            <select id="selectEntrySpendSector" class="form-input" style="width: 100%; font-size: 11px;" onchange="window.EconodeApp.onGhgSpendSectorChange()">
+              <!-- Opciones USEEIO -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Contenedor C: Vinculacion con Sistema Producto LCA -->
+        <div id="ghgContainerLca" style="display: none; background: #F0FDF4; border: 1px solid #BBF7D0; padding: 12px; border-radius: var(--radius-sm); margin-bottom: 14px;">
+          <div class="form-group" style="margin-bottom: 10px;">
+            <label style="font-size: 11px; font-weight: 600; color: #166534;">Sistema Producto del Lienzo (Tier 1):</label>
+            <select id="selectEntryProductSystem" class="form-input" style="width: 100%; font-size: 11.5px;" onchange="window.EconodeApp.onGhgProductSystemSelectChange()">
+              <option value="">Seleccione un sistema producto modelado...</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11px; font-weight: 600; color: #166534;">Unidades Funcionales Adquiridas / Producidas:</label>
+            <input type="number" id="inputEntryLcaAmount" class="form-input" value="1000" step="any" style="width: 100%; font-size: 12px;" oninput="window.EconodeApp.previewGhgEmissions()">
+          </div>
+        </div>
+
+        <!-- Scope 2 Market-Based Instrument Selector -->
+        <div id="ghgContainerMarketInstrument" style="display: none; margin-bottom: 14px;">
+          <label style="font-size: 11.5px; font-weight: 600;">Instrumento Contractual de Mercado (Scope 2):</label>
+          <select id="selectEntryContractualInstrument" class="form-input" style="width: 100%; font-size: 12px;">
+            <option value="none">Sin instrumento (Factor promedio de red)</option>
+            <option value="i_rec">Certificado Internacional de Energía Renovable (I-REC)</option>
+            <option value="cel">Certificado de Energía Limpia (CEL México)</option>
+            <option value="ppa">Contrato de Compra de Energía Limpia (PPA Solar/Eólico)</option>
+            <option value="supplier_tariff">Tarifa Verde de Suministrador Calificado</option>
+          </select>
+        </div>
+
+        <!-- Calculo Previsto en Tiempo Real -->
+        <div style="background: #FFFFFF; border: 1.5px dashed #CBD5E1; border-radius: var(--radius-sm); padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Emisión Estimada</div>
+            <div style="font-size: 16px; font-weight: 700; color: #0F172A;" id="ghgPreviewKg">0.00 kg CO2e</div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 10.5px; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Impacto en Toneladas</div>
+            <div style="font-size: 18px; font-weight: 800; color: #059669;" id="ghgPreviewTons">0.000 t CO2e</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-color);">
+        <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeModal('modalAddGhgEntry')">Cancelar</button>
+        <button class="btn btn-primary btn-sm" id="btnSubmitNewGhgEntry">Guardar Registro</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ============================================================= -->
   <!-- 10. MODAL: BÓVEDA DE DOCUMENTOS SQL, EXCEL, PDF (#modalDocuments) -->
