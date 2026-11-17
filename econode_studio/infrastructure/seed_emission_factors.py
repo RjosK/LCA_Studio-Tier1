@@ -15,9 +15,9 @@ if str(infra_dir) not in sys.path:
     sys.path.insert(0, str(infra_dir))
 
 try:
-    from emission_factors_db import get_ef_db_connection, init_emission_factors_db
+    from emission_factors_db import get_ef_db_connection, init_emission_factors_db, seed_sample_inventory_if_needed
 except ImportError:
-    from .emission_factors_db import get_ef_db_connection, init_emission_factors_db
+    from .emission_factors_db import get_ef_db_connection, init_emission_factors_db, seed_sample_inventory_if_needed
 
 SEED_EMISSION_FACTORS: List[Dict[str, Any]] = [
     # -------------------------------------------------------------
@@ -596,6 +596,8 @@ def seed_emission_factors(force_reload: bool = False) -> int:
         if force_reload:
             cursor.execute("DELETE FROM tbl_emission_factors;")
             cursor.execute("DELETE FROM tbl_currency_rates;")
+            cursor.execute("DELETE FROM tbl_ghg_entries;")
+            cursor.execute("DELETE FROM tbl_ghg_inventories;")
 
         # Insertar tasas de cambio
         for cr in SEED_CURRENCY_RATES:
@@ -620,6 +622,7 @@ def seed_emission_factors(force_reload: bool = False) -> int:
             ))
             inserted += 1
 
+        seed_sample_inventory_if_needed(cursor)
         conn.commit()
         return inserted
 

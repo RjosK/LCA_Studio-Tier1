@@ -139,7 +139,61 @@ def init_emission_factors_db() -> None:
         """)
 
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_ghg_entry_inv ON tbl_ghg_entries (inventory_id, scope);")
+        seed_sample_inventory_if_needed(cursor)
         conn.commit()
+
+def seed_sample_inventory_if_needed(cursor: sqlite3.Cursor) -> Optional[int]:
+    """Siembra un inventario corporativo de demostracion si la tabla de inventarios esta vacia."""
+    count = cursor.execute("SELECT COUNT(*) FROM tbl_ghg_inventories;").fetchone()[0]
+    if count > 0:
+        return None
+
+    cursor.execute("""
+        INSERT INTO tbl_ghg_inventories (
+            organization_name, reporting_year, consolidation_approach,
+            country_code, base_year, description, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?);
+    """, (
+        "BioPack Industrial S.A. de C.V.",
+        2024,
+        "operational_control",
+        "MX",
+        2023,
+        "Inventario corporativo auditado bajo GHG Protocol Corporate Standard e ISO 14064-1.",
+        "audited"
+    ))
+    inv_id = cursor.lastrowid
+
+    sample_entries = [
+        # Alcance 1: Calderas de vapor de gas natural
+        (inv_id, "SCOPE_1", "stationary_combustion", "Calderas de Vapor y Hornos Termicos (Gas Natural)", "activity_based", 25106.0, "m3", None, None, 2.0214, "kg CO2e / m3", "DEFRA 2024 Fuels", None, None, 50749.27, 50.75, "Tier 2", "Combustion fija para generacion de vapor en planta industrial."),
+        # Alcance 1: Flotilla utilitaria diesel
+        (inv_id, "SCOPE_1", "mobile_combustion", "Flotilla Utilitaria y Logistica Interna (Diesel)", "activity_based", 15100.0, "litres", None, None, 2.6620, "kg CO2e / litres", "DEFRA 2024 Mobile", None, None, 40196.20, 40.20, "Tier 2", "Vehiculos comerciales de reparto local y montacargas."),
+        # Alcance 2: Consumo red SEN (Location-based)
+        (inv_id, "SCOPE_2", "electricity_location", "Consumo Red Electrica SEN (Ubicacion)", "activity_based", 120000.0, "kWh", None, None, 0.4380, "kg CO2e / kWh", "CRE Mexico 2024 (FESEN)", None, None, 52560.00, 52.56, "Tier 3", "Consumo medido en media tension reportado por CFE Suministrador Basico."),
+        # Alcance 2: Suministro PPA con I-RECs (Market-based)
+        (inv_id, "SCOPE_2", "electricity_market", "Suministro Renovable PPA con I-RECs (Mercado)", "contractual_instrument", 120000.0, "kWh", None, None, 0.0000, "kg CO2e / kWh", "I-REC Standard / Contrato Suministro Verde", None, "i_rec", 0.00, 0.00, "Tier 3", "100% de la energia respaldada con certificados solares I-REC redimidos."),
+        # Alcance 3: Categoria 1 Resina rPET
+        (inv_id, "SCOPE_3", "cat_1_purchased_goods", "Resina Plastica rPET Reciclada Post-Consumo", "activity_based", 20000.0, "kg", None, None, 1.3000, "kg CO2e / kg", "DEFRA 2024 Material Use", None, None, 26000.00, 26.00, "Tier 2", "Materia prima secundaria para manufactura de empaques circulares."),
+        # Alcance 3: Categoria 4 Transporte upstream
+        (inv_id, "SCOPE_3", "cat_4_upstream_transport", "Transporte Terrestre Carga Pesada de Insumos", "activity_based", 70000.0, "ton.km", None, None, 0.1068, "kg CO2e / ton.km", "DEFRA 2024 Freight", None, None, 7476.00, 7.48, "Tier 2", "Flete terrestre por carretera de proveedores hacia nave industrial."),
+        # Alcance 3: Categoria 6 Viajes corporativos
+        (inv_id, "SCOPE_3", "cat_6_business_travel", "Vuelos Comerciales y Viajes Corporativos", "activity_based", 18500.0, "passenger.km", None, None, 0.1448, "kg CO2e / passenger.km", "DEFRA 2024 Business Travel", None, None, 2678.80, 2.68, "Tier 2", "Vuelos nacionales e internacionales de personal operativo y directivo.")
+    ]
+
+    for entry in sample_entries:
+        cursor.execute("""
+            INSERT INTO tbl_ghg_entries (
+                inventory_id, scope, scope_category, activity_name,
+                calculation_type, activity_amount, activity_unit,
+                currency, emission_factor_id, emission_factor_value,
+                emission_factor_unit, emission_factor_source, product_system_id,
+                contractual_instrument, emissions_kgco2e, emissions_tco2e,
+                data_quality_tier, notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, entry)
+
+    return inv_id
 
 # --- Funciones de Consulta de Factores de Emision ---
 

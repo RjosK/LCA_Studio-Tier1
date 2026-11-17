@@ -364,7 +364,12 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 elif path == "/api/ghg/inventories":
                     try:
                         inventories = list_inventories_use_case()
-                        self._send_json({"status": "success", "count": len(inventories), "items": inventories})
+                        self._send_json({
+                            "status": "success",
+                            "count": len(inventories),
+                            "items": inventories,
+                            "inventories": inventories
+                        })
                     except Exception as e:
                         self._send_error_json(str(e), 500)
                     return
@@ -401,7 +406,8 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                             "status": "success",
                             "total": total,
                             "count": len(factors),
-                            "items": factors
+                            "items": factors,
+                            "factors": factors
                         })
                     except Exception as e:
                         self._send_error_json(str(e), 500)

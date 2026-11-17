@@ -344,7 +344,11 @@
     // Alternar contenedores de vista
     Object.keys(views).forEach((name) => {
       if (views[name]) {
-        views[name].classList.toggle("active", name === viewName);
+        const isActive = (name === viewName);
+        views[name].classList.toggle("active", isActive);
+        if (isActive) {
+          views[name].style.display = "";
+        }
       }
     });
 
@@ -10948,7 +10952,7 @@
     // 2. Cargar inventarios del usuario
     try {
       const invList = await api.listGhgInventories();
-      state.ghgInventories = invList.inventories || [];
+      state.ghgInventories = invList.inventories || invList.items || [];
 
       const selectEl = document.getElementById("ghgInventorySelect");
       if (selectEl) {
@@ -11519,7 +11523,7 @@
 
     try {
       const data = await api.searchGhgEmissionFactors({ scope: scope === "ALL" ? "" : scope, limit: 100 });
-      const factors = data.factors || [];
+      const factors = data.factors || data.items || [];
       state.ghgEmissionFactors = factors;
 
       if (factors.length === 0) {
@@ -11556,7 +11560,7 @@
 
     try {
       const data = await api.searchGhgEmissionFactors({ source: "USEEIO_2024", limit: 60 });
-      const factors = data.factors || [];
+      const factors = data.factors || data.items || [];
       state.ghgSpendFactors = factors;
 
       select.innerHTML = factors.map(f => `
@@ -11797,7 +11801,7 @@
         source: source === "ALL" ? "" : source,
         limit: 100
       });
-      const factors = data.factors || [];
+      const factors = data.factors || data.items || [];
 
       if (factors.length === 0) {
         tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">No se encontraron factores con los filtros seleccionados.</td></tr>`;

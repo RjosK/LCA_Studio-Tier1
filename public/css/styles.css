@@ -323,7 +323,7 @@ body {
 }
 
 .view-container.active {
-  display: block;
+  display: block !important;
 }
 
 /* -------------------------------------------------------------
