@@ -707,6 +707,7 @@ const I18N_DICTIONARY = {
     "ver_match.optional_substitute": "Sustituto opcional",
     "ver_match.badge_foreground": "Proceso Propio",
     "ver_match.foreground_notice": "Modelo de primer plano conservado",
+    "ver_match.badge_pending_exchanges": "Insumos Pendientes",
     "common.cancel": "Cancelar"
  },
 
@@ -1415,6 +1416,7 @@ const I18N_DICTIONARY = {
     "ver_match.optional_substitute": "Optional substitute",
     "ver_match.badge_foreground": "Custom Process",
     "ver_match.foreground_notice": "Preserved foreground model",
+    "ver_match.badge_pending_exchanges": "Pending Exchanges",
     "common.cancel": "Cancel"
  }
 };

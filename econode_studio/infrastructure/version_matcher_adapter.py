@@ -548,8 +548,6 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
         # Si el nodo contiene intercambios internos y no es un proceso de fondo de ecoinvent,
         # se reconoce como proceso de primer plano (FOREGROUND_CUSTOM).
         if has_embedded_exchanges and (is_custom_id or is_custom_cat or not candidates or candidates[0]["name"].strip().lower() != src_name.lower()):
-            status = "FOREGROUND_CUSTOM"
-            exact_count += 1
             ref_unit = "kg"
             for out in outputs:
                 if out.get("is_reference"):
@@ -559,23 +557,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                 if outputs:
                     ref_unit = outputs[0].get("unit") or "kg"
 
-            processes_match.append({
-                "node_id": node_id,
-                "source_process_id": src_pid or node_id,
-                "source_name": src_name,
-                "source_location": src_loc,
-                "status": status,
-                "confidence": 1.0,
-                "is_foreground": True,
-                "target_process_id": node_id,
-                "target_name": f"{src_name} (Conservado)",
-                "target_location": src_loc,
-                "target_unit": ref_unit,
-                "inputs_count": len(inputs),
-                "outputs_count": len(outputs),
-                "alternatives": [],
-                "message": f"Modelo de primer plano conservado. Se transfieren {len(inputs)} insumos y {len(outputs)} emisiones a {target_meta['short_label']}."
-            })
+            node_flow_issues = 0
 
             # Pre-optimizacion masiva: resolver flujos y procesos en bloque en 1 sola consulta
             flow_name_keys = set()
@@ -657,6 +639,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                             "message": f"Insumo identificado en {target_meta['short_label']}."
                         })
                     else:
+                        node_flow_issues += 1
                         flows_match.append({
                             "flow_id": f"in_{len(flows_match)+1}",
                             "name": iname,
@@ -701,6 +684,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                             "message": f"Recurso natural identificado en {target_meta['short_label']}."
                         })
                     else:
+                        node_flow_issues += 1
                         flows_match.append({
                             "flow_id": f"in_{len(flows_match)+1}",
                             "name": iname,
@@ -754,6 +738,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                             "message": f"Tratamiento de residuo identificado en {target_meta['short_label']}."
                         })
                     else:
+                        node_flow_issues += 1
                         flows_match.append({
                             "flow_id": f"out_{len(flows_match)+1}",
                             "name": oname,
@@ -798,6 +783,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                             "message": f"Emision elemental identificada en {target_meta['short_label']}."
                         })
                     else:
+                        node_flow_issues += 1
                         flows_match.append({
                             "flow_id": f"out_{len(flows_match)+1}",
                             "name": oname,
@@ -812,6 +798,40 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                             "source_node_id": node_id,
                             "message": f"Emision elemental no caracterizada directamente en {target_meta['short_label']}."
                         })
+
+            if node_flow_issues == 0:
+                node_status = "FOREGROUND_CUSTOM"
+                exact_count += 1
+                confidence = 1.0
+                target_proc_id = node_id
+                target_name = f"{src_name} (Conservado)"
+                msg = f"Modelo de primer plano conservado. Se transfieren {len(inputs)} insumos y {len(outputs)} emisiones compatibles a {target_meta['short_label']}."
+            else:
+                node_status = "EXCHANGES_PENDING"
+                no_match_count += 1
+                confidence = round(max(0.0, 1.0 - (node_flow_issues / max(1, len(inputs) + len(outputs)))), 2)
+                target_proc_id = None
+                target_name = f"{src_name} ({node_flow_issues} insumos sin equivalencia)"
+                msg = f"Modelo de primer plano con {node_flow_issues} intercambios sin equivalencia directa en {target_meta['short_label']}. Requiere revisión o sustitución."
+
+            processes_match.append({
+                "node_id": node_id,
+                "source_process_id": src_pid or node_id,
+                "source_name": src_name,
+                "source_location": src_loc,
+                "status": node_status,
+                "confidence": confidence,
+                "is_foreground": True,
+                "target_process_id": target_proc_id,
+                "target_name": target_name,
+                "target_location": src_loc,
+                "target_unit": ref_unit,
+                "inputs_count": len(inputs),
+                "outputs_count": len(outputs),
+                "missing_exchanges_count": node_flow_issues,
+                "alternatives": [],
+                "message": msg
+            })
             continue
 
         # Buscar match exacto de (nombre, localizacion)
@@ -915,9 +935,12 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
                 "message": f"Flujo sin factor de caracterizacion directo en {target_meta['short_label']}. Se mantendra la conexion como flujo elemental informativo a menos que selecciones un sustituto."
             })
 
-    # Estadisticas Globales
+    # Estadisticas Globales ponderadas (procesos + flujos/intercambios)
     total_proc = len(nodes)
-    comp_pct = round((exact_count / max(1, total_proc)) * 100.0, 1) if total_proc > 0 else 100.0
+    total_flows = len(flows_match)
+    total_components = total_proc + total_flows
+    matched_components = (exact_count * 1.0) + (loc_diff_count * 0.85) + characterized_flows
+    comp_pct = round((matched_components / max(1, total_components)) * 100.0, 1) if total_components > 0 else 100.0
     ready = (no_match_count == 0)
 
     # Nomenclatura Automatica del Sistema Clonado

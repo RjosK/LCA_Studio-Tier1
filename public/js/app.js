@@ -11837,6 +11837,28 @@
           </select>
           <div style="font-size: 9.5px; color: #854D0E;">Region original: <strong>${escapeHtml(node.source_location || "GLO")}</strong> no disponible en destino.</div>
         </div>`;
+      } else if (status === "EXCHANGES_PENDING") {
+        const assignedTarget = currentVersionMatchMappings[nodeId];
+        statusBadge = assignedTarget ? `
+          <span class="ver-match-badge ver-match-badge-exact" id="badgeStatus_${nodeId}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Sustituido
+          </span>` : `
+          <span class="ver-match-badge ver-match-badge-none" id="badgeStatus_${nodeId}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+            ${window.I18n.t("ver_match.badge_pending_exchanges", "Insumos Pendientes")} (${node.missing_exchanges_count || 0})
+          </span>`;
+
+        targetContent = `
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="font-size: 10.5px; font-weight: 500; color: #DC2626;">${escapeHtml(node.message || "Intercambios sin equivalencia en destino")}</div>
+            <div style="font-size: 9.5px; color: #64748B;">Revisa la sección superior de flujos para sustituirlos, o busca un proceso equivalente en la base destino:</div>
+            <div class="ver-match-search-box" id="searchBox_${nodeId}">
+              <input type="text" class="ver-match-input" id="substituteInput_${nodeId}" placeholder="${window.I18n.t("ver_match.select_substitute_placeholder", "Buscar proceso sustituto en base destino...")}" oninput="window.EconodeApp.onSearchSubstituteProcess('${escapeHtml(nodeId)}', this.value)" autocomplete="off">
+              <div class="ver-match-results-dropdown" id="dropdown_${nodeId}" style="display: none;"></div>
+            </div>
+          </div>
+        `;
       } else {
         const assignedTarget = currentVersionMatchMappings[nodeId];
         statusBadge = assignedTarget ? `
