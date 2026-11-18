@@ -6233,3 +6233,33 @@ body.role-client #reportHighlightTooltip {
     page-break-inside: avoid;
   }
 }
+
+/* ==========================================================================
+   PRODUCT SYSTEM INFO MODAL (APPLE HIG ERGONOMICS)
+   ========================================================================== */
+.btn-sys-info {
+  transition: all 0.15s ease-in-out !important;
+}
+
+.btn-sys-info:hover {
+  background: #F1F5F9 !important;
+  color: #0284C7 !important;
+  border-color: rgba(2, 132, 199, 0.4) !important;
+}
+
+.btn-sys-info:active {
+  transform: scale(0.97);
+}
+
+#modalSystemInfo .modal-dialog {
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 1024px) {
+  #viewDashboard .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

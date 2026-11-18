@@ -2688,6 +2688,191 @@
   <!-- ============================================================= -->
   <!-- 13. MODALES DE GESTIÓN DE PROYECTOS CONTENEDORES Y COMPARATIVA LCIA -->
   <!-- ============================================================= -->
+  
+  <!-- ============================================================= -->
+  <!-- MODAL: FICHA TECNICA E INFORMACION DEL SISTEMA PRODUCTO (#modalSystemInfo) -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalSystemInfo" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 680px; width: 95vw;">
+      <div class="modal-header" style="align-items: center; padding: 16px 22px; border-bottom: 1px solid #E2E8F0;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <h2 style="font-size: 16px; font-weight: 700; color: #0F172A; margin: 0; line-height: 1.3;" id="infoSysTitle">Sistema Producto</h2>
+            <span class="badge-pill badge-slate mono" id="infoSysCode" style="font-size: 10px; padding: 2px 7px;">SKU</span>
+          </div>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 3px;" id="infoSysSubtitle" data-i18n="sys_info.modal_subtitle">
+            Metadatos del modelo, versiones de bases de datos, trazabilidad y gobernanza de ciclo de vida
+          </div>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseSystemInfoModal" onclick="window.EconodeApp.closeSystemInfoModal()" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 18px 22px; max-height: 75vh; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;">
+        
+        <!-- BADGES SUPERIORES DE ESTADO -->
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center;">
+          <span class="badge-pill badge-blue" id="infoSysDbBadge" style="font-size: 10.5px; font-weight: 600;">ecoinvent 3.12</span>
+          <span class="badge-pill" id="infoSysStatus" style="font-size: 10.5px; font-weight: 600;">Borrador Tecnico</span>
+          <span class="badge-pill badge-emerald" id="infoSysProjectBadge" style="font-size: 10.5px; font-weight: 600;">Sin Proyecto</span>
+          <span class="badge-pill badge-slate" id="infoSysGeoBadge" style="font-size: 10.5px;">[MX]</span>
+        </div>
+
+        <!-- TARJETA 1: BASES DE DATOS & METODOLOGIA LCI -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 13px 15px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;">
+            <div style="font-size: 12px; font-weight: 700; color: #1E293B; text-transform: uppercase; letter-spacing: 0.03em;" data-i18n="sys_info.sec_database">
+              Bases de Datos y Metodologia LCI
+            </div>
+            <span style="font-size: 10px; color: #0284C7; font-weight: 600; background: rgba(14, 165, 233, 0.1); padding: 2px 6px; border-radius: 4px;">Tier 1 Certified</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <div style="font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.db_primary">Base de Datos Principal LCI</div>
+              <div id="infoSysDbName" style="font-weight: 700; font-size: 12.5px; color: #0F172A; margin-top: 2px;">ecoinvent 3.12 (Cutoff Unit)</div>
+              <div id="infoSysDbAllocation" style="font-size: 10.5px; color: #64748B; margin-top: 2px;">Allocation, cut-off by classification</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.lcia_methods">Metodos de Impacto Soportados</div>
+              <div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px;">
+                <span class="user-chip-mini" style="background: #E0F2FE; color: #0369A1; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">ReCiPe 2016 Midpoint (H)</span>
+                <span class="user-chip-mini" style="background: #DCFCE7; color: #15803D; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">EN 15804+A2 (EPD)</span>
+                <span class="user-chip-mini" style="background: #FEF3C7; color: #B45309; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">TRACI 2.1 (EPA)</span>
+                <span class="user-chip-mini" style="background: #F3E8FF; color: #6B21A8; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 600;">GHG Protocol (Scope 1-3)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TARJETA 2: REGISTRO TEMPORAL & AUDITORIA DE CAMBIOS -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 13px 15px;">
+          <div style="font-size: 12px; font-weight: 700; color: #1E293B; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" data-i18n="sys_info.sec_timestamps">
+            Registro Temporal y Auditoria
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: left;">
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.created_at">Creacion</div>
+              <div id="infoSysCreatedAt" style="font-size: 11.5px; font-weight: 700; color: #0F172A; margin-top: 2px;">--</div>
+              <div id="infoSysCreatedAtRel" style="font-size: 9.5px; color: #64748B; margin-top: 1px;">--</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.updated_at">Ultima Modificacion</div>
+              <div id="infoSysUpdatedAt" style="font-size: 11.5px; font-weight: 700; color: #0F172A; margin-top: 2px;">--</div>
+              <div id="infoSysUpdatedAtRel" style="font-size: 9.5px; color: #0284C7; font-weight: 600; margin-top: 1px;">--</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.age">Antiguedad</div>
+              <div id="infoSysAge" style="font-size: 11.5px; font-weight: 700; color: #0F172A; margin-top: 2px;">--</div>
+              <div id="infoSysAgeRel" style="font-size: 9.5px; color: #64748B; margin-top: 1px;">Ciclo activo</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.compliance">Conformidad</div>
+              <div id="infoSysCompliance" style="font-size: 11.5px; font-weight: 700; color: #059669; margin-top: 2px;">100.0%</div>
+              <div style="font-size: 9.5px; color: #059669;" data-i18n="sys_info.compliance_lbl">Auditoria NOM-070</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TARJETA 3: ARQUITECTURA E INVENTARIO DEL MODELO -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 13px 15px;">
+          <div style="font-size: 12px; font-weight: 700; color: #1E293B; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" data-i18n="sys_info.sec_architecture">
+            Arquitectura e Inventario del Modelo
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; text-align: left;">
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.func_unit">Unidad Ref.</div>
+              <div id="infoSysFuncUnit" style="font-size: 12px; font-weight: 700; color: #0F172A; margin-top: 2px;">1.0 kg</div>
+              <div style="font-size: 9.5px; color: #64748B;" data-i18n="sys_info.func_unit_lbl">Referencia</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.nodes">Procesos</div>
+              <div id="infoSysNodesCount" style="font-size: 12px; font-weight: 700; color: #0F172A; margin-top: 2px;">0</div>
+              <div style="font-size: 9.5px; color: #64748B;" data-i18n="sys_info.nodes_lbl">Tecnosfera</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.edges">Conexiones</div>
+              <div id="infoSysEdgesCount" style="font-size: 12px; font-weight: 700; color: #0F172A; margin-top: 2px;">0</div>
+              <div style="font-size: 9.5px; color: #64748B;" data-i18n="sys_info.edges_lbl">Enlaces</div>
+            </div>
+            <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 6px; padding: 8px 10px;">
+              <div style="font-size: 9.5px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.params">Parametros</div>
+              <div id="infoSysParamsCount" style="font-size: 12px; font-weight: 700; color: #0F172A; margin-top: 2px;">0</div>
+              <div style="font-size: 9.5px; color: #64748B;" data-i18n="sys_info.params_lbl">Formulas activas</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TARJETA 4: GOBERNANZA, AUTORIA & AMBITO -->
+        <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 9px; padding: 13px 15px;">
+          <div style="font-size: 12px; font-weight: 700; color: #1E293B; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 10px; border-bottom: 1px solid #E2E8F0; padding-bottom: 6px;" data-i18n="sys_info.sec_governance">
+            Gobernanza, Autoria y Ambito
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <div style="font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.author">Autor / Propietario</div>
+              <div id="infoSysOwner" style="font-size: 12px; font-weight: 700; color: #0F172A; margin-top: 2px;">Carla Mendez</div>
+              <div id="infoSysOrg" style="font-size: 10.5px; color: #64748B; margin-top: 1px;">BioPack Industrial S.A. de C.V.</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 600;" data-i18n="sys_info.scope_geo">Ambito y Categoria</div>
+              <div id="infoSysGeoCat" style="font-size: 12px; font-weight: 600; color: #334155; margin-top: 2px;">Polimeros · [MX]</div>
+              <div id="infoSysProject" style="font-size: 10.5px; color: #64748B; margin-top: 1px;">Proyecto: Sin asignar</div>
+            </div>
+          </div>
+          <div style="margin-top: 10px; border-top: 1px solid #E2E8F0; padding-top: 8px;">
+            <div style="font-size: 10px; color: #64748B; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;" data-i18n="sys_info.collaborators">Equipo Colaborador</div>
+            <div id="infoSysCollabs" style="display: flex; gap: 4px; flex-wrap: wrap;"></div>
+          </div>
+        </div>
+
+        <!-- TARJETA 5: DECLARACION EPD (CONDICIONAL) -->
+        <div id="secInfoEpd" style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 9px; padding: 13px 15px; display: none;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #BBF7D0; padding-bottom: 6px;">
+            <div style="font-size: 12px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.03em;" data-i18n="sys_info.sec_epd">
+              Declaracion Ambiental de Producto (EPD)
+            </div>
+            <span style="font-size: 10px; color: #15803D; font-weight: 700; background: #DCFCE7; padding: 2px 7px; border-radius: 4px;">SmartEPD Ready</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
+            <div>
+              <div style="font-size: 9.5px; color: #166534; font-weight: 600; text-transform: uppercase;" data-i18n="sys_info.epd_pcr">Estandar PCR</div>
+              <div id="infoEpdPcr" style="font-size: 11px; font-weight: 700; color: #0F172A; margin-top: 2px;">EN 15804+A2</div>
+            </div>
+            <div>
+              <div style="font-size: 9.5px; color: #166534; font-weight: 600; text-transform: uppercase;" data-i18n="sys_info.epd_decl_unit">Unidad Declarada</div>
+              <div id="infoEpdDeclUnit" style="font-size: 11px; font-weight: 700; color: #0F172A; margin-top: 2px;">1 ton (1000 kg)</div>
+            </div>
+            <div>
+              <div style="font-size: 9.5px; color: #166534; font-weight: 600; text-transform: uppercase;" data-i18n="sys_info.epd_modules">Modulos</div>
+              <div id="infoEpdModules" style="font-size: 11px; font-weight: 700; color: #0F172A; margin-top: 2px;">A1-A3 (Cradle-to-gate)</div>
+            </div>
+            <div>
+              <div style="font-size: 9.5px; color: #166534; font-weight: 600; text-transform: uppercase;" data-i18n="sys_info.epd_balance">Balance Masa</div>
+              <div id="infoEpdBalance" style="font-size: 11px; font-weight: 700; color: #15803D; margin-top: 2px;">100% Cerrado</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 22px; border-top: 1px solid #E2E8F0; background: #FAFAFA; border-bottom-left-radius: var(--radius-xl); border-bottom-right-radius: var(--radius-xl);">
+        <div>
+          <button class="btn btn-secondary btn-sm" id="btnInfoOpenVault" onclick="window.EconodeApp.openVaultFromInfo()" style="border-radius: 7px; height: 30px; padding: 0 12px; font-size: 11px; font-weight: 500; display: inline-flex; align-items: center; gap: 5px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+            <span data-i18n="sys_info.btn_open_vault">Boveda Documental</span>
+          </button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeSystemInfoModal()" style="border-radius: 7px; height: 30px; padding: 0 14px; font-size: 11.5px; font-weight: 500;">
+            <span data-i18n="sys_info.btn_close">Cerrar</span>
+          </button>
+          <button class="btn btn-primary btn-sm" id="btnInfoOpenCanvas" onclick="window.EconodeApp.openCanvasFromInfo()" style="border-radius: 7px; height: 30px; padding: 0 14px; font-size: 11.5px; font-weight: 600; background: #18232C; color: #FFFFFF; display: inline-flex; align-items: center; gap: 5px;">
+            <span data-i18n="sys_info.btn_open_canvas">Abrir en Lienzo</span> &rarr;
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL: + NUEVO PROYECTO CONTENEDOR (#modalNewProject) -->
   <div class="modal-overlay" id="modalNewProject" role="dialog" aria-modal="true" style="display: none;">
     <div class="modal-dialog" style="max-width: 520px; width: 95vw;">

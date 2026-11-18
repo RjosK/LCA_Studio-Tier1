@@ -283,7 +283,8 @@ def ensure_product_systems_columns(conn: Any):
                     ("status", "VARCHAR(64) DEFAULT 'in_audit'"),
                     ("compliance_rate", "VARCHAR(32) DEFAULT '100.0%'"),
                     ("collaborators_json", "TEXT DEFAULT '[]'"),
-                    ("parameters_json", "TEXT DEFAULT '{}'")
+                    ("parameters_json", "TEXT DEFAULT '{}'"),
+                    ("db_profile", "VARCHAR(128) DEFAULT 'ecoinvent 3.12 (Cutoff Unit)'")
                 ]
                 for col_name, col_def in pg_cols:
                     try:
@@ -331,7 +332,8 @@ def ensure_product_systems_columns(conn: Any):
             ("compliance_rate", "TEXT DEFAULT '100.0%'"),
             ("collaborators_json", "TEXT DEFAULT '[]'"),
             ("parameters_json", "TEXT DEFAULT '{}'"),
-            ("project_id", "INTEGER DEFAULT NULL")
+            ("project_id", "INTEGER DEFAULT NULL"),
+            ("db_profile", "TEXT DEFAULT 'ecoinvent 3.12 (Cutoff Unit)'")
         ]
         with conn:
             for col_name, col_def in new_cols:
@@ -381,6 +383,9 @@ def list_product_systems(
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
                coalesce(s.parameters_json, '{}') as parameters_json,
+               coalesce(s.created_at, datetime('now')) as created_at,
+               coalesce(s.updated_at, datetime('now')) as updated_at,
+               coalesce(s.db_profile, 'ecoinvent 3.12 (Cutoff Unit)') as db_profile,
                s.project_id,
                pr.name as project_name,
                pr.code as project_code
@@ -399,6 +404,9 @@ def list_product_systems(
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
                coalesce(s.parameters_json, '{}') as parameters_json,
+               coalesce(s.created_at, datetime('now')) as created_at,
+               coalesce(s.updated_at, datetime('now')) as updated_at,
+               coalesce(s.db_profile, 'ecoinvent 3.12 (Cutoff Unit)') as db_profile,
                NULL as project_id,
                NULL as project_name,
                NULL as project_code
@@ -452,13 +460,24 @@ def list_product_systems(
     for r in rows:
         sys_id = r["id"]
         nodes_count = counts_map.get(sys_id, 0)
-        if nodes_count == 0 and "parameters_json" in r.keys() and r["parameters_json"]:
+        edges_count = 0
+        params_count = 0
+        epd_cfg = None
+        source_format = None
+
+        if "parameters_json" in r.keys() and r["parameters_json"]:
             try:
                 raw_p = r["parameters_json"]
-                if isinstance(raw_p, str) and "canvas_nodes" in raw_p:
-                    p_obj = json.loads(raw_p)
-                    if isinstance(p_obj, dict) and "canvas_nodes" in p_obj and isinstance(p_obj["canvas_nodes"], list):
+                p_obj = json.loads(raw_p) if isinstance(raw_p, str) else (raw_p or {})
+                if isinstance(p_obj, dict):
+                    if nodes_count == 0 and "canvas_nodes" in p_obj and isinstance(p_obj["canvas_nodes"], list):
                         nodes_count = len(p_obj["canvas_nodes"])
+                    if "canvas_edges" in p_obj and isinstance(p_obj["canvas_edges"], list):
+                        edges_count = len(p_obj["canvas_edges"])
+                    if "parameters" in p_obj and isinstance(p_obj["parameters"], list):
+                        params_count = len(p_obj["parameters"])
+                    epd_cfg = p_obj.get("epd_config")
+                    source_format = p_obj.get("source_format")
             except Exception:
                 pass
 
@@ -468,6 +487,20 @@ def list_product_systems(
             collabs = json.loads(raw_c) if isinstance(raw_c, str) else (raw_c or [])
         except Exception:
             collabs = []
+
+        # Tiempos de creación y actualización con fallback seguro
+        c_at = r["created_at"] if "created_at" in r.keys() and r["created_at"] else "2026-10-10 12:00:00"
+        u_at = r["updated_at"] if "updated_at" in r.keys() and r["updated_at"] else c_at
+
+        # Deducción inteligente de la versión de base de datos
+        db_prof = r["db_profile"] if "db_profile" in r.keys() and r["db_profile"] else "ecoinvent 3.12 (Cutoff Unit)"
+        code_str = str(r["code"] or "")
+        name_str = str(r["name"] or "")
+        if source_format == "simapro" or code_str.startswith("SP-") or "simapro" in name_str.lower():
+            db_prof = "SimaPro 9.5 (Imported CSV) / ecoinvent 3.12"
+        elif epd_cfg:
+            pcr_cat = epd_cfg.get("pcr_category", "Concrete & Cement") if isinstance(epd_cfg, dict) else "Concrete & Cement"
+            db_prof = f"ecoinvent 3.12 + SmartEPD Part B ({pcr_cat})"
 
         results.append({
             "id": r["id"],
@@ -479,6 +512,13 @@ def list_product_systems(
             "unit": "u",
             "description": r["description"],
             "nodes_count": nodes_count,
+            "edges_count": edges_count,
+            "parameters_count": params_count,
+            "created_at": c_at,
+            "updated_at": u_at,
+            "db_profile": db_prof,
+            "epd_config": epd_cfg,
+            "source_format": source_format,
             "status": r["status"] if "status" in r.keys() and r["status"] else "draft",
             "compliance_rate": r["compliance_rate"] if "compliance_rate" in r.keys() and r["compliance_rate"] else "0.0%",
             "owner_id": r["owner_id"] if "owner_id" in r.keys() and r["owner_id"] else "analyst_carla",
@@ -738,8 +778,25 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
 
     # 1. RUTA RÁPIDA: Si el usuario ya guardó nodos y aristas en parameters_json, retornar de inmediato (evita consultas costosas a exchanges)
     raw_p = sys_row["parameters_json"] if "parameters_json" in sys_row.keys() and sys_row["parameters_json"] else "{}"
+    parsed_p = {}
     try:
         parsed_p = json.loads(raw_p) if isinstance(raw_p, str) else (raw_p or {})
+    except Exception:
+        parsed_p = {}
+
+    c_at = sys_row["created_at"] if "created_at" in sys_row.keys() and sys_row["created_at"] else "2026-10-10 12:00:00"
+    u_at = sys_row["updated_at"] if "updated_at" in sys_row.keys() and sys_row["updated_at"] else c_at
+    db_prof = sys_row["db_profile"] if "db_profile" in sys_row.keys() and sys_row["db_profile"] else "ecoinvent 3.12 (Cutoff Unit)"
+    code_str = str(sys_row["code"] or "")
+    name_str = str(sys_row["name"] or "")
+    source_fmt = parsed_p.get("source_format") if isinstance(parsed_p, dict) else None
+    if source_fmt == "simapro" or code_str.startswith("SP-") or "simapro" in name_str.lower():
+        db_prof = "SimaPro 9.5 (Imported CSV) / ecoinvent 3.12"
+    elif isinstance(parsed_p, dict) and parsed_p.get("epd_config"):
+        pcr_cat = parsed_p["epd_config"].get("pcr_category", "Concrete & Cement") if isinstance(parsed_p["epd_config"], dict) else "Concrete & Cement"
+        db_prof = f"ecoinvent 3.12 + SmartEPD Part B ({pcr_cat})"
+
+    try:
         if isinstance(parsed_p, dict) and "canvas_nodes" in parsed_p and parsed_p["canvas_nodes"] is not None:
             saved_nodes = parsed_p["canvas_nodes"]
             saved_edges = parsed_p.get("canvas_edges", [])
@@ -772,6 +829,16 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "owner_name": sys_row["owner_name"] if "owner_name" in sys_row.keys() and sys_row["owner_name"] else "Carla Méndez",
                 "owner_role": sys_row["owner_role"] if "owner_role" in sys_row.keys() and sys_row["owner_role"] else "analyst",
                 "owner_org": sys_row["owner_org"] if "owner_org" in sys_row.keys() and sys_row["owner_org"] else "BioPack Industrial S.A. de C.V.",
+                "category": sys_row["category"] if "category" in sys_row.keys() and sys_row["category"] else "Polímeros",
+                "geography": sys_row["geography"] if "geography" in sys_row.keys() and sys_row["geography"] else "[MX]",
+                "status": sys_row["status"] if "status" in sys_row.keys() and sys_row["status"] else "draft",
+                "compliance_rate": sys_row["compliance_rate"] if "compliance_rate" in sys_row.keys() and sys_row["compliance_rate"] else "0.0%",
+                "created_at": c_at,
+                "updated_at": u_at,
+                "db_profile": db_prof,
+                "nodes_count": len(saved_nodes),
+                "edges_count": len(saved_edges),
+                "parameters_count": len(sys_params),
                 "collaborators": collabs,
                 "nodes": saved_nodes,
                 "edges": saved_edges,
@@ -797,6 +864,16 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "owner_name": sys_row["owner_name"] if "owner_name" in sys_row.keys() and sys_row["owner_name"] else "Carla Méndez",
                 "owner_role": sys_row["owner_role"] if "owner_role" in sys_row.keys() and sys_row["owner_role"] else "analyst",
                 "owner_org": sys_row["owner_org"] if "owner_org" in sys_row.keys() and sys_row["owner_org"] else "BioPack Industrial S.A. de C.V.",
+                "category": sys_row["category"] if "category" in sys_row.keys() and sys_row["category"] else "Polímeros",
+                "geography": sys_row["geography"] if "geography" in sys_row.keys() and sys_row["geography"] else "[MX]",
+                "status": sys_row["status"] if "status" in sys_row.keys() and sys_row["status"] else "in_audit",
+                "compliance_rate": sys_row["compliance_rate"] if "compliance_rate" in sys_row.keys() and sys_row["compliance_rate"] else "100.0%",
+                "created_at": c_at,
+                "updated_at": u_at,
+                "db_profile": db_prof,
+                "nodes_count": len(OFFICIAL_SYSTEM_SPEC["processes"]),
+                "edges_count": len(OFFICIAL_SYSTEM_SPEC["edges"]),
+                "parameters_count": len(get_system_parameters(conn, system_id)),
                 "collaborators": collabs,
                 "nodes": OFFICIAL_SYSTEM_SPEC["processes"],
                 "edges": OFFICIAL_SYSTEM_SPEC["edges"],
@@ -872,6 +949,16 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
         "owner_name": sys_row["owner_name"] if "owner_name" in sys_row.keys() and sys_row["owner_name"] else None,
         "owner_role": sys_row["owner_role"] if "owner_role" in sys_row.keys() and sys_row["owner_role"] else None,
         "owner_org": sys_row["owner_org"] if "owner_org" in sys_row.keys() and sys_row["owner_org"] else None,
+        "category": sys_row["category"] if "category" in sys_row.keys() and sys_row["category"] else "Polímeros",
+        "geography": sys_row["geography"] if "geography" in sys_row.keys() and sys_row["geography"] else "[MX]",
+        "status": sys_row["status"] if "status" in sys_row.keys() and sys_row["status"] else "draft",
+        "compliance_rate": sys_row["compliance_rate"] if "compliance_rate" in sys_row.keys() and sys_row["compliance_rate"] else "0.0%",
+        "created_at": c_at,
+        "updated_at": u_at,
+        "db_profile": db_prof,
+        "nodes_count": len(nodes),
+        "edges_count": len(edges_rows),
+        "parameters_count": len(get_system_parameters(conn, system_id)),
         "collaborators": collabs,
         "nodes": nodes,
         "edges": [dict(er) for er in edges_rows],
@@ -909,7 +996,7 @@ def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dic
         params["canvas_edges"] = edges or []
         if palette is not None:
             params["palette_processes"] = palette
-        conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params, ensure_ascii=False), system_id))
+        conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = datetime('now') WHERE id = ?;", (json.dumps(params, ensure_ascii=False), system_id))
 
         # 3. Mantener consistencia relacional en product_system_nodes
         conn.execute("DELETE FROM product_system_nodes WHERE system_id = ?", (system_id,))
@@ -1570,7 +1657,7 @@ def save_system_parameter(conn: Any, system_id: int, param_data: Dict[str, Any])
 
     params_dict["parameters"] = current_params
     with conn:
-        conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+        conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = datetime('now') WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
 
     return normalized_param
 
@@ -1597,5 +1684,5 @@ def delete_system_parameter(conn: Any, system_id: int, param_id: str) -> bool:
     new_params = [p for p in current_params if str(p.get("id")) != str(param_id)]
     params_dict["parameters"] = new_params
     with conn:
-        conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+        conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = datetime('now') WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
     return True

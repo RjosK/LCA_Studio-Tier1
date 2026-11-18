@@ -1103,8 +1103,16 @@
           <td>${teamHtml}</td>
           <td><span class="badge-pill ${badgeClass}">${statusText}</span></td>
           <td>
-            <div style="display: flex; gap: 6px; align-items: center;">
-              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 10px; font-weight: 500; font-size: 11px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155;">
+            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: nowrap;">
+              <button class="btn btn-secondary btn-sm btn-sys-info" onclick="window.EconodeApp.openSystemInfoModal(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 9px; font-weight: 500; font-size: 11px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155; display: inline-flex; align-items: center; gap: 4px;" title="${window.I18n.t("dash.info_tooltip", "Información técnica, versión de base de datos y auditoría")}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                <span>${window.I18n.t("dash.info_btn", "Info")}</span>
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openDocsModal(${sys.id})" style="border-radius: 7px; height: 28px; padding: 0 9px; font-weight: 500; font-size: 11px; border-color: rgba(0,0,0,0.12); background: #FFFFFF; color: #334155;">
                 ${window.I18n.t("app.vault_btn", "Bóveda")}
               </button>
               <button class="btn btn-primary btn-sm btn-open-system" onmouseenter="window.EconodeApp.prefetchSystem(${sys.id})" onclick="window.EconodeApp.openSystem(${sys.id}, true, this)" style="border-radius: 7px; height: 28px; padding: 0 12px; font-weight: 600; font-size: 11px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15); cursor: pointer;">
@@ -10906,6 +10914,9 @@
       btnToggleSticky.addEventListener("click", () => {
         state.showCanvasStickyNotes = !state.showCanvasStickyNotes;
         updateCanvasHeaderToolbar();
+      if (document.getElementById("modalSystemInfo")?.classList.contains("active") && currentInfoSystemId) {
+        openSystemInfoModal(currentInfoSystemId);
+      }
         renderCanvasStage();
         const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
         showNotification(state.showCanvasStickyNotes ? 
@@ -11317,6 +11328,274 @@
       await loadDashboard();
     } catch (err) {
       alert("Error al asignar proyecto: " + err.message);
+    }
+  }
+
+
+  // =========================================================================
+  // GESTION DE MODAL DE FICHA TECNICA E INFORMACION DEL SISTEMA PRODUCTO
+  // =========================================================================
+  let currentInfoSystemId = null;
+
+  function formatSystemAuditDateTime(dateStr) {
+    if (!dateStr) return { formatted: "--", relative: "--", age: "--" };
+    const cleanStr = String(dateStr).trim().replace(" ", "T");
+    const d = new Date(cleanStr);
+    if (isNaN(d.getTime())) return { formatted: String(dateStr), relative: "--", age: "--" };
+
+    const lang = (window.I18n && window.I18n.currentLang) || "es";
+    const locale = lang === "es" ? "es-MX" : "en-US";
+    const formatted = new Intl.DateTimeFormat(locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit"
+    }).format(d);
+
+    const diffMs = Math.max(0, Date.now() - d.getTime());
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHrs = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHrs / 24);
+
+    let relative = "";
+    if (diffSec < 60) {
+      relative = lang === "es" ? "hace unos instantes" : "just now";
+    } else if (diffMin < 60) {
+      relative = lang === "es" ? `hace ${diffMin} min` : `${diffMin}m ago`;
+    } else if (diffHrs < 24) {
+      relative = lang === "es" ? `hace ${diffHrs} h` : `${diffHrs}h ago`;
+    } else if (diffDays === 1) {
+      relative = lang === "es" ? "ayer" : "yesterday";
+    } else if (diffDays < 30) {
+      relative = lang === "es" ? `hace ${diffDays} dias` : `${diffDays}d ago`;
+    } else {
+      const diffMonths = Math.floor(diffDays / 30);
+      relative = lang === "es" ? `hace ${diffMonths} ${diffMonths === 1 ? 'mes' : 'meses'}` : `${diffMonths}mo ago`;
+    }
+
+    let age = "";
+    if (diffDays === 0) {
+      age = lang === "es" ? "Hoy" : "Today";
+    } else if (diffDays === 1) {
+      age = lang === "es" ? "1 dia" : "1 day";
+    } else if (diffDays < 30) {
+      age = `${diffDays} ${lang === "es" ? "dias" : "days"}`;
+    } else {
+      const mos = Math.floor(diffDays / 30);
+      age = `${mos} ${lang === "es" ? (mos === 1 ? "mes" : "meses") : (mos === 1 ? "month" : "months")}`;
+    }
+
+    return { formatted, relative, age };
+  }
+
+  async function openSystemInfoModal(systemId) {
+    currentInfoSystemId = systemId;
+    const modal = document.getElementById("modalSystemInfo");
+    if (!modal) return;
+
+    let sys = (state.systems || []).find(s => s.id === systemId);
+
+    // Si aún no tenemos los datos completos o faltan atributos, obtener el detalle de canvas
+    if (!sys || sys.nodes_count === undefined || !sys.created_at) {
+      try {
+        const detailsRes = await api.getSystemCanvas(systemId);
+        if (detailsRes && detailsRes.system) {
+          sys = Object.assign({}, sys || {}, detailsRes.system);
+        }
+      } catch (err) {
+        console.warn("No se pudo cargar detalles adicionales del sistema:", err);
+      }
+    }
+
+    if (!sys) return;
+
+    const lang = (window.I18n && window.I18n.currentLang) || "es";
+
+    // 1. Cabecera y Badges
+    const titleEl = document.getElementById("infoSysTitle");
+    if (titleEl) titleEl.textContent = sys.name || `Sistema #${sys.id}`;
+
+    const codeEl = document.getElementById("infoSysCode");
+    if (codeEl) codeEl.textContent = sys.code || `SYS-${sys.id}`;
+
+    const subEl = document.getElementById("infoSysSubtitle");
+    if (subEl) subEl.textContent = window.I18n.t("sys_info.modal_subtitle", "Metadatos del modelo, versiones de bases de datos, trazabilidad y gobernanza de ciclo de vida");
+
+    const dbBadgeEl = document.getElementById("infoSysDbBadge");
+    if (dbBadgeEl) {
+      dbBadgeEl.textContent = sys.db_profile || "ecoinvent 3.12 (Cutoff)";
+    }
+
+    const statusEl = document.getElementById("infoSysStatus");
+    if (statusEl) {
+      let badgeClass = "badge-slate";
+      let statusText = window.I18n.t("app.status_draft", "Borrador Tecnico");
+      if (sys.status === "in_audit") {
+        badgeClass = "badge-emerald";
+        statusText = window.I18n.t("app.status_in_audit", "En Auditoria NOM-070");
+      } else if (sys.status === "certified") {
+        badgeClass = "badge-emerald";
+        statusText = window.I18n.t("app.status_certified", "Certificado NOM-070");
+      }
+      statusEl.className = `badge-pill ${badgeClass}`;
+      statusEl.textContent = statusText;
+    }
+
+    const projBadgeEl = document.getElementById("infoSysProjectBadge");
+    if (projBadgeEl) {
+      projBadgeEl.textContent = sys.project_name ? `${sys.project_name}` : window.I18n.t("sys_info.standalone", "Sin Proyecto (Independiente)");
+    }
+
+    const geoBadgeEl = document.getElementById("infoSysGeoBadge");
+    if (geoBadgeEl) {
+      geoBadgeEl.textContent = sys.geography || "[MX]";
+    }
+
+    // 2. Base de Datos y Metodologia LCI
+    const dbNameEl = document.getElementById("infoSysDbName");
+    if (dbNameEl) {
+      dbNameEl.textContent = sys.db_profile || "ecoinvent 3.12 (Cutoff Unit)";
+    }
+
+    const dbAllocEl = document.getElementById("infoSysDbAllocation");
+    if (dbAllocEl) {
+      if ((sys.db_profile || "").includes("SimaPro")) {
+        dbAllocEl.textContent = "Importacion SimaPro 9.x CSV · Mapeo de inventario a procesos unitarios ecoinvent";
+      } else if (sys.epd_config) {
+        dbAllocEl.textContent = "Modular PCR EN 15804+A2 / ISO 21930 · Modulos A1 a D";
+      } else {
+        dbAllocEl.textContent = "Allocation, cut-off by classification (ISO 14044 / EN 15804 compatible)";
+      }
+    }
+
+    // 3. Registro Temporal y Auditoria
+    const createdInfo = formatSystemAuditDateTime(sys.created_at);
+    const updatedInfo = formatSystemAuditDateTime(sys.updated_at || sys.created_at);
+
+    const cAtEl = document.getElementById("infoSysCreatedAt");
+    if (cAtEl) cAtEl.textContent = createdInfo.formatted;
+    const cAtRelEl = document.getElementById("infoSysCreatedAtRel");
+    if (cAtRelEl) cAtRelEl.textContent = createdInfo.relative;
+
+    const uAtEl = document.getElementById("infoSysUpdatedAt");
+    if (uAtEl) uAtEl.textContent = updatedInfo.formatted;
+    const uAtRelEl = document.getElementById("infoSysUpdatedAtRel");
+    if (uAtRelEl) uAtRelEl.textContent = updatedInfo.relative;
+
+    const ageEl = document.getElementById("infoSysAge");
+    if (ageEl) ageEl.textContent = createdInfo.age;
+
+    const compEl = document.getElementById("infoSysCompliance");
+    if (compEl) compEl.textContent = sys.compliance_rate || "100.0%";
+
+    // 4. Arquitectura e Inventario
+    const funcUnitEl = document.getElementById("infoSysFuncUnit");
+    if (funcUnitEl) {
+      funcUnitEl.textContent = `${sys.target_amount || 1.0} ${sys.unit || "kg"}`;
+    }
+
+    const nodesEl = document.getElementById("infoSysNodesCount");
+    if (nodesEl) {
+      const nCount = sys.nodes_count !== undefined ? sys.nodes_count : (sys.nodes ? sys.nodes.length : 0);
+      nodesEl.textContent = String(nCount);
+    }
+
+    const edgesEl = document.getElementById("infoSysEdgesCount");
+    if (edgesEl) {
+      const eCount = sys.edges_count !== undefined ? sys.edges_count : (sys.edges ? sys.edges.length : 0);
+      edgesEl.textContent = String(eCount);
+    }
+
+    const paramsEl = document.getElementById("infoSysParamsCount");
+    if (paramsEl) {
+      const pCount = sys.parameters_count !== undefined ? sys.parameters_count : (sys.parameters ? sys.parameters.length : 0);
+      paramsEl.textContent = String(pCount);
+    }
+
+    // 5. Gobernanza y Equipo
+    const ownerEl = document.getElementById("infoSysOwner");
+    if (ownerEl) {
+      const ownerName = sys.owner_name || "Carla Mendez";
+      const ownerRole = sys.owner_role ? ` (${sys.owner_role})` : "";
+      ownerEl.textContent = `${ownerName}${ownerRole}`;
+    }
+
+    const orgEl = document.getElementById("infoSysOrg");
+    if (orgEl) orgEl.textContent = sys.owner_org || "BioPack Industrial S.A. de C.V.";
+
+    const geoCatEl = document.getElementById("infoSysGeoCat");
+    if (geoCatEl) geoCatEl.textContent = `${sys.category || "General"} · ${sys.geography || "[MX]"}`;
+
+    const projEl = document.getElementById("infoSysProject");
+    if (projEl) {
+      projEl.textContent = sys.project_name ? `${window.I18n.t("sys_info.project", "Proyecto:")} ${sys.project_name}` : window.I18n.t("sys_info.standalone", "Sin Proyecto Contenedor (Independiente)");
+    }
+
+    const collabsContainer = document.getElementById("infoSysCollabs");
+    if (collabsContainer) {
+      const collabsList = sys.collaborators || [];
+      if (collabsList.length === 0) {
+        collabsContainer.innerHTML = `<span style="font-size: 10px; color: #94A3B8; font-style: italic;">Sin colaboradores externos asignados</span>`;
+      } else {
+        collabsContainer.innerHTML = collabsList.map(c => {
+          const roleLabel = c.role === "auditor" ? "Auditor" : c.role === "client" ? "Cliente" : "Colab";
+          const colorBg = c.role === "auditor" ? "rgba(16, 185, 129, 0.12)" : c.role === "client" ? "rgba(139, 92, 246, 0.12)" : "rgba(14, 165, 233, 0.12)";
+          const colorText = c.role === "auditor" ? "#059669" : c.role === "client" ? "#7C3AED" : "#0284C7";
+          return `<span class="user-chip-mini" style="background: ${colorBg}; color: ${colorText}; font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 600;">${escapeHtml(c.display_name || c.name || "Usuario")} (${roleLabel})</span>`;
+        }).join("");
+      }
+    }
+
+    // 6. EPD (Condicional)
+    const secEpd = document.getElementById("secInfoEpd");
+    if (secEpd) {
+      if (sys.epd_config && typeof sys.epd_config === "object") {
+        secEpd.style.display = "block";
+        const pcrEl = document.getElementById("infoEpdPcr");
+        if (pcrEl) pcrEl.textContent = sys.epd_config.pcr_standard || "EN 15804+A2 / ISO 21930";
+        const declEl = document.getElementById("infoEpdDeclUnit");
+        if (declEl) declEl.textContent = `${sys.epd_config.declared_unit_amount || 1} ${sys.epd_config.declared_unit || "ton"}`;
+        const modEl = document.getElementById("infoEpdModules");
+        if (modEl) modEl.textContent = sys.epd_config.system_boundary || "A1-A3 (Cradle-to-gate)";
+      } else {
+        secEpd.style.display = "none";
+      }
+    }
+
+    if (window.I18n && typeof window.I18n.applyTranslations === "function") {
+      window.I18n.applyTranslations(modal);
+    }
+
+    // Mostrar modal con animacion Apple HIG
+    modal.style.display = "flex";
+    modal.classList.add("active");
+  }
+
+  function closeSystemInfoModal() {
+    const modal = document.getElementById("modalSystemInfo");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+  }
+
+  function openCanvasFromInfo() {
+    const targetId = currentInfoSystemId;
+    closeSystemInfoModal();
+    if (targetId) {
+      selectProductSystem(targetId);
+      switchView("canvas");
+    }
+  }
+
+  function openVaultFromInfo() {
+    const targetId = currentInfoSystemId;
+    closeSystemInfoModal();
+    if (targetId && typeof openDocsModal === "function") {
+      openDocsModal(targetId);
     }
   }
 
@@ -12803,6 +13082,10 @@
     getNodes: () => state.canvasNodes,
     getEdges: () => state.canvasEdges,
     closeModal: (id) => closeModal(id),
+    openSystemInfoModal: (id) => openSystemInfoModal(id),
+    closeSystemInfoModal: () => closeSystemInfoModal(),
+    openCanvasFromInfo: () => openCanvasFromInfo(),
+    openVaultFromInfo: () => openVaultFromInfo(),
     openNewGhgInventoryModal: () => openNewGhgInventoryModal(),
     submitNewGhgInventory: () => submitNewGhgInventory(),
     openAddGhgEntryModal: (scope, cat) => openAddGhgEntryModal(scope, cat),
