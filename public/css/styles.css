@@ -6301,6 +6301,12 @@ body.role-client #reportHighlightTooltip {
   border: 1px solid #FECACA;
 }
 
+.ver-match-badge-foreground {
+  background: #EEF2FF;
+  color: #3730A3;
+  border: 1px solid #C7D2FE;
+}
+
 .ver-match-select {
   font-size: 11px;
   height: 26px;

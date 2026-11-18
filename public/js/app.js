@@ -11783,6 +11783,8 @@
 
       if (status === "EXACT_MATCH" && suggested) {
         currentVersionMatchMappings[nodeId] = suggested.id;
+      } else if (status === "FOREGROUND_CUSTOM") {
+        currentVersionMatchMappings[nodeId] = node.target_process_id || nodeId;
       } else if (status === "LOCATION_DIFF" && suggested) {
         if (!currentVersionMatchMappings[nodeId]) {
           currentVersionMatchMappings[nodeId] = suggested.id;
@@ -11803,6 +11805,15 @@
             <div style="font-size: 10px; color: #64748B;">${escapeHtml(suggested.database || "")} · ${escapeHtml(suggested.reference_unit || "")}</div>
           </div>
           <span class="badge-pill badge-green mono" style="font-size: 9.5px; padding: 1px 6px;">${escapeHtml(suggested.location || "GLO")}</span>
+        </div>`;
+      } else if (status === "FOREGROUND_CUSTOM") {
+        statusBadge = `<span class="ver-match-badge ver-match-badge-foreground">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+          ${window.I18n.t("ver_match.badge_foreground", "Proceso Propio")}
+        </span>`;
+        targetContent = `<div style="display: flex; flex-direction: column; gap: 3px;">
+          <div style="font-weight: 600; color: #1E1B4B; font-size: 11px;">${escapeHtml(node.target_name || node.source_name)}</div>
+          <div style="font-size: 9.5px; color: #4338CA;">${escapeHtml(node.message || window.I18n.t("ver_match.foreground_notice", "Modelo de primer plano conservado"))}</div>
         </div>`;
       } else if (status === "LOCATION_DIFF") {
         statusBadge = `<span class="ver-match-badge ver-match-badge-loc">

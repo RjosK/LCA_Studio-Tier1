@@ -285,6 +285,29 @@ class TestVersionCrossMatching(unittest.TestCase):
                 if (0x1F600 <= cp <= 0x1F64F) or (0x1F300 <= cp <= 0x1F5FF) or (0x1F680 <= cp <= 0x1F6FF) or (0x1F900 <= cp <= 0x1F9FF):
                     self.fail(f"Emoji detected '{char}' (U+{cp:X}) in {rel_path}")
 
+    def test_11_foreground_custom_model_matching(self):
+        with get_active_db_connection() as conn:
+            # Check if system 6 exists or evaluate mock foreground model
+            row = conn.execute("SELECT id, name FROM product_systems WHERE id = 6;").fetchone()
+            if row:
+                report = match_system_to_database(conn, 6, "ecoinvent_311")
+                self.assertIsNotNone(report)
+                self.assertTrue(report["is_ready_for_conversion"])
+                self.assertEqual(report["no_matches"], 0)
+                self.assertGreaterEqual(report["compatibility_score"], 90.0)
+                
+                # Verify node is FOREGROUND_CUSTOM
+                nodes = report["nodes"]
+                self.assertEqual(len(nodes), 1)
+                fg_node = nodes[0]
+                self.assertEqual(fg_node["status"], "FOREGROUND_CUSTOM")
+                self.assertTrue(fg_node.get("is_foreground", False))
+                self.assertEqual(fg_node["source_name"], "08_CO_IN_S1")
+                
+                # Verify embedded exchanges were diagnosed
+                self.assertGreater(len(report["flows_match"]), 100)
+                self.assertGreater(report["characterized_flows_count"], 100)
+
 
 if __name__ == "__main__":
     unittest.main()

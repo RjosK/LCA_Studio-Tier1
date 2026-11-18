@@ -705,6 +705,8 @@ const I18N_DICTIONARY = {
     "ver_match.no_results": "Sin resultados",
     "ver_match.uncharacterized_tag": "Informativo (sin caracterizar)",
     "ver_match.optional_substitute": "Sustituto opcional",
+    "ver_match.badge_foreground": "Proceso Propio",
+    "ver_match.foreground_notice": "Modelo de primer plano conservado",
     "common.cancel": "Cancelar"
  },
 
@@ -1411,6 +1413,8 @@ const I18N_DICTIONARY = {
     "ver_match.no_results": "No results",
     "ver_match.uncharacterized_tag": "Informative (uncharacterized)",
     "ver_match.optional_substitute": "Optional substitute",
+    "ver_match.badge_foreground": "Custom Process",
+    "ver_match.foreground_notice": "Preserved foreground model",
     "common.cancel": "Cancel"
  }
 };

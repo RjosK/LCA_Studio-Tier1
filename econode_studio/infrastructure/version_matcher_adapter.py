@@ -19,6 +19,7 @@ import time
 import re
 import uuid
 import sqlite3
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any, Tuple
 
 try:
@@ -27,6 +28,73 @@ except (ImportError, ValueError):
     from econode_studio.config import settings
 
 from .db_connection import get_db_connection
+
+# Mapeo de equivalencias y alias entre nomenclatura SimaPro y ecoinvent
+SIMAPRO_ECOINVENT_ALIASES: Dict[str, str] = {
+    "carbon dioxide, biogenic": "carbon dioxide, non-fossil",
+    "carbon dioxide, land transformation": "carbon dioxide, from soil or biomass stock",
+    "methane, biogenic": "methane, non-fossil",
+    "carbon monoxide, biogenic": "carbon monoxide, non-fossil",
+    "dinitrogen monoxide": "dinitrogen monoxide",
+    "water, unspecified natural origin/m3": "water",
+    "water, well, in ground": "water, well",
+    "water, lake": "water, lake",
+    "water, river": "water, river",
+    "particulates, < 2.5 um": "particulate matter, < 2.5 um",
+    "particulates, > 2.5 um, and < 10um": "particulate matter, > 2.5 um and < 10um",
+    "particulates, > 10 um": "particulate matter, > 10 um",
+    "dioxin, 2,3,7,8 tetrachlorodibenzo-p-": "dioxins, measured as 2,3,7,8-tetrachlorodibenzo-p-dioxin",
+    "benzene, pentachloro-": "pentachlorobenzene",
+    "benzene, hexachloro-": "hexachlorobenzene",
+    "phenol, pentachloro-": "pentachlorophenol",
+    "iron (ii)": "iron, ion",
+    "bod5 (biological oxygen demand), ch": "bod5, biological oxygen demand",
+    "cod (chemical oxygen demand), ch": "cod, chemical oxygen demand",
+    "transformation, from grassland/pasture/meadow": "transformation, from grassland, natural (non-use)",
+    "transformation, to grassland/pasture/meadow, ch": "transformation, to grassland, natural (non-use)",
+}
+
+def parse_simapro_process_name(raw_name: str) -> Tuple[str, str, Optional[str]]:
+    """
+    Descompone un nombre de proceso de SimaPro en (actividad, producto, localizacion).
+    Formatos comunes:
+    - 'Product {LOC}| activity name | Cut-off, U'
+    - 'Product {LOC}| activity name'
+    - 'Product | activity name'
+    """
+    if not raw_name:
+        return "", "", None
+    loc = None
+    m_loc = re.search(r"\{(.*?)\}", raw_name)
+    if m_loc:
+        loc = m_loc.group(1).strip()
+    parts = raw_name.split("|")
+    if len(parts) >= 2:
+        activity_name = parts[1].strip()
+        product_name = re.sub(r"\{.*?\}", "", parts[0]).strip()
+        return activity_name, product_name, loc
+    clean = re.sub(r"\{.*?\}", "", raw_name).strip()
+    return clean, clean, loc
+
+def normalize_flow_name(raw_name: str) -> str:
+    """
+    Normaliza nombres de flujos elementales de SimaPro a la nomenclatura canonica de ecoinvent.
+    """
+    if not raw_name:
+        return ""
+    n = re.sub(r"\s*\[.*?\]", "", raw_name).strip()
+    n = re.sub(r"\(([I|V|X]+)\)", r"\1", n).strip()
+    lower_n = n.lower().strip()
+    if lower_n in SIMAPRO_ECOINVENT_ALIASES:
+        return SIMAPRO_ECOINVENT_ALIASES[lower_n]
+    if lower_n.startswith("particulates,"):
+        return lower_n.replace("particulates,", "particulate matter,")
+    if lower_n.endswith(", ch"):
+        base = lower_n[:-4].strip()
+        if base in SIMAPRO_ECOINVENT_ALIASES:
+            return SIMAPRO_ECOINVENT_ALIASES[base]
+        return base
+    return n
 
 # Catalogo Maestro de Bases de Datos Activas
 AVAILABLE_DATABASES = [
@@ -417,9 +485,11 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
 
     # 2. Diagnostico de Procesos
     processes_match = []
+    flows_match = []
     exact_count = 0
     loc_diff_count = 0
     no_match_count = 0
+    characterized_flows = 0
 
     for n in nodes:
         node_id = n.get("id") or f"node_{n.get('process_id')}"
@@ -430,8 +500,283 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
         candidate_loc = raw_node_loc or palette_loc
         src_loc = _resolve_process_location(conn, src_pid, fallback_loc=candidate_loc)
 
+        inputs = n.get("inputs", [])
+        outputs = n.get("outputs", [])
+        has_embedded_exchanges = bool(inputs or outputs)
+        is_custom_id = not src_pid or str(src_pid).startswith("node_") or str(src_pid).startswith("SP-") or str(src_pid).startswith("CUSTOM_")
+        is_custom_cat = (n.get("category") or "").lower() in ("material", "unspecified", "custom", "general", "process")
+
         # Coincidencia canonica en la base destino
         candidates = search_database_processes(conn, target_db_id, query=src_name, limit=10)
+
+        # Si el nodo contiene intercambios internos y no es un proceso de fondo de ecoinvent,
+        # se reconoce como proceso de primer plano (FOREGROUND_CUSTOM).
+        if has_embedded_exchanges and (is_custom_id or is_custom_cat or not candidates or candidates[0]["name"].strip().lower() != src_name.lower()):
+            status = "FOREGROUND_CUSTOM"
+            exact_count += 1
+            ref_unit = "kg"
+            for out in outputs:
+                if out.get("is_reference"):
+                    ref_unit = out.get("unit") or "kg"
+                    break
+            else:
+                if outputs:
+                    ref_unit = outputs[0].get("unit") or "kg"
+
+            processes_match.append({
+                "node_id": node_id,
+                "source_process_id": src_pid or node_id,
+                "source_name": src_name,
+                "source_location": src_loc,
+                "status": status,
+                "confidence": 1.0,
+                "is_foreground": True,
+                "target_process_id": node_id,
+                "target_name": f"{src_name} (Conservado)",
+                "target_location": src_loc,
+                "target_unit": ref_unit,
+                "inputs_count": len(inputs),
+                "outputs_count": len(outputs),
+                "alternatives": [],
+                "message": f"Modelo de primer plano conservado. Se transfieren {len(inputs)} insumos y {len(outputs)} emisiones a {target_meta['short_label']}."
+            })
+
+            # Pre-optimizacion masiva: resolver flujos y procesos en bloque en 1 sola consulta
+            flow_name_keys = set()
+            proc_name_keys = set()
+            for inp in inputs:
+                if inp.get("is_elementary"):
+                    flow_name_keys.add(normalize_flow_name(inp.get("name", "")).strip().lower())
+                else:
+                    act, _, _ = parse_simapro_process_name(inp.get("name", ""))
+                    if act:
+                        proc_name_keys.add(act.strip().lower())
+            for out in outputs:
+                if not out.get("is_reference"):
+                    oname = out.get("name", "")
+                    if "{" in oname and "|" in oname:
+                        act, _, _ = parse_simapro_process_name(oname)
+                        if act:
+                            proc_name_keys.add(act.strip().lower())
+                    else:
+                        flow_name_keys.add(normalize_flow_name(oname).strip().lower())
+
+            batch_flow_map = {}
+            if flow_name_keys:
+                try:
+                    tbl_f = "lci_flows_311" if target_db_id == "ecoinvent_311" and is_pg else ("flows" if not is_pg else "lci_flows")
+                    pl_f = ", ".join(["?"] * len(flow_name_keys))
+                    for fr in conn.execute(f"SELECT id, name, unit_symbol FROM {tbl_f} WHERE LOWER(name) IN ({pl_f});", tuple(flow_name_keys)).fetchall():
+                        batch_flow_map[fr["name"].strip().lower()] = fr
+                except Exception:
+                    pass
+
+            batch_proc_map = {}
+            if proc_name_keys:
+                try:
+                    tbl_p = "lci_processes_311" if target_db_id == "ecoinvent_311" and is_pg else ("processes" if not is_pg else "lci_processes")
+                    pl_p = ", ".join(["?"] * len(proc_name_keys))
+                    for pr in conn.execute(f"SELECT id, name, location FROM {tbl_p} WHERE LOWER(name) IN ({pl_p});", tuple(proc_name_keys)).fetchall():
+                        batch_proc_map[pr["name"].strip().lower()] = pr
+                except Exception:
+                    pass
+
+            memo_proc = {}
+            memo_flow = {}
+
+            # Evaluar insumos embebidos (tecnosfera y recursos)
+            for inp in inputs:
+                iname = inp.get("name", "")
+                iunit = inp.get("unit", "kg")
+                iamt = float(inp.get("amount", 1.0))
+                is_elem = bool(inp.get("is_elementary", False))
+
+                if not is_elem:
+                    act, prod, loc = parse_simapro_process_name(iname)
+                    act_l = act.strip().lower()
+                    if act_l in batch_proc_map:
+                        pr = batch_proc_map[act_l]
+                        cands = [{"id": pr["id"], "name": pr["name"], "location": pr["location"] or "GLO", "unit": iunit}]
+                    elif act_l in memo_proc:
+                        cands = memo_proc[act_l]
+                    else:
+                        cands = search_database_processes(conn, target_db_id, query=act, limit=3)
+                        if not cands and "," in act:
+                            cands = search_database_processes(conn, target_db_id, query=act.split(",")[0].strip(), limit=3)
+                        memo_proc[act_l] = cands
+
+                    if cands:
+                        characterized_flows += 1
+                        flows_match.append({
+                            "flow_id": f"in_{len(flows_match)+1}",
+                            "name": iname,
+                            "amount": iamt,
+                            "unit": iunit,
+                            "status": "FLOW_MATCH",
+                            "target_flow_id": cands[0]["id"],
+                            "target_flow_name": cands[0]["name"],
+                            "is_characterized": True,
+                            "exchange_type": "technosphere_input",
+                            "source_node_id": node_id,
+                            "message": f"Insumo identificado en {target_meta['short_label']}."
+                        })
+                    else:
+                        flows_match.append({
+                            "flow_id": f"in_{len(flows_match)+1}",
+                            "name": iname,
+                            "amount": iamt,
+                            "unit": iunit,
+                            "status": "FLOW_UNCHARACTERIZED",
+                            "target_flow_id": None,
+                            "target_flow_name": iname,
+                            "is_characterized": False,
+                            "suggested_flows": [],
+                            "exchange_type": "technosphere_input",
+                            "source_node_id": node_id,
+                            "message": f"Insumo no encontrado directamente en {target_meta['short_label']}."
+                        })
+                else:
+                    norm = normalize_flow_name(iname)
+                    norm_l = norm.strip().lower()
+                    if norm_l in batch_flow_map:
+                        fr = batch_flow_map[norm_l]
+                        fcands = [{"id": fr["id"], "name": fr["name"], "unit": fr["unit_symbol"] or iunit}]
+                    elif norm_l in memo_flow:
+                        fcands = memo_flow[norm_l]
+                    else:
+                        fcands = search_database_flows(conn, target_db_id, query=norm, limit=3)
+                        if not fcands and "," in norm:
+                            fcands = search_database_flows(conn, target_db_id, query=norm.split(",")[0].strip(), limit=3)
+                        memo_flow[norm_l] = fcands
+
+                    if fcands:
+                        characterized_flows += 1
+                        flows_match.append({
+                            "flow_id": f"in_{len(flows_match)+1}",
+                            "name": iname,
+                            "amount": iamt,
+                            "unit": iunit,
+                            "status": "FLOW_MATCH",
+                            "target_flow_id": fcands[0]["id"],
+                            "target_flow_name": fcands[0]["name"],
+                            "is_characterized": True,
+                            "exchange_type": "elementary_resource",
+                            "source_node_id": node_id,
+                            "message": f"Recurso natural identificado en {target_meta['short_label']}."
+                        })
+                    else:
+                        flows_match.append({
+                            "flow_id": f"in_{len(flows_match)+1}",
+                            "name": iname,
+                            "amount": iamt,
+                            "unit": iunit,
+                            "status": "FLOW_UNCHARACTERIZED",
+                            "target_flow_id": None,
+                            "target_flow_name": iname,
+                            "is_characterized": False,
+                            "suggested_flows": [],
+                            "exchange_type": "elementary_resource",
+                            "source_node_id": node_id,
+                            "message": f"Recurso elemental no caracterizado directamente en {target_meta['short_label']}."
+                        })
+
+            # Evaluar emisiones embebidas y tratamientos de residuos
+            for out in outputs:
+                if out.get("is_reference"):
+                    continue
+                oname = out.get("name", "")
+                ounit = out.get("unit", "kg")
+                oamt = float(out.get("amount", 1.0))
+
+                if "{" in oname and "|" in oname:
+                    act, prod, loc = parse_simapro_process_name(oname)
+                    act_l = act.strip().lower()
+                    if act_l in batch_proc_map:
+                        pr = batch_proc_map[act_l]
+                        cands = [{"id": pr["id"], "name": pr["name"], "location": pr["location"] or "GLO", "unit": ounit}]
+                    elif act_l in memo_proc:
+                        cands = memo_proc[act_l]
+                    else:
+                        cands = search_database_processes(conn, target_db_id, query=act, limit=3)
+                        if not cands and "," in act:
+                            cands = search_database_processes(conn, target_db_id, query=act.split(",")[0].strip(), limit=3)
+                        memo_proc[act_l] = cands
+
+                    if cands:
+                        characterized_flows += 1
+                        flows_match.append({
+                            "flow_id": f"out_{len(flows_match)+1}",
+                            "name": oname,
+                            "amount": oamt,
+                            "unit": ounit,
+                            "status": "FLOW_MATCH",
+                            "target_flow_id": cands[0]["id"],
+                            "target_flow_name": cands[0]["name"],
+                            "is_characterized": True,
+                            "exchange_type": "waste_treatment",
+                            "source_node_id": node_id,
+                            "message": f"Tratamiento de residuo identificado en {target_meta['short_label']}."
+                        })
+                    else:
+                        flows_match.append({
+                            "flow_id": f"out_{len(flows_match)+1}",
+                            "name": oname,
+                            "amount": oamt,
+                            "unit": ounit,
+                            "status": "FLOW_UNCHARACTERIZED",
+                            "target_flow_id": None,
+                            "target_flow_name": oname,
+                            "is_characterized": False,
+                            "suggested_flows": [],
+                            "exchange_type": "waste_treatment",
+                            "source_node_id": node_id,
+                            "message": f"Tratamiento no encontrado directamente en {target_meta['short_label']}."
+                        })
+                else:
+                    norm = normalize_flow_name(oname)
+                    norm_l = norm.strip().lower()
+                    if norm_l in batch_flow_map:
+                        fr = batch_flow_map[norm_l]
+                        fcands = [{"id": fr["id"], "name": fr["name"], "unit": fr["unit_symbol"] or ounit}]
+                    elif norm_l in memo_flow:
+                        fcands = memo_flow[norm_l]
+                    else:
+                        fcands = search_database_flows(conn, target_db_id, query=norm, limit=3)
+                        if not fcands and "," in norm:
+                            fcands = search_database_flows(conn, target_db_id, query=norm.split(",")[0].strip(), limit=3)
+                        memo_flow[norm_l] = fcands
+
+                    if fcands:
+                        characterized_flows += 1
+                        flows_match.append({
+                            "flow_id": f"out_{len(flows_match)+1}",
+                            "name": oname,
+                            "amount": oamt,
+                            "unit": ounit,
+                            "status": "FLOW_MATCH",
+                            "target_flow_id": fcands[0]["id"],
+                            "target_flow_name": fcands[0]["name"],
+                            "is_characterized": True,
+                            "exchange_type": "elementary_emission",
+                            "source_node_id": node_id,
+                            "message": f"Emision elemental identificada en {target_meta['short_label']}."
+                        })
+                    else:
+                        flows_match.append({
+                            "flow_id": f"out_{len(flows_match)+1}",
+                            "name": oname,
+                            "amount": oamt,
+                            "unit": ounit,
+                            "status": "FLOW_UNCHARACTERIZED",
+                            "target_flow_id": None,
+                            "target_flow_name": oname,
+                            "is_characterized": False,
+                            "suggested_flows": [],
+                            "exchange_type": "elementary_emission",
+                            "source_node_id": node_id,
+                            "message": f"Emision elemental no caracterizada directamente en {target_meta['short_label']}."
+                        })
+            continue
 
         # Buscar match exacto de (nombre, localizacion)
         exact = next((c for c in candidates if c["name"].strip().lower() == src_name.lower() and c["location"].strip().lower() == src_loc.lower()), None)
@@ -495,9 +840,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
             })
 
     # 3. Diagnostico de Flujos entre Nodos
-    flows_match = []
-    total_flows = len(edges)
-    characterized_flows = 0
+    total_flows = len(edges) + len(flows_match)
 
     for e in edges:
         fl_id = str(e.get("flow_id") or e.get("flow") or "").strip()
@@ -659,8 +1002,40 @@ def convert_product_system_version(
                     n_copy["name"] = mapping["target_name"]
                 if mapping.get("target_location"):
                     n_copy["location"] = mapping["target_location"]
-            else:
+            elif str(mapping) != str(nid) and not str(mapping).startswith("node_"):
                 n_copy["process_id"] = mapping
+
+        # Si el nodo tiene inputs embebidos, actualizar sus flujos / procesos
+        if n_copy.get("inputs"):
+            updated_inputs = []
+            for inp in n_copy["inputs"]:
+                inp_c = dict(inp)
+                iname = inp_c.get("name", "")
+                if inp_c.get("is_elementary"):
+                    inp_c["normalized_name"] = normalize_flow_name(iname)
+                else:
+                    act, prod, loc = parse_simapro_process_name(iname)
+                    inp_c["activity_name"] = act
+                    if loc:
+                        inp_c["location"] = loc
+                updated_inputs.append(inp_c)
+            n_copy["inputs"] = updated_inputs
+
+        # Si el nodo tiene outputs embebidos, actualizar sus flujos
+        if n_copy.get("outputs"):
+            updated_outputs = []
+            for out in n_copy["outputs"]:
+                out_c = dict(out)
+                oname = out_c.get("name", "")
+                if not out_c.get("is_reference"):
+                    if "{" in oname and "|" in oname:
+                        act, prod, loc = parse_simapro_process_name(oname)
+                        out_c["activity_name"] = act
+                    else:
+                        out_c["normalized_name"] = normalize_flow_name(oname)
+                updated_outputs.append(out_c)
+            n_copy["outputs"] = updated_outputs
+
         updated_nodes.append(n_copy)
 
     # Actualizar edges con flujos mapeados si se sustituyeron
@@ -677,8 +1052,7 @@ def convert_product_system_version(
                 e_copy["flow_id"] = sub
         updated_edges.append(e_copy)
 
-    from datetime import datetime
-    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
     new_params_json = {
         "canvas_nodes": updated_nodes,
