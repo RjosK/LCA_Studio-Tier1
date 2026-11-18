@@ -776,7 +776,8 @@ def get_product_system_details(conn: sqlite3.Connection, system_id: int) -> Opti
                 "nodes": saved_nodes,
                 "edges": saved_edges,
                 "palette": saved_palette,
-                "parameters": sys_params
+                "parameters": sys_params,
+                "epd_config": parsed_p.get("epd_config")
             }
     except Exception:
         pass

@@ -115,6 +115,22 @@ except (ImportError, ValueError):
         search_emission_factors,
         list_distinct_sources
     )
+try:
+    from application.epd_service import (
+        list_epd_templates_use_case,
+        instantiate_epd_template_use_case,
+        compute_epd_report_use_case,
+        save_epd_metadata_use_case,
+        export_openepd_json_use_case
+    )
+except (ImportError, ValueError):
+    from econode_studio.application.epd_service import (
+        list_epd_templates_use_case,
+        instantiate_epd_template_use_case,
+        compute_epd_report_use_case,
+        save_epd_metadata_use_case,
+        export_openepd_json_use_case
+    )
 from infrastructure import get_active_db_connection, get_configured_client_id, get_user_by_id
 
 WEB_DIR = os.path.join(os.path.dirname(STUDIO_DIR), "public")
@@ -420,6 +436,51 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self._send_json({"status": "success", "sources": sources})
                     except Exception as e:
                         self._send_error_json(str(e), 500)
+                    return
+
+                # --- Modulo EPD (Environmental Product Declarations / SmartEPD) ---
+                # Catalogo de Plantillas Preliminares EPD (Cemento, Concreto y registro multi-industria)
+                elif path == "/api/epd/templates":
+                    industry = query.get("industry", ["ALL"])[0]
+                    try:
+                        res = list_epd_templates_use_case(industry_id=industry)
+                        self._send_json(res)
+                    except Exception as e:
+                        self._send_error_json(str(e), 500)
+                    return
+
+                # Reporte EPD Estructurado por Modulos A1-D (EN 15804+A2 / TRACI 2.1)
+                elif path.startswith("/api/systems/") and path.endswith("/epd-report"):
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    sys_id = int(path.split("/")[3])
+                    std = query.get("standard", ["EN15804_A2"])[0]
+                    try:
+                        res = compute_epd_report_use_case(conn, sys_id, standard=std)
+                        self._send_json(res)
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
+                    return
+
+                # Exportar Declaracion Digital OpenEPD JSON (SmartEPD / EC3 Compatible)
+                elif path.startswith("/api/systems/") and path.endswith("/export/openepd"):
+                    user = self._require_auth(query=query)
+                    if not user:
+                        return
+                    sys_id = int(path.split("/")[3])
+                    try:
+                        payload = export_openepd_json_use_case(conn, sys_id)
+                        body_bytes = json.dumps(payload, indent=2, ensure_ascii=False).encode("utf-8")
+                        fname = f"ECONODE_openEPD_SYS_{sys_id}.json"
+                        self._set_headers(200, "application/json; charset=utf-8", {"Content-Disposition": f'attachment; filename="{fname}"'})
+                        self.wfile.write(body_bytes)
+                        try:
+                            self.wfile.flush()
+                        except Exception:
+                            pass
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
                     return
 
                 # Canvas details for a system (Requiere Autenticación)
@@ -963,6 +1024,33 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 try:
                     res = delete_entry_from_inventory_use_case(inv_id, entry_id)
                     self._send_json({"status": "success", "inventory": res})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # --- Modulo EPD POST ---
+            # Instanciar Plantilla Preliminar EPD (Cemento / Concreto)
+            elif path == "/api/epd/templates/instantiate":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                template_id = body.get("template_id") or "epd_concrete_rmx_4000"
+                try:
+                    res = instantiate_epd_template_use_case(conn, template_id=template_id, overrides=body, user=user)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Guardar Metadatos Administrativos y Especificaciones EPD
+            elif path.startswith("/api/systems/") and path.endswith("/epd-metadata"):
+                user = self._require_auth(allowed_roles=["analyst", "auditor"])
+                if not user:
+                    return
+                sys_id = int(path.split("/")[3])
+                try:
+                    res = save_epd_metadata_use_case(conn, sys_id, epd_updates=body)
+                    self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)
                 return

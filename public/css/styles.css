@@ -5824,3 +5824,412 @@ body.role-client #reportHighlightTooltip {
   border: 1px solid rgba(71, 85, 105, 0.22);
   color: #334155;
 }
+
+
+/* -------------------------------------------------------------
+   MODULO EPD (ENVIRONMENTAL PRODUCT DECLARATIONS - SMARTEPD / EN 15804+A2)
+   Alineado con Apple Human Interface Guidelines (Desktop 11-13px)
+------------------------------------------------------------- */
+.epd-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background: #F1F5F9;
+  border: 1px solid var(--border-color);
+  border-radius: 9px;
+  padding: 2.5px;
+  gap: 2px;
+}
+
+.epd-seg-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.16s ease, color 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
+}
+
+.epd-seg-btn:hover {
+  color: var(--text-primary);
+}
+
+.epd-seg-btn:active {
+  transform: scale(0.97);
+}
+
+.epd-seg-btn.active {
+  background: #FFFFFF;
+  color: #0F172A;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.10), 0 0 0 1px rgba(15, 23, 42, 0.04);
+}
+
+.epd-seg-compact .epd-seg-btn {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.epd-toolbar-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  background: #F8FAFC;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.epd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.epd-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 11px 13px;
+}
+
+.epd-kpi-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epd-kpi-value {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0F172A;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.epd-kpi-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.epd-doc-section {
+  margin-bottom: 22px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.epd-doc-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.epd-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.epd-section-header h3 {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.epd-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font-size: 11px;
+}
+
+.epd-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.epd-meta-key {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.epd-meta-val {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0F172A;
+  word-break: break-word;
+}
+
+.epd-specs-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.epd-spec-chip {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+.epd-spec-chip strong {
+  color: #0F172A;
+}
+
+.epd-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-md);
+}
+
+.epd-dense-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  margin: 0 !important;
+}
+
+.epd-dense-table th,
+.epd-dense-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.epd-dense-table th {
+  background: #F8FAFC;
+  font-size: 10px;
+  font-weight: 700;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.epd-numeric-table td.epd-num-cell {
+  text-align: right;
+  font-family: "JetBrains Mono", monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.epd-numeric-table td.epd-total-cell {
+  font-weight: 700;
+  background: rgba(5, 150, 105, 0.05);
+  color: #065F46;
+}
+
+.epd-boundary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10.5px;
+  text-align: center;
+}
+
+.epd-boundary-table th,
+.epd-boundary-table td {
+  border: 1px solid #E2E8F0;
+  padding: 5px 4px;
+}
+
+.epd-boundary-table thead tr.epd-stage-row th {
+  background: #0F172A;
+  color: #FFFFFF;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.epd-boundary-table thead tr.epd-mod-row th {
+  background: #F8FAFC;
+  color: #334155;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.epd-mod-cell-x {
+  background: rgba(5, 150, 105, 0.12);
+  color: #065F46;
+  font-weight: 800;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.epd-mod-cell-mnd {
+  background: #FFFFFF;
+  color: #94A3B8;
+  font-size: 9.5px;
+  font-family: "JetBrains Mono", monospace;
+}
+
+.epd-contrib-box {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.epd-contrib-row {
+  display: grid;
+  grid-template-columns: 185px 1fr 110px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 10.5px;
+}
+
+.epd-contrib-row:last-child {
+  margin-bottom: 0;
+}
+
+.epd-contrib-track {
+  height: 10px;
+  background: #E2E8F0;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.epd-contrib-fill {
+  height: 100%;
+  border-radius: 5px;
+  background: #059669;
+  transition: width 0.25s ease;
+}
+
+.epd-contrib-fill.is-credit {
+  background: #2563EB;
+}
+
+.epd-comparability-box {
+  background: #F8FAFC;
+  border-left: 3px solid #0F172A;
+  border-top: 1px solid #E2E8F0;
+  border-right: 1px solid #E2E8F0;
+  border-bottom: 1px solid #E2E8F0;
+  border-radius: 4px;
+  padding: 10px 12px;
+}
+
+/* Galeria de Plantillas Preliminares EPD en Modal Wizard */
+.epd-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.epd-template-card {
+  border: 1.5px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  padding: 11px 12px;
+  background: #FFFFFF;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.epd-template-card:hover {
+  border-color: #94A3B8;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+}
+
+.epd-template-card:active {
+  transform: scale(0.985);
+}
+
+.epd-template-card.selected {
+  border-color: var(--accent-emerald);
+  background: rgba(5, 150, 105, 0.03);
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.14);
+}
+
+/* Insignia de Modulo EPD en Tarjetas del Lienzo */
+.epd-module-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 4px;
+  letter-spacing: 0.02em;
+  background: #0F172A;
+  color: #FFFFFF;
+}
+
+.epd-module-pill.mod-a {
+  background: #065F46;
+  color: #ECFDF5;
+}
+
+.epd-module-pill.mod-b {
+  background: #1E40AF;
+  color: #EFF6FF;
+}
+
+.epd-module-pill.mod-c {
+  background: #9A3412;
+  color: #FFF7ED;
+}
+
+.epd-module-pill.mod-d {
+  background: #4338CA;
+  color: #EEF2FF;
+}
+
+@media (max-width: 1100px) {
+  .epd-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .epd-template-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .epd-segmented-control,
+  .epd-toolbar-bar {
+    display: none !important;
+  }
+  .epd-table-wrap {
+    overflow: visible !important;
+  }
+  .epd-doc-section {
+    page-break-inside: avoid;
+  }
+}

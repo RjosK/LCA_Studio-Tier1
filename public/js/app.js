@@ -73,6 +73,15 @@
     activeGhgInventory: null,
     ghgTaxonomy: null,
     ghgActiveTab: "summary",
+    // Modulo EPD (Environmental Product Declarations / SmartEPD / EN 15804+A2)
+    epdTemplates: [],
+    epdIndustries: [],
+    epdModulesTaxonomy: [],
+    epdWizardMode: "blank", // "blank" | "epd"
+    selectedEpdTemplateId: "epd_concrete_rmx_4000",
+    reportViewMode: "lca", // "lca" | "epd"
+    epdStandard: "EN15804_A2", // "EN15804_A2" | "TRACI_2_1"
+    activeEpdReport: null,
     ghgEmissionFactors: [],
     ghgFactorsFilterSource: "ALL",
     ghgFactorsFilterScope: "ALL",
@@ -297,6 +306,29 @@
       if (params.limit) sp.append("limit", params.limit);
       const qs = sp.toString();
       return api.get(`/api/ghg/emission-factors${qs ? '?' + qs : ''}`);
+    },
+
+    // EPD Preliminary Models & Report Builder (SmartEPD / ISO 14025 / EN 15804+A2)
+    listEpdTemplates: (industry = "ALL") =>
+      api.get(`/api/epd/templates?industry=${encodeURIComponent(industry)}`),
+    instantiateEpdTemplate: (payload) => {
+      const u = state.activeUser;
+      return api.post("/api/epd/templates/instantiate", {
+        ...payload,
+        owner_id: u ? u.id : undefined,
+        owner_email: u ? u.email : undefined,
+        owner_name: u ? u.display_name : undefined,
+        owner_role: u ? u.role : undefined,
+        owner_org: u ? u.organization : undefined
+      });
+    },
+    getEpdReport: (sysId, standard = "EN15804_A2") =>
+      api.get(`/api/systems/${sysId}/epd-report?standard=${encodeURIComponent(standard)}`),
+    saveEpdMetadata: (sysId, metadata) =>
+      api.post(`/api/systems/${sysId}/epd-metadata`, metadata),
+    getOpenEpdExportUrl: (sysId) => {
+      const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token") || "";
+      return `/api/systems/${sysId}/export/openepd${token ? `?token=${encodeURIComponent(token)}` : ""}`;
     },
     getGhgEmissionSources: () => api.get("/api/ghg/sources")
   };
@@ -856,6 +888,7 @@
   function updateProjectSelectOptions() {
     const selects = [
       document.getElementById("wizSystemProject"),
+      document.getElementById("wizEpdProject"),
       document.getElementById("selectAssignProject")
     ];
     selects.forEach(sel => {
@@ -1833,6 +1866,7 @@
         <div class="node-header-row" style="display: flex; justify-content: space-between; align-items: center;">
           <div style="display: flex; align-items: center; gap: 4px;">
             <span class="mono" style="font-size: 8.5px; font-weight: 700; color: var(--accent-emerald); background: rgba(5, 150, 105, 0.08); padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(5, 150, 105, 0.25);">ID: #${node.process_id || node.id}</span>
+            ${node.epd_module ? `<span class="epd-module-pill mod-${String(node.epd_module).charAt(0).toLowerCase()}" title="Modulo EPD EN 15804 / ISO 21930">${escapeHtml(node.epd_module)}</span>` : ""}
             <span class="badge-pill badge-slate" style="font-size: 8px;">${node.category || "Process"}</span>
           </div>
           <div style="display: flex; align-items: center; gap: 4px;">
@@ -3117,6 +3151,7 @@
     const codeInput = document.getElementById("procEditCode");
     const catInput = document.getElementById("procEditCategory");
     const locInput = document.getElementById("procEditLocation");
+    const epdModInput = document.getElementById("procEditEpdModule");
     const refNameInput = document.getElementById("procEditRefFlowName");
     const refAmountInput = document.getElementById("procEditRefAmount");
     const refUnitInput = document.getElementById("procEditRefUnit");
@@ -3128,6 +3163,7 @@
     if (codeInput) codeInput.value = target.code || target.id || "";
     if (catInput) catInput.value = target.category || target.category_name || "Custom processes & flows";
     if (locInput) locInput.value = target.location || "GLO";
+    if (epdModInput) epdModInput.value = target.epd_module || "";
 
     const ref = target.reference_flow || { name: target.name || "", amount: target.amount || 1.0, unit: target.unit || "kg" };
     if (refNameInput) {
@@ -4037,6 +4073,7 @@
         const codeVal = (document.getElementById("procEditCode")?.value || target.code || target.id || "").trim();
         const catVal = (document.getElementById("procEditCategory")?.value || target.category || "Custom processes & flows").trim();
         const locVal = (document.getElementById("procEditLocation")?.value || target.location || "GLO").trim();
+        const epdModVal = (document.getElementById("procEditEpdModule")?.value || "").trim();
         const refName = (document.getElementById("procEditRefFlowName")?.value || nameVal).trim();
         const refAmt = parseFloat(document.getElementById("procEditRefAmount")?.value || "1.0");
         const refUnit = (document.getElementById("procEditRefUnit")?.value || "kg").trim();
@@ -4046,6 +4083,7 @@
         target.category = catVal;
         target.category_name = catVal;
         target.location = locVal;
+        target.epd_module = epdModVal || undefined;
         target.reference_flow = { name: refName, amount: refAmt, unit: refUnit };
         target.inputs = JSON.parse(JSON.stringify(state.editingInputs || []));
         target.outputs = JSON.parse(JSON.stringify(state.editingOutputs || []));
@@ -8008,11 +8046,29 @@
   }
 
   // =========================================================================
-  // 8. REPORTE DINÁMICO & HILOS COLABORATIVOS (3 ROLES) & EXPORTACIONES
+  // 8. REPORTE DINÁMICO & HILOS COLABORATIVOS (3 ROLES) & EXPORTACIONES & EPD
   // =========================================================================
+  let epdReportListenersBound = false;
+
   async function loadReport() {
+    setupEpdReportListeners();
     const sysId = state.activeSystem ? state.activeSystem.id : 21;
     const isOfficialSys = (sysId === 21 || sysId === 1);
+
+    // Actualizar titulo del documento con el sistema activo
+    const titleEl = document.getElementById("reportMainTitle");
+    if (titleEl && state.activeSystem && state.activeSystem.name) {
+      titleEl.textContent = `${state.activeSystem.name} (${state.activeSystem.code || `SYS-${sysId}`})`;
+    }
+
+    // Si el sistema activo fue creado desde plantilla EPD, abrir automaticamente en modo EPD
+    if (state.activeSystem && state.activeSystem.epd_config && state.activeSystem.epd_config.is_epd_enabled) {
+      state.epdStandard = state.activeSystem.epd_config.default_standard || state.epdStandard || "EN15804_A2";
+      switchReportMode("epd", false);
+    } else {
+      switchReportMode(state.reportViewMode || "lca", false);
+    }
+
     try {
       const res = await api.getComments(sysId);
       state.comments = (res.items || []).filter(c => {
@@ -8024,11 +8080,379 @@
       renderCommentsThread();
       renderReportProcessesTable();
       applyRolePermissions();
+      if (state.reportViewMode === "epd") {
+        await loadEpdReport(state.epdStandard);
+      }
     } catch (err) {
       console.error("Error al cargar reporte:", err);
       state.comments = [];
       applyRolePermissions();
     }
+  }
+
+  function setupEpdReportListeners() {
+    if (epdReportListenersBound) return;
+    epdReportListenersBound = true;
+
+    const btnLca = document.getElementById("btnReportModeLca");
+    const btnEpd = document.getElementById("btnReportModeEpd");
+    if (btnLca) btnLca.addEventListener("click", () => switchReportMode("lca", true));
+    if (btnEpd) btnEpd.addEventListener("click", () => switchReportMode("epd", true));
+
+    const btnStdEn = document.getElementById("btnEpdStdEn15804");
+    const btnStdTraci = document.getElementById("btnEpdStdTraci");
+    if (btnStdEn) btnStdEn.addEventListener("click", () => loadEpdReport("EN15804_A2"));
+    if (btnStdTraci) btnStdTraci.addEventListener("click", () => loadEpdReport("TRACI_2_1"));
+
+    const btnOpenMeta = document.getElementById("btnOpenEpdMetaModal");
+    if (btnOpenMeta) btnOpenMeta.addEventListener("click", openEpdMetadataModal);
+
+    const btnCloseMeta = document.getElementById("btnCloseEpdMetaModal");
+    const btnCancelMeta = document.getElementById("btnCancelEpdMetaModal");
+    const modalMeta = document.getElementById("modalEpdMetadata");
+    const closeMeta = () => {
+      if (modalMeta) {
+        modalMeta.style.display = "none";
+        modalMeta.classList.remove("active");
+      }
+    };
+    if (btnCloseMeta) btnCloseMeta.addEventListener("click", closeMeta);
+    if (btnCancelMeta) btnCancelMeta.addEventListener("click", closeMeta);
+    if (modalMeta) {
+      modalMeta.addEventListener("click", (e) => {
+        if (e.target === modalMeta) closeMeta();
+      });
+    }
+
+    const btnSaveMeta = document.getElementById("btnSaveEpdMetadata");
+    if (btnSaveMeta) btnSaveMeta.addEventListener("click", saveEpdMetadataFromModal);
+
+    const btnOpenEpd = document.getElementById("btnExportOpenEpdJson");
+    if (btnOpenEpd) btnOpenEpd.addEventListener("click", downloadOpenEpdJson);
+
+    const btnPrintEpd = document.getElementById("btnPrintEpdPdf");
+    if (btnPrintEpd) {
+      btnPrintEpd.addEventListener("click", () => {
+        window.print();
+      });
+    }
+  }
+
+  function switchReportMode(mode, shouldFetch = true) {
+    state.reportViewMode = mode === "epd" ? "epd" : "lca";
+    const lcaBox = document.getElementById("reportLcaModeContainer");
+    const epdBox = document.getElementById("epdReportContainer");
+    const btnLca = document.getElementById("btnReportModeLca");
+    const btnEpd = document.getElementById("btnReportModeEpd");
+
+    if (lcaBox) lcaBox.style.display = state.reportViewMode === "lca" ? "block" : "none";
+    if (epdBox) epdBox.style.display = state.reportViewMode === "epd" ? "block" : "none";
+    if (btnLca) {
+      btnLca.classList.toggle("active", state.reportViewMode === "lca");
+      btnLca.setAttribute("aria-selected", String(state.reportViewMode === "lca"));
+    }
+    if (btnEpd) {
+      btnEpd.classList.toggle("active", state.reportViewMode === "epd");
+      btnEpd.setAttribute("aria-selected", String(state.reportViewMode === "epd"));
+    }
+
+    if (state.reportViewMode === "epd" && shouldFetch) {
+      loadEpdReport(state.epdStandard || "EN15804_A2");
+    }
+  }
+
+  async function loadEpdReport(standard = "EN15804_A2") {
+    state.epdStandard = standard;
+    const btnStdEn = document.getElementById("btnEpdStdEn15804");
+    const btnStdTraci = document.getElementById("btnEpdStdTraci");
+    if (btnStdEn) btnStdEn.classList.toggle("active", standard === "EN15804_A2");
+    if (btnStdTraci) btnStdTraci.classList.toggle("active", standard === "TRACI_2_1");
+
+    const sysId = state.activeSystem ? state.activeSystem.id : 21;
+    try {
+      const data = await api.getEpdReport(sysId, standard);
+      state.activeEpdReport = data;
+      renderEpdReportView(data);
+    } catch (err) {
+      console.error("Error al calcular reporte EPD:", err);
+      showNotification("Error al cargar reporte EPD: " + err.message);
+    }
+  }
+
+  function formatEpdNumber(val) {
+    if (val === null || val === undefined || isNaN(Number(val))) return "0.00";
+    const num = Number(val);
+    if (num === 0) return "0.00";
+    if (Math.abs(num) > 0 && Math.abs(num) < 0.0005) {
+      return num.toExponential(2);
+    }
+    if (Math.abs(num) < 1) {
+      return num.toFixed(4);
+    }
+    return num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function renderEpdReportView(data) {
+    if (!data) return;
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+    const cfg = data.epd_config || {};
+    const kpis = data.summary_kpis || {};
+    const mods = data.declared_modules || ["A1", "A2", "A3"];
+
+    // 1. KPIs
+    const elGwpA1A3 = document.getElementById("epdKpiGwpA1A3");
+    const elGwpTotal = document.getElementById("epdKpiGwpTotal");
+    const elModD = document.getElementById("epdKpiModD");
+    const elSm = document.getElementById("epdKpiSm");
+    const elUnitSub = document.getElementById("epdKpiUnitSub");
+    const elBoundSub = document.getElementById("epdKpiBoundarySub");
+
+    const duSym = cfg.declared_unit_symbol || "u";
+    if (elGwpA1A3) elGwpA1A3.textContent = `${formatEpdNumber(kpis.gwp_a1_a3)} kg`;
+    if (elGwpTotal) elGwpTotal.textContent = `${formatEpdNumber(kpis.gwp_total_lifecycle)} kg`;
+    if (elModD) {
+      const md = Number(kpis.gwp_module_d || 0);
+      elModD.textContent = mods.includes("D") ? `${formatEpdNumber(md)} kg` : "MND";
+      elModD.style.color = md < 0 ? "#2563EB" : "#0F172A";
+    }
+    if (elSm) elSm.textContent = `${formatEpdNumber(kpis.secondary_materials_kg)} kg`;
+    if (elUnitSub) elUnitSub.textContent = `kg CO2 eq / 1 ${duSym}`;
+    if (elBoundSub) elBoundSub.textContent = cfg.system_boundary || `${mods.join(", ")}`;
+
+    // Badges
+    const elDeclNum = document.getElementById("epdHeaderDeclNumber");
+    if (elDeclNum) elDeclNum.textContent = cfg.declaration_number || `EPD-SYS-${data.system_id}`;
+    const elCpc = document.getElementById("epdUnCpcBadge");
+    if (elCpc) elCpc.textContent = `UN CPC: ${cfg.un_cpc || "N/A"}`;
+    const elStdBadge = document.getElementById("epdActiveStandardBadge");
+    if (elStdBadge) elStdBadge.textContent = data.standard_label || data.standard;
+
+    // 2. Seccion 1: Metadatos Administrativos
+    const adminGrid = document.getElementById("epdAdminMetaGrid");
+    if (adminGrid) {
+      const metaRows = [
+        [isEn ? "Program Operator" : "Operador de Programa", cfg.program_operator || "Smart EPD (Draft)"],
+        [isEn ? "Declaration Holder" : "Titular / Fabricante", cfg.declaration_holder || "-"],
+        [isEn ? "Product Name" : "Producto Declarado", cfg.product_name || data.system_name],
+        [isEn ? "Plant Location(s)" : "Planta(s) de Manufactura", cfg.plant_location || data.geography],
+        [isEn ? "Applicable PCR" : "PCR Aplicable", cfg.pcr_reference || "ISO 21930 / EN 15804+A2"],
+        [isEn ? "Reference Standards" : "Normas de Referencia", cfg.standards || "ISO 14025, ISO 21930, EN 15804+A2"],
+        [isEn ? "Declared Unit" : "Unidad Declarada", isEn ? (cfg.declared_unit_en || cfg.declared_unit) : (cfg.declared_unit || "1 u")],
+        [isEn ? "Validity Period" : "Emision / Vigencia (5 anos)", `${cfg.issue_date || "-"}  ->  ${cfg.valid_until || "-"}`],
+        [isEn ? "Verification Statement" : "Tipo de Verificacion", cfg.verification_type || "Draft"],
+        [isEn ? "Verifier / RSL" : "Verificador / Vida Util (RSL)", `${cfg.verifier_name || "-"} · RSL: ${cfg.reference_service_life || "N/A"}`]
+      ];
+      adminGrid.innerHTML = metaRows.map(([k, v]) => `
+        <div class="epd-meta-item">
+          <span class="epd-meta-key">${escapeHtml(k)}</span>
+          <span class="epd-meta-val">${escapeHtml(String(v || "-"))}</span>
+        </div>
+      `).join("");
+    }
+
+    // 3. Seccion 2: Especificaciones Tecnicas y Composicion
+    const specsBox = document.getElementById("epdTechnicalSpecsBox");
+    if (specsBox) {
+      const specs = cfg.technical_specs || {};
+      const entries = Object.entries(specs);
+      if (entries.length === 0) {
+        specsBox.innerHTML = `<span class="epd-spec-chip">${isEn ? "Declared boundary:" : "Limite declarado:"} <strong>${escapeHtml(cfg.system_boundary || "A1-A3")}</strong></span>`;
+      } else {
+        specsBox.innerHTML = entries.map(([k, v]) => `
+          <span class="epd-spec-chip">${escapeHtml(k.replace(/_/g, " "))}: <strong>${escapeHtml(String(v))}</strong></span>
+        `).join("");
+      }
+    }
+
+    const compBody = document.getElementById("epdCompositionTableBody");
+    if (compBody) {
+      const comp = cfg.composition || [];
+      if (comp.length === 0) {
+        compBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 14px;">${isEn ? "No composition breakdown defined. Use an EPD template or configure inputs on the canvas." : "Sin tabla de composicion definida. Utiliza una plantilla EPD o configura los insumos en el lienzo."}</td></tr>`;
+      } else {
+        compBody.innerHTML = comp.map(c => `
+          <tr>
+            <td><strong>${escapeHtml(isEn ? (c.material_en || c.material_es) : (c.material_es || c.material_en))}</strong></td>
+            <td class="epd-num-cell">${formatEpdNumber(c.mass_kg)}</td>
+            <td class="epd-num-cell">${formatEpdNumber(c.share_pct)}%</td>
+            <td class="epd-num-cell">${formatEpdNumber(c.post_consumer_pct)}%</td>
+            <td class="epd-num-cell">${formatEpdNumber(c.biogenic_carbon_kg)}</td>
+          </tr>
+        `).join("");
+      }
+    }
+
+    // 4. Seccion 3: Matriz de Modulos Declarados (A1-D)
+    const matrixTbl = document.getElementById("epdBoundaryMatrixTable");
+    if (matrixTbl && Array.isArray(data.boundary_matrix)) {
+      const bm = data.boundary_matrix;
+      matrixTbl.innerHTML = `
+        <thead>
+          <tr class="epd-stage-row">
+            <th colspan="3">${isEn ? "PRODUCT STAGE" : "PRODUCTO"}</th>
+            <th colspan="2">${isEn ? "CONSTRUCTION" : "CONSTRUCCION"}</th>
+            <th colspan="7">${isEn ? "USE STAGE" : "ETAPA DE USO"}</th>
+            <th colspan="4">${isEn ? "END-OF-LIFE" : "FIN DE VIDA"}</th>
+            <th colspan="1">${isEn ? "BEYOND" : "MOD D"}</th>
+          </tr>
+          <tr class="epd-mod-row">
+            ${bm.map(m => `<th title="${escapeHtml(isEn ? m.name_en : m.name_es)}">${m.code}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            ${bm.map(m => `
+              <td class="${m.is_declared ? "epd-mod-cell-x" : "epd-mod-cell-mnd"}" title="${escapeHtml((m.processes || []).join(", ") || (isEn ? "Module Not Declared" : "Modulo No Declarado"))}">
+                ${m.status}
+              </td>
+            `).join("")}
+          </tr>
+        </tbody>
+      `;
+    }
+
+    // 5. Grafico de Contribucion GWP por Modulo
+    const contribBox = document.getElementById("epdGwpContributionChart");
+    if (contribBox && Array.isArray(data.gwp_breakdown)) {
+      const items = data.gwp_breakdown;
+      const maxAbs = Math.max(1, ...items.map(i => Math.abs(Number(i.gwp_kg_co2e || 0))));
+      contribBox.innerHTML = `
+        <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px;">
+          ${isEn ? "GWP Contribution by Declared Module (kg CO2 eq)" : "Contribucion de Huella de Carbono (GWP) por Modulo Declarado (kg CO2 eq)"}
+        </div>
+        ${items.map(item => {
+          const val = Number(item.gwp_kg_co2e || 0);
+          const widthPct = Math.min(100, Math.max(2, (Math.abs(val) / maxAbs) * 100));
+          const isCredit = val < 0;
+          return `
+            <div class="epd-contrib-row">
+              <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                <span class="epd-module-pill mod-${item.module.charAt(0).toLowerCase()}" style="margin-right: 4px;">${item.module}</span>
+                <span style="color: var(--text-secondary);">${escapeHtml(isEn ? item.name_en : item.name_es)}</span>
+              </div>
+              <div class="epd-contrib-track">
+                <div class="epd-contrib-fill ${isCredit ? "is-credit" : ""}" style="width: ${widthPct.toFixed(1)}%;"></div>
+              </div>
+              <div class="mono" style="text-align: right; font-weight: 700; color: ${isCredit ? "#2563EB" : "#0F172A"};">
+                ${formatEpdNumber(val)} <span style="font-weight: 400; color: var(--text-muted);">(${item.share_pct}%)</span>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      `;
+    }
+
+    // 6. Helper generico para renderizar tablas numericas modulares (Impactos, Recursos, Residuos)
+    const renderModularTable = (headId, bodyId, rows) => {
+      const thead = document.getElementById(headId);
+      const tbody = document.getElementById(bodyId);
+      if (!thead || !tbody) return;
+
+      const hasPostGate = mods.some(m => !["A1", "A2", "A3"].includes(m) && m !== "D");
+      thead.innerHTML = `
+        <tr>
+          <th style="min-width: 190px;">${isEn ? "Indicator" : "Indicador"}</th>
+          <th>${isEn ? "Unit" : "Unidad"}</th>
+          ${mods.map(m => `<th style="text-align: right;">${m}</th>`).join("")}
+          <th style="text-align: right; background: rgba(5,150,105,0.08); color: #065F46;">A1-A3</th>
+          ${hasPostGate ? `<th style="text-align: right;">${isEn ? "Total" : "Total"}</th>` : ""}
+        </tr>
+      `;
+
+      tbody.innerHTML = (rows || []).map(r => `
+        <tr>
+          <td>
+            <strong style="color: #0F172A;">${escapeHtml(r.code)}</strong>
+            <div style="font-size: 9.5px; color: var(--text-muted);">${escapeHtml(isEn ? r.name_en : r.name_es)}</div>
+          </td>
+          <td class="mono" style="font-size: 10px; color: var(--text-secondary); white-space: nowrap;">${escapeHtml(r.unit)}</td>
+          ${mods.map(m => `<td class="epd-num-cell">${formatEpdNumber((r.modules || {})[m])}</td>`).join("")}
+          <td class="epd-num-cell epd-total-cell">${formatEpdNumber(r.total_a1_a3)}</td>
+          ${hasPostGate ? `<td class="epd-num-cell" style="font-weight: 700;">${formatEpdNumber(r.total_declared)}</td>` : ""}
+        </tr>
+      `).join("");
+    };
+
+    renderModularTable("epdImpactTableHead", "epdImpactTableBody", data.impact_results);
+    renderModularTable("epdResourceTableHead", "epdResourceTableBody", data.resource_use);
+    renderModularTable("epdWasteTableHead", "epdWasteTableBody", data.waste_and_outputs);
+
+    // 7. Seccion 6: Escenarios y Comparabilidad
+    const scenEl = document.getElementById("epdScenariosNotesText");
+    if (scenEl) scenEl.textContent = cfg.scenarios_notes || "";
+    const compEl = document.getElementById("epdComparabilityText");
+    if (compEl) compEl.textContent = isEn ? (cfg.comparability_statement_en || "") : (cfg.comparability_statement_es || "");
+  }
+
+  function openEpdMetadataModal() {
+    const modal = document.getElementById("modalEpdMetadata");
+    if (!modal) return;
+    const cfg = (state.activeEpdReport && state.activeEpdReport.epd_config) || {};
+
+    const setVal = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.value = v || "";
+    };
+    setVal("epdMetaOperator", cfg.program_operator);
+    setVal("epdMetaDeclNumber", cfg.declaration_number);
+    setVal("epdMetaHolder", cfg.declaration_holder);
+    setVal("epdMetaPlant", cfg.plant_location);
+    setVal("epdMetaPcr", cfg.pcr_reference);
+    setVal("epdMetaDeclaredUnit", cfg.declared_unit);
+    setVal("epdMetaUnCpc", cfg.un_cpc);
+    setVal("epdMetaIssueDate", cfg.issue_date);
+    setVal("epdMetaValidUntil", cfg.valid_until);
+    setVal("epdMetaRsl", cfg.reference_service_life);
+    setVal("epdMetaVerificationType", cfg.verification_type);
+    setVal("epdMetaVerifier", cfg.verifier_name);
+    setVal("epdMetaScenarios", cfg.scenarios_notes);
+
+    modal.style.display = "flex";
+    modal.classList.add("active");
+  }
+
+  async function saveEpdMetadataFromModal() {
+    const sysId = state.activeSystem ? state.activeSystem.id : 21;
+    const getVal = (id) => (document.getElementById(id)?.value || "").trim();
+
+    const payload = {
+      program_operator: getVal("epdMetaOperator"),
+      declaration_number: getVal("epdMetaDeclNumber"),
+      declaration_holder: getVal("epdMetaHolder"),
+      plant_location: getVal("epdMetaPlant"),
+      pcr_reference: getVal("epdMetaPcr"),
+      declared_unit: getVal("epdMetaDeclaredUnit"),
+      un_cpc: getVal("epdMetaUnCpc"),
+      issue_date: getVal("epdMetaIssueDate"),
+      valid_until: getVal("epdMetaValidUntil"),
+      reference_service_life: getVal("epdMetaRsl"),
+      verification_type: getVal("epdMetaVerificationType"),
+      verifier_name: getVal("epdMetaVerifier"),
+      scenarios_notes: getVal("epdMetaScenarios")
+    };
+
+    try {
+      const res = await api.saveEpdMetadata(sysId, payload);
+      if (state.activeSystem && res.epd_config) {
+        state.activeSystem.epd_config = res.epd_config;
+      }
+      const modal = document.getElementById("modalEpdMetadata");
+      if (modal) {
+        modal.style.display = "none";
+        modal.classList.remove("active");
+      }
+      showNotification("Metadatos de la declaracion EPD actualizados correctamente.");
+      await loadEpdReport(state.epdStandard || "EN15804_A2");
+    } catch (err) {
+      alert("Error al guardar metadatos EPD: " + err.message);
+    }
+  }
+
+  function downloadOpenEpdJson() {
+    const sysId = state.activeSystem ? state.activeSystem.id : 21;
+    const url = api.getOpenEpdExportUrl(sysId);
+    window.open(url, "_blank");
+    showNotification("Descargando declaracion digital en formato OpenEPD (.json)...");
   }
 
   function renderReportProcessesTable() {
@@ -8968,11 +9392,120 @@
     const btnClose = document.getElementById("btnCloseWizardModal");
     const btnCancel = document.getElementById("btnCancelWizard");
     const btnSubmit = document.getElementById("btnSubmitWizard");
+    const btnModeBlank = document.getElementById("btnWizModeBlank");
+    const btnModeEpd = document.getElementById("btnWizModeEpd");
+    const formBlank = document.getElementById("formWizard");
+    const panelEpd = document.getElementById("wizardEpdTemplatePanel");
+    const footerHint = document.getElementById("wizFooterHint");
+
+    const renderWizardEpdTemplates = () => {
+      const grid = document.getElementById("wizEpdTemplatesGrid");
+      if (!grid) return;
+      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+      const list = state.epdTemplates || [];
+
+      if (list.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 18px; color: var(--text-muted); font-size: 11px;">Cargando plantillas EPD de Cemento y Concreto...</div>`;
+        return;
+      }
+
+      if (!list.some(t => t.template_id === state.selectedEpdTemplateId)) {
+        state.selectedEpdTemplateId = list[0].template_id;
+      }
+
+      grid.innerHTML = list.map(t => {
+        const isSel = t.template_id === state.selectedEpdTemplateId;
+        const title = isEn ? t.name_en : t.name_es;
+        const desc = isEn ? t.short_desc_en : t.short_desc_es;
+        const subBadge = t.sub_sector === "cement"
+          ? (isEn ? "Cement" : "Cemento")
+          : (isEn ? "Concrete" : "Concreto");
+        return `
+          <div class="epd-template-card ${isSel ? "selected" : ""}" data-epd-tpl="${t.template_id}">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+              <span class="badge-pill ${t.sub_sector === "cement" ? "badge-slate" : "badge-blue"}" style="font-size: 9px;">${subBadge}</span>
+              <span class="mono" style="font-size: 9.5px; font-weight: 700; color: var(--accent-emerald);">${escapeHtml(t.declared_unit_amount + " " + t.declared_unit_symbol)} · ${escapeHtml(t.declared_modules.join(","))}</span>
+            </div>
+            <div style="font-size: 11.5px; font-weight: 700; color: #0F172A; line-height: 1.3;">${escapeHtml(title)}</div>
+            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.4;">${escapeHtml(desc)}</div>
+            <div style="font-size: 9.5px; color: var(--text-secondary); margin-top: auto; padding-top: 4px; border-top: 1px dashed #E2E8F0;">
+              <strong>PCR:</strong> ${escapeHtml(t.pcr_reference)}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      grid.querySelectorAll(".epd-template-card").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedEpdTemplateId = card.getAttribute("data-epd-tpl");
+          renderWizardEpdTemplates();
+          syncSelectedEpdTemplateFields();
+        });
+      });
+
+      syncSelectedEpdTemplateFields();
+    };
+
+    const syncSelectedEpdTemplateFields = () => {
+      const tpl = (state.epdTemplates || []).find(t => t.template_id === state.selectedEpdTemplateId);
+      if (!tpl) return;
+      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+      const nameEl = document.getElementById("wizEpdCustomName");
+      const keyLbl = document.getElementById("wizEpdKeyParamLabel");
+      const keyInp = document.getElementById("wizEpdKeyParamVal");
+      if (nameEl) nameEl.placeholder = isEn ? tpl.name_en : tpl.name_es;
+      if (tpl.key_override) {
+        if (keyLbl) keyLbl.textContent = isEn ? tpl.key_override.label_en : tpl.key_override.label_es;
+        if (keyInp) {
+          keyInp.value = tpl.key_override.default;
+          keyInp.min = tpl.key_override.min;
+          keyInp.max = tpl.key_override.max;
+        }
+      }
+    };
+
+    const ensureEpdTemplatesLoaded = async () => {
+      if (state.epdTemplates && state.epdTemplates.length > 0) {
+        renderWizardEpdTemplates();
+        return;
+      }
+      try {
+        const res = await api.listEpdTemplates("cement_concrete");
+        state.epdTemplates = res.templates || [];
+        state.epdIndustries = res.industries || [];
+        state.epdModulesTaxonomy = res.modules || [];
+        renderWizardEpdTemplates();
+      } catch (err) {
+        console.warn("No se pudieron cargar plantillas EPD:", err);
+      }
+    };
+
+    const setWizardMode = (mode) => {
+      state.epdWizardMode = mode === "epd" ? "epd" : "blank";
+      if (btnModeBlank) btnModeBlank.classList.toggle("active", state.epdWizardMode === "blank");
+      if (btnModeEpd) btnModeEpd.classList.toggle("active", state.epdWizardMode === "epd");
+      if (formBlank) formBlank.style.display = state.epdWizardMode === "blank" ? "block" : "none";
+      if (panelEpd) panelEpd.style.display = state.epdWizardMode === "epd" ? "block" : "none";
+      if (footerHint) {
+        footerHint.textContent = state.epdWizardMode === "epd"
+          ? "● Se generaran nodos A1-D conectados, balance de masa y reporte EPD editable."
+          : "● Se creara en modo borrador y se abrira el lienzo de modelado.";
+      }
+      if (state.epdWizardMode === "epd") {
+        ensureEpdTemplatesLoaded();
+      }
+    };
+
+    if (btnModeBlank) btnModeBlank.addEventListener("click", () => setWizardMode("blank"));
+    if (btnModeEpd) btnModeEpd.addEventListener("click", () => setWizardMode("epd"));
 
     const open = () => {
       if (modal) {
         modal.style.display = "flex";
         modal.classList.add("active");
+        if (state.epdWizardMode === "epd") {
+          ensureEpdTemplatesLoaded();
+        }
       }
     };
     const close = () => {
@@ -8981,6 +9514,9 @@
         modal.classList.remove("active");
       }
     };
+
+    // Exponer refresco para cambio de idioma
+    window._refreshWizardEpdTemplates = renderWizardEpdTemplates;
 
     if (btnOpen1) btnOpen1.addEventListener("click", open);
     if (btnOpen2) btnOpen2.addEventListener("click", open);
@@ -9022,6 +9558,51 @@
       let isSubmittingWizard = false;
       btnSubmit.addEventListener("click", async () => {
         if (isSubmittingWizard) return;
+
+        // MODO PLANTILLA EPD PRELIMINAR (CEMENTO & CONCRETO)
+        if (state.epdWizardMode === "epd") {
+          const tplId = state.selectedEpdTemplateId || "epd_concrete_rmx_4000";
+          const tpl = (state.epdTemplates || []).find(t => t.template_id === tplId);
+          const customName = (document.getElementById("wizEpdCustomName")?.value || "").trim() || (tpl ? tpl.name_es : "Modelo EPD");
+          const plantLoc = (document.getElementById("wizEpdPlantLocation")?.value || "").trim();
+          const keyParamVal = parseFloat(document.getElementById("wizEpdKeyParamVal")?.value || "");
+          const defaultStd = document.getElementById("wizEpdDefaultStd")?.value || "EN15804_A2";
+          const epdProjVal = document.getElementById("wizEpdProject")?.value;
+          const epdProjId = epdProjVal ? parseInt(epdProjVal, 10) : null;
+
+          isSubmittingWizard = true;
+          btnSubmit.disabled = true;
+          const prevText = btnSubmit.textContent;
+          btnSubmit.textContent = "Instanciando modelo EPD...";
+
+          try {
+            const payload = {
+              template_id: tplId,
+              name: customName,
+              plant_location: plantLoc,
+              default_standard: defaultStd,
+              project_id: epdProjId
+            };
+            if (!isNaN(keyParamVal) && tpl && tpl.key_override) {
+              payload[tpl.key_override.param_name] = keyParamVal;
+            }
+            const res = await api.instantiateEpdTemplate(payload);
+            close();
+            showNotification(res.message || `Modelo EPD "${customName}" creado exitosamente.`);
+            await loadDashboard();
+            if (res.system_id) {
+              await openSystem(res.system_id);
+            }
+          } catch (err) {
+            alert("Error al instanciar plantilla EPD: " + err.message);
+          } finally {
+            isSubmittingWizard = false;
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = prevText;
+          }
+          return;
+        }
+
         const name = document.getElementById("wizSystemName")?.value || "";
         let code = document.getElementById("wizSystemCode")?.value || "";
         const category = document.getElementById("wizSystemCategory")?.value || "";
@@ -12236,6 +12817,8 @@
     onGhgSpendSectorChange: () => onGhgSpendSectorChange(),
     onGhgProductSystemSelectChange: () => onGhgProductSystemSelectChange(),
     searchGhgFactorsTab: () => searchGhgFactorsTab(),
+    switchReportMode: (m) => switchReportMode(m, true),
+    loadEpdReport: (std) => loadEpdReport(std),
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();
@@ -12246,6 +12829,12 @@
       renderCanvasStage();
       if (state.canvasViewMode === "table") {
         renderCanvasTableView();
+      }
+      if (state.activeEpdReport && state.reportViewMode === "epd") {
+        renderEpdReportView(state.activeEpdReport);
+      }
+      if (typeof window._refreshWizardEpdTemplates === "function") {
+        window._refreshWizardEpdTemplates();
       }
       updateCanvasHeaderToolbar();
       if (state.selectedNode) {

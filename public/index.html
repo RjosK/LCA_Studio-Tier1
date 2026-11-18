@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=20261012_client_report_v37">
+  <link rel="stylesheet" href="css/styles.css?v=20261117_epd_smartepd_v1">
   <!-- Google Identity Services (GSI SDK) -->
   <script src="https://accounts.google.com/gsi/client" async defer onload="window.initGoogleAuthUI && window.initGoogleAuthUI()"></script>
 </head>
@@ -1518,19 +1518,30 @@
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 14px; flex-wrap: wrap; gap: 12px;">
           <div>
-            <span class="badge-pill badge-emerald"> Auto-Sincronizado con el Modelo Oficial</span>
-            <h1 style="font-size: 20px; font-weight: 700; margin-top: 8px;" id="reportMainTitle">Sistema Producto: Envase PET Circular 500ml</h1>
+            <span class="badge-pill badge-emerald" data-i18n="report.synced_badge">Auto-Sincronizado con el Modelo Oficial</span>
+            <h1 style="font-size: 19px; font-weight: 700; margin-top: 6px;" id="reportMainTitle">Sistema Producto: Envase PET Circular 500ml</h1>
           </div>
 
-          <!-- ACCIONES DEL DOCUMENTO -->
-          <div class="report-web-actions" style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;" role="toolbar" aria-label="Exportación del reporte">
-            <button class="btn btn-primary btn-sm" id="btnExportReportPdf" title="Descargar documento PDF oficial con membrete y sellos" data-i18n="report.export_pdf">
-              PDF Oficial ↓
-            </button>
+          <!-- CONMUTADOR SEGMENTADO APPLE HIG: REPORTE ACV vs REPORTE EPD -->
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <div class="epd-segmented-control" id="reportModeSegmented" role="tablist" aria-label="Modo de reporte">
+              <button type="button" class="epd-seg-btn active" id="btnReportModeLca" data-report-mode="lca" role="tab" aria-selected="true" data-i18n="report.mode_lca">Reporte ACV / NOM-070</button>
+              <button type="button" class="epd-seg-btn" id="btnReportModeEpd" data-report-mode="epd" role="tab" aria-selected="false" data-i18n="report.mode_epd">Declaracion EPD (SmartEPD)</button>
+            </div>
+
+            <!-- ACCIONES DEL DOCUMENTO -->
+            <div class="report-web-actions" style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;" role="toolbar" aria-label="Exportación del reporte">
+              <button class="btn btn-primary btn-sm" id="btnExportReportPdf" title="Descargar documento PDF oficial con membrete y sellos" data-i18n="report.export_pdf">
+                PDF Oficial ↓
+              </button>
+            </div>
           </div>
         </div>
+
+        <!-- CONTENEDOR MODO 1: REPORTE ACV / NOM-070 EDITABLE -->
+        <div id="reportLcaModeContainer">
 
         <!-- BARRA DE EDICIÓN RICA ESTILO NOTION / WORD -->
         <div id="reportFormattingToolbar" style="display: flex; gap: 6px; align-items: center; padding: 6px 12px; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 16px; flex-wrap: wrap;">
@@ -1591,6 +1602,146 @@
             La tasa de merma del proceso de inyección se acreditó en 5% con reciclaje interno en bucle cerrado. Para la etapa de soplado se utilizó un factor de recorte de 0.2%. Las evidencias documentales (facturas CFE y manifiestos de residuo) se encuentran custodiadas en la <strong>Bóveda de Documentos</strong>.
           </p>
         </div>
+        </div><!-- Fin #reportLcaModeContainer -->
+
+        <!-- CONTENEDOR MODO 2: ESTRUCTURADOR DE REPORTE EPD (ISO 14025 / ISO 21930 / EN 15804+A2 / SMARTEPD) -->
+        <div id="epdReportContainer" style="display: none;">
+          <!-- Barra de Herramientas EPD -->
+          <div class="epd-toolbar-bar report-web-actions">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;" data-i18n="epd.standard_label">Estandar LCIA:</span>
+              <div class="epd-segmented-control epd-seg-compact" id="epdStandardSegmented" role="tablist">
+                <button type="button" class="epd-seg-btn active" id="btnEpdStdEn15804" data-epd-std="EN15804_A2">EN 15804+A2 (EF 3.1)</button>
+                <button type="button" class="epd-seg-btn" id="btnEpdStdTraci" data-epd-std="TRACI_2_1">TRACI 2.1 / ISO 21930</button>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnOpenEpdMetaModal" data-i18n="epd.btn_edit_meta">Configurar Metadatos EPD</button>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnExportOpenEpdJson" data-i18n="epd.btn_openepd">Exportar OpenEPD (.json)</button>
+              <button type="button" class="btn btn-emerald btn-sm" id="btnPrintEpdPdf" data-i18n="epd.btn_print_pdf">Imprimir / PDF EPD</button>
+            </div>
+          </div>
+
+          <!-- KPIs Ejecutivos EPD -->
+          <div class="epd-kpi-grid" id="epdKpiGrid">
+            <div class="epd-kpi-card">
+              <div class="epd-kpi-label" data-i18n="epd.kpi_gwp_a1a3">Huella Carbono (A1-A3)</div>
+              <div class="epd-kpi-value mono" id="epdKpiGwpA1A3">--</div>
+              <div class="epd-kpi-sub" id="epdKpiUnitSub">kg CO2 eq / unidad declarada</div>
+            </div>
+            <div class="epd-kpi-card">
+              <div class="epd-kpi-label" data-i18n="epd.kpi_gwp_total">Total Ciclo Declarado</div>
+              <div class="epd-kpi-value mono" id="epdKpiGwpTotal">--</div>
+              <div class="epd-kpi-sub" id="epdKpiBoundarySub">Cradle-to-Gate</div>
+            </div>
+            <div class="epd-kpi-card">
+              <div class="epd-kpi-label" data-i18n="epd.kpi_mod_d">Beneficios Modulo D</div>
+              <div class="epd-kpi-value mono" id="epdKpiModD">--</div>
+              <div class="epd-kpi-sub" data-i18n="epd.kpi_mod_d_sub">Credito fuera de limites</div>
+            </div>
+            <div class="epd-kpi-card">
+              <div class="epd-kpi-label" data-i18n="epd.kpi_scm">Materiales Secundarios (SM)</div>
+              <div class="epd-kpi-value mono" id="epdKpiSm">--</div>
+              <div class="epd-kpi-sub" data-i18n="epd.kpi_scm_sub">SCMs / Contenido reciclado</div>
+            </div>
+          </div>
+
+          <!-- SECCION 1: PORTADA & INFORMACION ADMINISTRATIVA (ESTILO SMARTEPD) -->
+          <section class="epd-doc-section">
+            <div class="epd-section-header">
+              <h3 data-i18n="epd.sec1_title">1. Informacion General y Administrativa de la Declaracion</h3>
+              <span class="badge-pill badge-blue" id="epdHeaderDeclNumber">EPD-ECONODE-2026</span>
+            </div>
+            <div class="epd-meta-grid" id="epdAdminMetaGrid">
+              <!-- Renderizado dinamico por app.js -->
+            </div>
+          </section>
+
+          <!-- SECCION 2: DESCRIPCION DEL PRODUCTO, ESPECIFICACIONES Y COMPOSICION -->
+          <section class="epd-doc-section">
+            <div class="epd-section-header">
+              <h3 data-i18n="epd.sec2_title">2. Descripcion del Producto, Especificaciones Tecnicas y Composicion</h3>
+              <span class="badge-pill badge-slate" id="epdUnCpcBadge">UN CPC: --</span>
+            </div>
+            <div id="epdTechnicalSpecsBox" class="epd-specs-strip"></div>
+            <div class="epd-table-wrap">
+              <table class="data-table epd-dense-table">
+                <thead>
+                  <tr>
+                    <th data-i18n="epd.th_material">Material Constituyente</th>
+                    <th style="text-align: right;" data-i18n="epd.th_mass">Masa (kg)</th>
+                    <th style="text-align: right;" data-i18n="epd.th_share">Proporcion (%)</th>
+                    <th style="text-align: right;" data-i18n="epd.th_secondary">Contenido Secundario (%)</th>
+                    <th style="text-align: right;" data-i18n="epd.th_biogenic">Carbono Biogenico (kg C)</th>
+                  </tr>
+                </thead>
+                <tbody id="epdCompositionTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- SECCION 3: LIMITES DEL SISTEMA Y MATRIZ DE MODULOS DECLARADOS (A1-D) -->
+          <section class="epd-doc-section">
+            <div class="epd-section-header">
+              <h3 data-i18n="epd.sec3_title">3. Limites del Sistema y Modulos de Ciclo de Vida Declarados (EN 15804 / ISO 21930)</h3>
+              <span style="font-size: 10.5px; color: var(--text-muted);" data-i18n="epd.matrix_legend">X = Modulo Declarado · MND = Modulo No Declarado</span>
+            </div>
+            <div class="epd-table-wrap">
+              <table class="epd-boundary-table" id="epdBoundaryMatrixTable">
+                <!-- Renderizado dinamico A1-A5, B1-B7, C1-C4, D -->
+              </table>
+            </div>
+          </section>
+
+          <!-- SECCION 4: RESULTADOS DE IMPACTO AMBIENTAL (LCIA POR MODULO) -->
+          <section class="epd-doc-section">
+            <div class="epd-section-header">
+              <h3 data-i18n="epd.sec4_title">4. Resultados de Evaluacion de Impacto Ambiental (LCIA por Unidad Declarada)</h3>
+              <span class="badge-pill badge-emerald" id="epdActiveStandardBadge">EN 15804+A2</span>
+            </div>
+            <!-- Grafico horizontal de contribucion GWP por modulo -->
+            <div id="epdGwpContributionChart" class="epd-contrib-box"></div>
+            <div class="epd-table-wrap">
+              <table class="data-table epd-dense-table epd-numeric-table" id="epdImpactTable">
+                <thead id="epdImpactTableHead"></thead>
+                <tbody id="epdImpactTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- SECCION 5: USO DE RECURSOS, RESIDUOS Y FLUJOS DE SALIDA -->
+          <section class="epd-doc-section">
+            <div class="epd-section-header">
+              <h3 data-i18n="epd.sec5_title">5. Parametros de Uso de Recursos, Residuos y Flujos de Salida</h3>
+            </div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;" data-i18n="epd.sec5_resources">5.1 Uso de Recursos (EN 15804 / ISO 21930)</div>
+            <div class="epd-table-wrap" style="margin-bottom: 16px;">
+              <table class="data-table epd-dense-table epd-numeric-table">
+                <thead id="epdResourceTableHead"></thead>
+                <tbody id="epdResourceTableBody"></tbody>
+              </table>
+            </div>
+            <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;" data-i18n="epd.sec5_waste">5.2 Categorias de Residuos y Flujos de Salida</div>
+            <div class="epd-table-wrap">
+              <table class="data-table epd-dense-table epd-numeric-table">
+                <thead id="epdWasteTableHead"></thead>
+                <tbody id="epdWasteTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- SECCION 6: ESCENARIOS, COMPARABILIDAD Y REFERENCIAS NORMATIVAS -->
+          <section class="epd-doc-section">
+            <div class="epd-section-header">
+              <h3 data-i18n="epd.sec6_title">6. Escenarios Tecnicos, Comparabilidad y Referencias</h3>
+            </div>
+            <p id="epdScenariosNotesText" style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 10px;"></p>
+            <div class="epd-comparability-box">
+              <div style="font-size: 10.5px; font-weight: 700; color: #0F172A; margin-bottom: 3px;" data-i18n="epd.comparability_heading">Clausula de Comparabilidad (ISO 14025 / ISO 21930 / EN 15804)</div>
+              <div id="epdComparabilityText" style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;"></div>
+            </div>
+          </section>
+        </div><!-- Fin #epdReportContainer -->
 
         <!-- PIE FORMAL CON FIRMAS PARA IMPRESIÓN PDF -->
         <div class="print-official-footer" style="display: none; margin-top: 24pt; border-top: 1px solid #CBD5E1; padding-top: 16pt; page-break-inside: avoid;">
@@ -2288,6 +2439,65 @@
       </div>
 
       <div class="modal-body">
+        <!-- CONMUTADOR APPLE HIG: MODELO EN BLANCO vs PLANTILLA EPD (SMARTEPD) -->
+        <div class="epd-segmented-control" id="wizardModeSegmented" style="width: 100%; margin-bottom: 16px;" role="tablist">
+          <button type="button" class="epd-seg-btn active" id="btnWizModeBlank" data-wiz-mode="blank" style="flex: 1;" data-i18n="wiz.mode_blank">Modelo en Blanco (ACV Libre)</button>
+          <button type="button" class="epd-seg-btn" id="btnWizModeEpd" data-wiz-mode="epd" style="flex: 1;" data-i18n="wiz.mode_epd">Plantilla EPD Preliminar (SmartEPD)</button>
+        </div>
+
+        <!-- PANEL MODO PLANTILLA EPD (CEMENTO & CONCRETO + MULTI-INDUSTRIA) -->
+        <div id="wizardEpdTemplatePanel" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; flex-wrap: wrap;">
+            <div>
+              <div style="font-size: 12px; font-weight: 700; color: var(--text-primary);" data-i18n="wiz.epd_gallery_title">Modelos Preliminares EPD · Industria de Cemento y Concreto</div>
+              <div style="font-size: 10.5px; color: var(--text-muted);" data-i18n="wiz.epd_gallery_sub">Estructurados bajo SmartEPD Part B, ISO 14025, ISO 21930 y EN 15804+A2 con nodos A1-D listos para editar</div>
+            </div>
+            <div style="display: flex; gap: 4px; flex-wrap: wrap;">
+              <span class="badge-pill badge-emerald" style="font-size: 9.5px;">Cemento &amp; Concreto</span>
+              <span class="badge-pill badge-slate" style="font-size: 9.5px; opacity: 0.65;" title="Disponible en Fase 2">Acero (Pronto)</span>
+              <span class="badge-pill badge-slate" style="font-size: 9.5px; opacity: 0.65;" title="Disponible en Fase 2">Asfalto (Pronto)</span>
+              <span class="badge-pill badge-slate" style="font-size: 9.5px; opacity: 0.65;" title="Disponible en Fase 2">Yeso (Pronto)</span>
+            </div>
+          </div>
+
+          <div id="wizEpdTemplatesGrid" class="epd-template-grid">
+            <!-- Tarjetas renderizadas dinamicamente desde /api/epd/templates -->
+          </div>
+
+          <!-- Personalizacion rapida de la plantilla EPD seleccionada -->
+          <div style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 12px; margin-top: 12px;">
+            <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 10px; margin-bottom: 10px;">
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" data-i18n="wiz.epd_custom_name">Nombre del Producto Declarado</label>
+                <input type="text" class="form-input" id="wizEpdCustomName" placeholder="Ej. Concreto Estructural f'c 280 Planta Monterrey">
+              </div>
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" data-i18n="wiz.epd_plant">Planta / Ubicacion de Manufactura</label>
+                <input type="text" class="form-input" id="wizEpdPlantLocation" placeholder="Ej. Planta Monterrey, Nuevo Leon, MX">
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" id="wizEpdKeyParamLabel">Parametro Clave de Mezcla</label>
+                <input type="number" step="0.5" class="form-input mono" id="wizEpdKeyParamVal" value="340">
+              </div>
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" data-i18n="wiz.epd_std_default">Estandar Inicial del Reporte</label>
+                <select class="form-input" id="wizEpdDefaultStd">
+                  <option value="EN15804_A2" selected>EN 15804+A2 (Europa / Global)</option>
+                  <option value="TRACI_2_1">TRACI 2.1 / ISO 21930 (SmartEPD NA)</option>
+                </select>
+              </div>
+              <div class="form-group" style="margin: 0;">
+                <label class="form-label" data-i18n="wiz.project_label">Proyecto Contenedor (Opcional)</label>
+                <select class="form-input" id="wizEpdProject">
+                  <option value="" selected data-i18n="wiz.no_project">-- Ninguno (Sistema Independiente) --</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <form id="formWizard" onsubmit="return false;">
           <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 14px;">
             <div class="form-group">
@@ -2381,11 +2591,96 @@
       </div>
 
       <div class="modal-footer">
-        <span style="font-size: 10.5px; color: var(--text-muted);">● Se creará en modo borrador y se abrirá el lienzo de modelado.</span>
+        <span style="font-size: 10.5px; color: var(--text-muted);" id="wizFooterHint">● Se creará en modo borrador y se abrirá el lienzo de modelado.</span>
         <div style="display: flex; gap: 8px;">
           <button class="btn btn-secondary" id="btnCancelWizard" data-i18n="wiz.cancel">Cancelar</button>
           <button class="btn btn-primary" id="btnSubmitWizard" data-i18n="wiz.submit">Crear y Abrir Lienzo &rarr;</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: CONFIGURACION DE METADATOS ADMINISTRATIVOS EPD (#modalEpdMetadata) -->
+  <div class="modal-overlay" id="modalEpdMetadata" role="dialog" aria-modal="true" style="display: none;">
+    <div class="modal-dialog" style="max-width: 680px; width: 95vw;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 16px; font-weight: 700;" data-i18n="epd.meta_modal_title">Configuracion Administrativa de la EPD</h2>
+          <p style="font-size: 11px; color: var(--text-muted); margin-top: 2px;" data-i18n="epd.meta_modal_sub">Datos del operador de programa (SmartEPD), PCR, titular, planta y verificacion ISO 14025</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseEpdMetaModal">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_operator">Operador de Programa</label>
+            <input type="text" class="form-input" id="epdMetaOperator" placeholder="Smart EPD">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_decl_num">Numero de Declaracion / Registro</label>
+            <input type="text" class="form-input mono" id="epdMetaDeclNumber" placeholder="EPD-ECONODE-2026-001">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_holder">Titular / Fabricante</label>
+            <input type="text" class="form-input" id="epdMetaHolder">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_plant">Ubicacion de Planta(s)</label>
+            <input type="text" class="form-input" id="epdMetaPlant">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" data-i18n="epd.meta_pcr">Regla de Categoria de Producto (PCR Aplicable)</label>
+          <input type="text" class="form-input" id="epdMetaPcr">
+        </div>
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_declared_unit">Unidad Declarada / Funcional</label>
+            <input type="text" class="form-input" id="epdMetaDeclaredUnit">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_cpc">Codigo UN CPC</label>
+            <input type="text" class="form-input mono" id="epdMetaUnCpc" placeholder="37510">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_issue">Fecha de Emision</label>
+            <input type="date" class="form-input mono" id="epdMetaIssueDate">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_valid">Vigencia (5 anos)</label>
+            <input type="date" class="form-input mono" id="epdMetaValidUntil">
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_rsl">Vida Util de Referencia (RSL)</label>
+            <input type="text" class="form-input" id="epdMetaRsl">
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_verif_type">Tipo de Verificacion</label>
+            <select class="form-input" id="epdMetaVerificationType">
+              <option value="Internal Draft (Pre-Verification)">Borrador Interno (Pre-Verificacion)</option>
+              <option value="Independent Third-Party Verification (Pending / Draft)">Verificacion Externa Independiente (En Proceso)</option>
+              <option value="Independent Third-Party Verified (ISO 14025)">Verificada por Tercero Independiente (ISO 14025)</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin: 0;">
+            <label class="form-label" data-i18n="epd.meta_verifier">Verificador / Organismo</label>
+            <input type="text" class="form-input" id="epdMetaVerifier">
+          </div>
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label class="form-label" data-i18n="epd.meta_scenarios">Notas de Escenarios y Supuestos Tecnicos (A2, A4, C1-C4, D)</label>
+          <textarea class="form-input" id="epdMetaScenarios" rows="3" style="height: auto; padding: 8px;"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelEpdMetaModal" data-i18n="wiz.cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSaveEpdMetadata" data-i18n="epd.meta_save">Guardar Metadatos EPD</button>
       </div>
     </div>
   </div>
@@ -2797,7 +3092,7 @@
 
       <div class="modal-body" style="padding: 16px 20px;">
         <!-- Metadatos Básicos -->
-        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1.1fr; gap: 10px; margin-bottom: 14px;">
           <div>
             <label class="form-label" data-i18n="editor.name_label">Nombre del Proceso</label>
             <input type="text" class="form-input" id="procEditName" required>
@@ -2813,6 +3108,29 @@
           <div>
             <label class="form-label" data-i18n="editor.location_label">Ubicación / Geografía</label>
             <input type="text" class="form-input" id="procEditLocation">
+          </div>
+          <div>
+            <label class="form-label" data-i18n="editor.epd_module_label">Modulo EPD (A1-D)</label>
+            <select class="form-input mono" id="procEditEpdModule">
+              <option value="">Auto / General</option>
+              <option value="A1">A1 - Materias Primas</option>
+              <option value="A2">A2 - Transporte Planta</option>
+              <option value="A3">A3 - Manufactura</option>
+              <option value="A4">A4 - Transporte Obra</option>
+              <option value="A5">A5 - Construccion</option>
+              <option value="B1">B1 - Uso / Carbonatacion</option>
+              <option value="B2">B2 - Mantenimiento</option>
+              <option value="B3">B3 - Reparacion</option>
+              <option value="B4">B4 - Reemplazo</option>
+              <option value="B5">B5 - Rehabilitacion</option>
+              <option value="B6">B6 - Energia Operacional</option>
+              <option value="B7">B7 - Agua Operacional</option>
+              <option value="C1">C1 - Demolicion</option>
+              <option value="C2">C2 - Transp. Residuos</option>
+              <option value="C3">C3 - Proc. Residuos</option>
+              <option value="C4">C4 - Disposicion Final</option>
+              <option value="D">D - Beneficios / Credito</option>
+            </select>
           </div>
         </div>
 
