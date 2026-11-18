@@ -704,7 +704,8 @@ const I18N_DICTIONARY = {
     "ver_match.searching": "Buscando...",
     "ver_match.no_results": "Sin resultados",
     "ver_match.uncharacterized_tag": "Informativo (sin caracterizar)",
-    "ver_match.optional_substitute": "Sustituto opcional"
+    "ver_match.optional_substitute": "Sustituto opcional",
+    "common.cancel": "Cancelar"
  },
 
  en: {
@@ -1409,7 +1410,8 @@ const I18N_DICTIONARY = {
     "ver_match.searching": "Searching...",
     "ver_match.no_results": "No results",
     "ver_match.uncharacterized_tag": "Informative (uncharacterized)",
-    "ver_match.optional_substitute": "Optional substitute"
+    "ver_match.optional_substitute": "Optional substitute",
+    "common.cancel": "Cancel"
  }
 };
 

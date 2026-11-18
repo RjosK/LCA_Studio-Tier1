@@ -320,6 +320,55 @@ def search_database_flows(conn: Any, db_id: str, query: str = "", limit: int = 2
         "unit": r["unit_symbol"] or "kg"
     } for r in rows]
 
+def _resolve_process_location(conn: Any, process_id: Any, fallback_loc: Optional[str] = None) -> str:
+    """Resuelve la localizacion geografica canonica del proceso consultando la base de datos."""
+    if not process_id:
+        return (fallback_loc or "GLO").strip()
+
+    clean_id = str(process_id).replace("eco311_", "").replace("cat_", "").replace("proc_lci_", "")
+    is_pg = getattr(settings, "IS_POSTGRES", False)
+
+    if clean_id.isdigit():
+        int_id = int(clean_id)
+        # 1. Probar en lci_processes / processes (ecoinvent 3.12)
+        tbl_312 = "lci_processes" if is_pg else "processes"
+        try:
+            row = conn.execute(f"SELECT location FROM {tbl_312} WHERE id = ? LIMIT 1;", (int_id,)).fetchone()
+            if row and row[0]:
+                return str(row[0]).strip()
+        except Exception:
+            pass
+
+        # 2. Probar en lci_processes_311 (ecoinvent 3.11)
+        if is_pg:
+            try:
+                row = conn.execute("SELECT location FROM lci_processes_311 WHERE id = ? LIMIT 1;", (int_id,)).fetchone()
+                if row and row[0]:
+                    return str(row[0]).strip()
+            except Exception:
+                pass
+        else:
+            try:
+                conn_311 = _get_sqlite_311_connection()
+                try:
+                    r311 = conn_311.execute("SELECT location FROM processes WHERE id = ? LIMIT 1;", (int_id,)).fetchone()
+                    if r311 and r311["location"]:
+                        return str(r311["location"]).strip()
+                finally:
+                    conn_311.close()
+            except Exception:
+                pass
+
+        # 3. Probar en catalog_processes
+        try:
+            row = conn.execute("SELECT location FROM catalog_processes WHERE id = ? LIMIT 1;", (int_id,)).fetchone()
+            if row and row[0]:
+                return str(row[0]).strip()
+        except Exception:
+            pass
+
+    return (fallback_loc or "GLO").strip()
+
 def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Dict[str, Any]:
     """
     Evalua exhaustivamente un sistema producto frente a una base de datos de destino.
@@ -342,6 +391,12 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
 
     nodes = p_obj.get("canvas_nodes", [])
     edges = p_obj.get("canvas_edges", [])
+    palette = p_obj.get("palette_processes", [])
+    palette_locs = {}
+    for p in palette:
+        pid = str(p.get("process_id") or p.get("id", ""))
+        if p.get("location"):
+            palette_locs[pid] = p.get("location").strip()
 
     # Si canvas_nodes esta vacio, obtener nodos relacionales
     if not nodes:
@@ -370,7 +425,10 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
         node_id = n.get("id") or f"node_{n.get('process_id')}"
         src_pid = n.get("process_id")
         src_name = (n.get("name") or "").strip()
-        src_loc = (n.get("location") or "GLO").strip()
+        raw_node_loc = n.get("location")
+        palette_loc = palette_locs.get(str(src_pid)) if src_pid else None
+        candidate_loc = raw_node_loc or palette_loc
+        src_loc = _resolve_process_location(conn, src_pid, fallback_loc=candidate_loc)
 
         # Coincidencia canonica en la base destino
         candidates = search_database_processes(conn, target_db_id, query=src_name, limit=10)

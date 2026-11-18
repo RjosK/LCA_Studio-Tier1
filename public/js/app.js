@@ -11622,7 +11622,15 @@
     modal.classList.add("active");
 
     const activeSys = (state.systems || []).find(s => s.id === sysId) || state.activeSystem || {};
-    const currentDbKey = activeSys.source_db || "ecoinvent_312";
+    let currentDbKey = "ecoinvent_312";
+    const rawDb = (activeSys.source_db || activeSys.db_profile || "").toLowerCase();
+    if (rawDb.includes("3.11") || rawDb.includes("311")) currentDbKey = "ecoinvent_311";
+    else if (rawDb.includes("simapro") || rawDb.includes("sp-")) currentDbKey = "simapro";
+    else if (rawDb.includes("oeko")) currentDbKey = "oekobaudat_de";
+    else if (rawDb.includes("glad")) currentDbKey = "glad_network";
+    else if (rawDb.includes("ademe")) currentDbKey = "ademe_base_carbone";
+    else if (rawDb.includes("custom") || rawDb.includes("propio")) currentDbKey = "user_custom";
+    else currentDbKey = "ecoinvent_312";
 
     const badgeCurrentDb = document.getElementById("verMatchCurrentDb");
     if (badgeCurrentDb) {
