@@ -215,8 +215,9 @@
       };
       return api.post("/api/systems/create", payload);
     },
-    importCsv: (csvStr) => api.post("/api/systems/import-csv", { csv: csvStr }),
-    importSimaProToSystem: (sysId, csvStr) => api.post(`/api/systems/${sysId}/import-simapro`, { csv: csvStr }),
+    importCsv: (csvStr, mode = "full") => api.post("/api/systems/import-csv", { csv: csvStr, mode }),
+    importSimaProToSystem: (sysId, csvStr, mode = "full") => api.post(`/api/systems/${sysId}/import-simapro`, { csv: csvStr, mode }),
+    inspectSimaProCsv: (csvStr) => api.post("/api/systems/inspect-simapro", { csv: csvStr }),
 
     // Catalog LCI
     searchCatalog: (q = "", categoryId = null, limit = 50, source = "all") => {
@@ -10696,11 +10697,16 @@
               console.warn("Respaldo Google Drive omitido:", driveErr);
             }
           }
-          const res = await api.importCsv(fileContent);
-          showNotification(res.message || "Importacion SimaPro completada exitosamente.");
-          await loadDashboard();
-          if (res.systems_created && res.systems_created.length > 0) {
-            await openSystem(res.systems_created[0]);
+          const insp = await api.inspectSimaProCsv(fileContent);
+          if (insp && insp.is_multi_process) {
+            openSimaProModeModal(insp, fileContent, "dashboard");
+          } else {
+            const res = await api.importCsv(fileContent, "full");
+            showNotification(res.message || "Importación SimaPro completada exitosamente.");
+            await loadDashboard();
+            if (res.systems_created && res.systems_created.length > 0) {
+              await openSystem(res.systems_created[0]);
+            }
           }
         } catch (err) {
           alert("Error al importar SimaPro CSV: " + err.message);
@@ -11149,9 +11155,14 @@
               console.warn("Respaldo Google Drive omitido:", driveErr);
             }
           }
-          const res = await api.importSimaProToSystem(sysId, fileContent);
-          showNotification(res.message || "Procesos SimaPro incorporados al lienzo exitosamente.");
-          await openSystem(sysId, false);
+          const insp = await api.inspectSimaProCsv(fileContent);
+          if (insp && insp.is_multi_process) {
+            openSimaProModeModal(insp, fileContent, "canvas", sysId);
+          } else {
+            const res = await api.importSimaProToSystem(sysId, fileContent, "full");
+            showNotification(res.message || "Procesos SimaPro incorporados al lienzo exitosamente.");
+            await openSystem(sysId, false);
+          }
         } catch (err) {
           alert("Error al importar SimaPro a este lienzo: " + err.message);
         } finally {
@@ -12054,6 +12065,124 @@
   }
 
 
+
+  let pendingSimaProImport = null;
+  let selectedSimaProImportMode = "full";
+
+  function openSimaProModeModal(meta, fileContent, target, sysId = null) {
+    pendingSimaProImport = {
+      meta,
+      fileContent,
+      target,
+      sysId
+    };
+    selectedSimaProImportMode = "full";
+
+    const modal = document.getElementById("modalSimaProImportMode");
+    const elProj = document.getElementById("spModeProjectName");
+    const elTotal = document.getElementById("spModeTotalProcsBadge");
+    const elWaste = document.getElementById("spModeWasteBadge");
+    const elRoot = document.getElementById("spModeRootProcName");
+
+    if (elProj) elProj.textContent = meta.project_name || "Modelo SimaPro";
+    if (elTotal) elTotal.textContent = `${meta.total_processes || 0} procesos`;
+    if (elWaste) {
+      if (meta.waste_treatment_count > 0) {
+        elWaste.style.display = "inline-flex";
+        elWaste.textContent = `${meta.waste_treatment_count} tratamientos de residuo`;
+      } else {
+        elWaste.style.display = "none";
+      }
+    }
+    if (elRoot) elRoot.textContent = `${meta.root_process_name || "Proceso Raíz"} (${meta.root_inputs_count || 0} in / ${meta.root_outputs_count || 0} out)`;
+
+    selectSimaProImportMode("full");
+
+    if (modal) {
+      modal.style.display = "flex";
+      modal.classList.add("active");
+      if (window.I18n && typeof window.I18n.applyTranslations === "function") {
+        window.I18n.applyTranslations(modal);
+      }
+    }
+  }
+
+  function closeSimaProModeModal() {
+    const modal = document.getElementById("modalSimaProImportMode");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+    pendingSimaProImport = null;
+  }
+
+  function selectSimaProImportMode(mode) {
+    selectedSimaProImportMode = mode;
+    const cardFull = document.getElementById("spCardModeFull");
+    const cardRoot = document.getElementById("spCardModeRoot");
+    const radioFull = document.getElementById("radioSpModeFull");
+    const radioRoot = document.getElementById("radioSpModeRoot");
+
+    if (mode === "full") {
+      if (cardFull) {
+        cardFull.style.border = "2px solid #2563EB";
+        cardFull.classList.add("active");
+      }
+      if (cardRoot) {
+        cardRoot.style.border = "1px solid #CBD5E1";
+        cardRoot.classList.remove("active");
+      }
+      if (radioFull) radioFull.checked = true;
+      if (radioRoot) radioRoot.checked = false;
+    } else {
+      if (cardFull) {
+        cardFull.style.border = "1px solid #CBD5E1";
+        cardFull.classList.remove("active");
+      }
+      if (cardRoot) {
+        cardRoot.style.border = "2px solid #2563EB";
+        cardRoot.classList.add("active");
+      }
+      if (radioFull) radioFull.checked = false;
+      if (radioRoot) radioRoot.checked = true;
+    }
+  }
+
+  async function confirmSimaProImport() {
+    if (!pendingSimaProImport) return;
+    const btn = document.getElementById("btnConfirmSimaProImport");
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<span class="apple-spinner-micro" style="margin-right: 6px;"></span> Importando...`;
+    }
+
+    const { fileContent, target, sysId } = pendingSimaProImport;
+    const mode = selectedSimaProImportMode;
+
+    try {
+      if (target === "dashboard") {
+        const res = await api.importCsv(fileContent, mode);
+        showNotification(res.message || "Importación SimaPro completada exitosamente.");
+        closeSimaProModeModal();
+        await loadDashboard();
+        if (res.systems_created && res.systems_created.length > 0) {
+          await openSystem(res.systems_created[0]);
+        }
+      } else if (target === "canvas") {
+        const res = await api.importSimaProToSystem(sysId, fileContent, mode);
+        showNotification(res.message || "Procesos SimaPro incorporados al lienzo exitosamente.");
+        closeSimaProModeModal();
+        await openSystem(sysId, false);
+      }
+    } catch (err) {
+      alert("Error al importar SimaPro: " + err.message);
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span data-i18n="sp_mode.btn_import">Importar Modelo</span>`;
+      }
+    }
+  }
 
   function openVaultFromInfo() {
     const targetId = currentInfoSystemId;
@@ -13548,6 +13677,10 @@
     closeModal: (id) => closeModal(id),
     openVersionMatchModal: (id) => openVersionMatchModal(id),
     closeVersionMatchModal: () => closeVersionMatchModal(),
+    openSimaProModeModal: (meta, content, target, sysId) => openSimaProModeModal(meta, content, target, sysId),
+    closeSimaProModeModal: () => closeSimaProModeModal(),
+    selectSimaProImportMode: (mode) => selectSimaProImportMode(mode),
+    confirmSimaProImport: () => confirmSimaProImport(),
     onTargetDatabaseChange: () => onTargetDatabaseChange(),
     onSelectLocationVariation: (nodeId, val) => onSelectLocationVariation(nodeId, val),
     onSearchSubstituteProcess: (nodeId, q) => onSearchSubstituteProcess(nodeId, q),

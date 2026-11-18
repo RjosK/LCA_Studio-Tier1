@@ -923,6 +923,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if not user:
                     return
                 csv_str = body.get("csv", "")
+                mode = body.get("mode", "full")
                 if not csv_str:
                     if os.path.exists(TEMPLATE_CSV_PATH):
                         try:
@@ -933,7 +934,21 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     else:
                         csv_str = DEFAULT_TEMPLATE_CSV
                 try:
-                    res = import_systems_csv_use_case(conn, csv_str, user=user)
+                    res = import_systems_csv_use_case(conn, csv_str, user=user, mode=mode)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Inspeccionar SimaPro CSV (Pre-flight para detección de modelo multi-proceso)
+            elif path == "/api/systems/inspect-simapro":
+                user = self._require_auth(allowed_roles=["analyst", "auditor", "client"])
+                if not user:
+                    return
+                csv_str = body.get("csv", "")
+                try:
+                    from econode_studio.infrastructure.simapro_adapter import inspect_simapro_csv
+                    res = inspect_simapro_csv(csv_str)
                     self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)
@@ -946,8 +961,9 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     return
                 sys_id = int(path.split("/")[3])
                 csv_str = body.get("csv", "")
+                mode = body.get("mode", "full")
                 try:
-                    res = import_simapro_to_system_use_case(conn, sys_id, csv_str, user=user)
+                    res = import_simapro_to_system_use_case(conn, sys_id, csv_str, user=user, mode=mode)
                     self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)

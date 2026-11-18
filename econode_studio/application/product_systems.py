@@ -17,7 +17,9 @@ try:
         create_project, list_projects, get_project_by_id, delete_project, assign_system_to_project,
         get_active_db_connection
     )
-    from infrastructure.simapro_adapter import parse_simapro_csv, simapro_process_to_econode_node
+    from infrastructure.simapro_adapter import (
+        parse_simapro_csv, simapro_process_to_econode_node, build_simapro_graph, inspect_simapro_csv
+    )
 except (ImportError, ValueError):
     from econode_studio.infrastructure.database_adapter import (
         list_product_systems, create_product_system, get_product_system_details, save_system_canvas,
@@ -25,7 +27,9 @@ except (ImportError, ValueError):
         create_project, list_projects, get_project_by_id, delete_project, assign_system_to_project,
         get_active_db_connection
     )
-    from econode_studio.infrastructure.simapro_adapter import parse_simapro_csv, simapro_process_to_econode_node
+    from econode_studio.infrastructure.simapro_adapter import (
+        parse_simapro_csv, simapro_process_to_econode_node, build_simapro_graph, inspect_simapro_csv
+    )
 
 
 def get_dashboard_systems_use_case(
@@ -105,7 +109,8 @@ def create_system_wizard_use_case(
 def import_systems_csv_use_case(
     conn: Optional[sqlite3.Connection] = None,
     csv_content: str = "",
-    user: Optional[Dict[str, Any]] = None
+    user: Optional[Dict[str, Any]] = None,
+    mode: str = "full"
 ) -> Dict[str, Any]:
     """Importa modelos de sistemas producto desde un CSV (plantilla o SimaPro) asignando la propiedad al usuario activo."""
     if not csv_content.strip():
@@ -131,37 +136,32 @@ def import_systems_csv_use_case(
         if not raw_procs:
             raise ValueError("No se encontraron procesos válidos en el archivo SimaPro CSV.")
 
-        nodes = []
-        total_flows = 0
-        for idx, rp in enumerate(raw_procs, start=1):
-            n = simapro_process_to_econode_node(rp, idx=idx)
-            n["x"] = 80 + (idx - 1) * 360
-            n["y"] = 120
-            n["pos_x"] = n["x"]
-            n["pos_y"] = n["y"]
-            total_flows += len(n.get("inputs", [])) + len(n.get("outputs", []))
-            nodes.append(n)
+        nodes, edges = build_simapro_graph(raw_procs, mode=mode, start_idx=1)
+        total_flows = sum(len(n.get("inputs", [])) + len(n.get("outputs", [])) for n in nodes)
 
-        proj_name = header.get("Project") or (nodes[0]["name"] if nodes else "Modelo SimaPro")
+        root_node = nodes[0] if nodes else {}
+        proj_name = header.get("Project") or root_node.get("name") or "Modelo SimaPro"
         sys_name = f"{proj_name} (SimaPro)" if "(SimaPro)" not in proj_name else proj_name
-        sys_code = f"SP-{nodes[0].get('code', os.urandom(3).hex().upper())}"
-        cat = nodes[0].get("category", "Material").capitalize()
-        geo = nodes[0].get("location", "GLO")
+        sys_code = f"SP-{root_node.get('code', os.urandom(3).hex().upper())}"
+        cat = root_node.get("category", "Material").capitalize()
+        geo = root_node.get("location", "GLO")
         
         # Buscar flujo de referencia para cantidad funcional
         ref_amt = 1.0
-        for out in nodes[0].get("outputs", []):
+        for out in root_node.get("outputs", []):
             if out.get("is_reference"):
                 ref_amt = float(out.get("amount", 1.0))
                 break
 
         def _execute_simapro(c: sqlite3.Connection):
+            mode_lbl = "red completa" if mode == "full" else "proceso raíz"
+            desc = f"Importado desde SimaPro CSV ({mode_lbl}: {len(nodes)} proceso(s), {len(edges)} conexiones, {total_flows} flujos LCI)"
             sys_id = create_product_system(
                 c,
                 name=sys_name,
                 code=sys_code,
                 target_amount=ref_amt,
-                description=f"Importado desde SimaPro CSV ({len(nodes)} proceso(s), {total_flows} flujos LCI)",
+                description=desc,
                 owner_id=owner_id,
                 owner_email=owner_email,
                 owner_name=owner_name,
@@ -170,8 +170,8 @@ def import_systems_csv_use_case(
                 category=cat,
                 geography=geo
             )
-            # Guardar lienzo con todos los nodos y flujos
-            save_system_canvas(c, sys_id, nodes, [])
+            # Guardar lienzo con todos los nodos y aristas generadas
+            save_system_canvas(c, sys_id, nodes, edges)
             return sys_id
 
         if conn is None:
@@ -183,14 +183,16 @@ def import_systems_csv_use_case(
         return {
             "status": "success",
             "format": "simapro",
+            "mode": mode,
             "imported_count": 1,
             "systems_imported": 1,
             "system_ids": [created_sys_id],
             "systems_created": [created_sys_id],
             "system_id": created_sys_id,
             "processes_count": len(nodes),
+            "edges_count": len(edges),
             "flows_count": total_flows,
-            "message": f"Se importó el modelo SimaPro '{sys_name}' con {len(nodes)} proceso(s) y {total_flows} flujos de inventario LCI."
+            "message": f"Se importó el modelo SimaPro '{sys_name}' con {len(nodes)} proceso(s), {len(edges)} conexiones automáticas y {total_flows} flujos LCI."
         }
 
     # 2. Plantilla CSV estándar
@@ -256,7 +258,8 @@ def import_simapro_to_system_use_case(
     conn: Optional[sqlite3.Connection] = None,
     system_id: int = 1,
     csv_content: str = "",
-    user: Optional[Dict[str, Any]] = None
+    user: Optional[Dict[str, Any]] = None,
+    mode: str = "full"
 ) -> Dict[str, Any]:
     """Importa uno o varios procesos de SimaPro directamente dentro del lienzo de un sistema existente."""
     if not csv_content.strip():
@@ -272,34 +275,36 @@ def import_simapro_to_system_use_case(
         existing_edges = details.get("edges", []) if details else []
 
         start_idx = len(existing_nodes) + 1
-        new_nodes = []
-        total_new_flows = 0
+        new_nodes, new_edges = build_simapro_graph(raw_procs, mode=mode, start_idx=start_idx)
+        total_new_flows = sum(len(n.get("inputs", [])) + len(n.get("outputs", [])) for n in new_nodes)
 
-        for i, rp in enumerate(raw_procs, start=start_idx):
-            n = simapro_process_to_econode_node(rp, idx=i)
-            n["x"] = 120 + ((i - 1) % 4) * 350
-            n["y"] = 100 + ((i - 1) // 4) * 260
-            n["pos_x"] = n["x"]
-            n["pos_y"] = n["y"]
-            total_new_flows += len(n.get("inputs", [])) + len(n.get("outputs", []))
-            new_nodes.append(n)
+        # Ajustar desplazamiento espacial si ya hay nodos en el lienzo
+        if existing_nodes:
+            max_existing_x = max((n.get("x", 0) for n in existing_nodes), default=0)
+            shift_x = max_existing_x + 350
+            for n in new_nodes:
+                n["x"] += shift_x
+                n["pos_x"] = n["x"]
 
         combined_nodes = list(existing_nodes) + new_nodes
-        save_system_canvas(c, system_id, combined_nodes, existing_edges)
-        return len(new_nodes), total_new_flows
+        combined_edges = list(existing_edges) + new_edges
+        save_system_canvas(c, system_id, combined_nodes, combined_edges)
+        return len(new_nodes), len(new_edges), total_new_flows
 
     if conn is None:
         with get_active_db_connection() as c:
-            proc_count, flow_count = _execute(c)
+            proc_count, edge_count, flow_count = _execute(c)
     else:
-        proc_count, flow_count = _execute(conn)
+        proc_count, edge_count, flow_count = _execute(conn)
 
     return {
         "status": "success",
         "system_id": system_id,
+        "mode": mode,
         "added_processes": proc_count,
+        "added_edges": edge_count,
         "added_flows": flow_count,
-        "message": f"Se agregaron {proc_count} proceso(s) de SimaPro con {flow_count} flujos al lienzo actual."
+        "message": f"Se agregaron {proc_count} proceso(s) y {edge_count} conexiones de SimaPro con {flow_count} flujos al lienzo actual."
     }
 
 

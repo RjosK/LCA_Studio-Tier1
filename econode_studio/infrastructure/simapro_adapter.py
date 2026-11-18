@@ -8,6 +8,7 @@ y preservación de fórmulas paramétricas condicionales (iff).
 import os
 import re
 import datetime
+from collections import defaultdict, deque
 from typing import Dict, List, Any, Tuple, Optional
 
 
@@ -491,3 +492,173 @@ def serialize_econode_to_simapro_csv(
     lines.append("End")
 
     return "\n".join(lines)
+
+
+def inspect_simapro_csv(content: str) -> Dict[str, Any]:
+    """
+    Inspecciona rapidamente un archivo CSV de SimaPro para determinar si contiene
+    un modelo multi-proceso (red completa) o un proceso individual aislado.
+    """
+    header, raw_procs = parse_simapro_csv(content)
+    total_procs = len(raw_procs)
+
+    if total_procs == 0:
+        return {
+            "status": "empty",
+            "is_multi_process": False,
+            "total_processes": 0,
+            "project_name": "",
+            "root_process_name": "",
+            "categories": {},
+            "waste_treatment_count": 0
+        }
+
+    root_raw = raw_procs[0]
+    root_node = simapro_process_to_econode_node(root_raw, idx=1)
+
+    cats: Dict[str, int] = {}
+    waste_count = 0
+    for rp in raw_procs:
+        c = rp.get("meta", {}).get("Category type") or "material"
+        cats[c] = cats.get(c, 0) + 1
+        c_lower = c.lower()
+        if "waste" in c_lower or "residuo" in c_lower or "landfill" in c_lower:
+            waste_count += 1
+
+    proj_name = header.get("Project") or root_node.get("name") or "Modelo SimaPro"
+
+    return {
+        "status": "success",
+        "is_multi_process": total_procs > 1,
+        "total_processes": total_procs,
+        "project_name": proj_name,
+        "root_process_name": root_node.get("name", "Proceso Principal"),
+        "root_inputs_count": len(root_node.get("inputs", [])),
+        "root_outputs_count": len(root_node.get("outputs", [])),
+        "categories": cats,
+        "waste_treatment_count": waste_count,
+        "version": header.get("SimaPro") or header.get("CSV Format version") or "9.0.0"
+    }
+
+
+def build_simapro_graph(
+    raw_procs: List[Dict[str, Any]],
+    mode: str = "full",
+    start_idx: int = 1
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Construye la red de nodos y aristas (edges) a partir de una lista de procesos SimaPro.
+    - Si mode == 'root': Extrae unicamente el proceso raiz como nodo individual con sus intercambios.
+    - Si mode == 'full': Reconstruye todos los procesos como nodos, resuelve conexiones por PlatformId
+      o nombres canonicos, y aplica distribucion topologica por niveles (DAG) en el lienzo.
+    """
+    if not raw_procs:
+        return [], []
+
+    if mode == "root" or len(raw_procs) == 1:
+        root_node = simapro_process_to_econode_node(raw_procs[0], idx=start_idx)
+        root_node["x"] = 450
+        root_node["y"] = 240
+        root_node["pos_x"] = root_node["x"]
+        root_node["pos_y"] = root_node["y"]
+        root_node["is_foreground"] = True
+        return [root_node], []
+
+    # Modo red completa (full)
+    nodes = [simapro_process_to_econode_node(rp, idx=start_idx + i) for i, rp in enumerate(raw_procs)]
+    nodes[0]["is_foreground"] = True
+
+    pid_to_node = {}
+    name_to_node = {}
+    for i, rp in enumerate(raw_procs):
+        pid = (rp.get("meta", {}).get("PlatformId") or "").strip().lower()
+        nid = nodes[i]["id"]
+        if pid:
+            pid_to_node[pid] = nid
+        pname = (nodes[i].get("name") or "").strip().lower()
+        if pname:
+            name_to_node[pname] = nid
+        prods = [e["raw"] for e in rp.get("exchanges", []) if e.get("section") == "Products"]
+        if prods and prods[0]:
+            prod_raw = prods[0][0].strip().lower()
+            name_to_node[prod_raw] = nid
+            if "{" in prod_raw:
+                name_to_node[prod_raw.split("{")[0].strip()] = nid
+
+    edges: List[Dict[str, Any]] = []
+    in_edges = defaultdict(list)
+    out_edges = defaultdict(list)
+    seen = set()
+
+    for i, rp in enumerate(raw_procs):
+        target_nid = nodes[i]["id"]
+        for ex in rp.get("exchanges", []):
+            if ex.get("section") in ["Materials/fuels", "Electricity/heat", "Waste to treatment"]:
+                raw = ex.get("raw", [])
+                src_nid = None
+                for item in raw:
+                    item_l = item.strip().lower()
+                    if item_l in pid_to_node:
+                        src_nid = pid_to_node[item_l]
+                        break
+                if not src_nid and raw:
+                    fl_name = raw[0].strip().lower()
+                    if fl_name in name_to_node:
+                        src_nid = name_to_node[fl_name]
+                    elif "{" in fl_name:
+                        fl_clean = fl_name.split("{")[0].strip()
+                        if fl_clean in name_to_node:
+                            src_nid = name_to_node[fl_clean]
+
+                if src_nid and src_nid != target_nid:
+                    key = (src_nid, target_nid, raw[0] if raw else "")
+                    if key not in seen:
+                        seen.add(key)
+                        amt = float(raw[2]) if len(raw) > 2 and raw[2] else 1.0
+                        unit = raw[1] if len(raw) > 1 and raw[1] else "kg"
+                        edges.append({
+                            "id": f"edge_{src_nid}_{target_nid}_{len(edges)+1}",
+                            "source": src_nid,
+                            "target": target_nid,
+                            "from_node": src_nid,
+                            "to_node": target_nid,
+                            "flow_name": raw[0] if raw else "Intercambio",
+                            "amount": amt,
+                            "unit": unit
+                        })
+                        in_edges[target_nid].append(src_nid)
+                        out_edges[src_nid].append(target_nid)
+
+    # Disposicion espacial automatica (layout jerarquico DAG)
+    root_nid = nodes[0]["id"]
+    depth = {root_nid: 0}
+    queue = deque([root_nid])
+    while queue:
+        curr = queue.popleft()
+        curr_d = depth[curr]
+        for src in in_edges[curr]:
+            if src not in depth or depth[src] < curr_d + 1:
+                depth[src] = curr_d + 1
+                queue.append(src)
+
+    for n in nodes:
+        if n["id"] not in depth:
+            depth[n["id"]] = 1
+
+    max_depth = max(depth.values()) if depth else 0
+    tier_nodes = defaultdict(list)
+    for n in nodes:
+        tier_nodes[depth[n["id"]]].append(n)
+
+    sub_col_capacity = 8
+    for d, t_nodes in tier_nodes.items():
+        base_x = 100 + (max_depth - d) * 580
+        for idx, node in enumerate(t_nodes):
+            sub_col = idx // sub_col_capacity
+            row_in_sub = idx % sub_col_capacity
+            node["x"] = base_x + sub_col * 260
+            node["y"] = 100 + row_in_sub * 160
+            node["pos_x"] = node["x"]
+            node["pos_y"] = node["y"]
+
+    return nodes, edges
