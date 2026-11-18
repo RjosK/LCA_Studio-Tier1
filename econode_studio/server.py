@@ -523,6 +523,49 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         pass
                     return
 
+                # 1. Catalogo de Bases de Datos Disponibles para Cruce de Versiones
+                elif path == "/api/version/databases":
+                    from econode_studio.infrastructure.version_matcher_adapter import get_available_databases
+                    dbs = get_available_databases(conn)
+                    self._send_json({"status": "success", "databases": dbs})
+                    return
+
+                # 2. Diagnostico de Emparejamiento de Sistema Producto con Base Destino
+                elif path == "/api/version/match-system":
+                    from econode_studio.infrastructure.version_matcher_adapter import match_system_to_database
+                    raw_sys_id = query.get("system_id", [None])[0]
+                    target_ver = query.get("target_version", ["ecoinvent_311"])[0]
+                    if not raw_sys_id:
+                        self._send_error_json("Parametro 'system_id' es requerido", 400)
+                        return
+                    try:
+                        sys_id = int(raw_sys_id)
+                        report = match_system_to_database(conn, sys_id, target_ver)
+                        res_dict = dict(report)
+                        res_dict["status"] = "success"
+                        res_dict["report"] = report
+                        self._send_json(res_dict)
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
+                    return
+
+                # 3. Buscador de Procesos y Flujos en Base Destino (para sustituciones)
+                elif path == "/api/version/search-target":
+                    from econode_studio.infrastructure.version_matcher_adapter import search_database_processes, search_database_flows
+                    target_ver = query.get("target_version", ["ecoinvent_311"])[0]
+                    q = query.get("q", [""])[0]
+                    is_flow = query.get("is_flow", ["0"])[0] in ("1", "true", "True") or query.get("type", ["processes"])[0] == "flows"
+                    lim = int(query.get("limit", [25])[0])
+                    try:
+                        if is_flow:
+                            items = search_database_flows(conn, target_ver, q, limit=lim)
+                        else:
+                            items = search_database_processes(conn, target_ver, q, limit=lim)
+                        self._send_json({"status": "success", "items": items, "count": len(items)})
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
+                    return
+
                 # LCI Catalog Search
                 elif path == "/api/processes":
                     q = query.get("q", [""])[0].strip()
@@ -905,6 +948,38 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 csv_str = body.get("csv", "")
                 try:
                     res = import_simapro_to_system_use_case(conn, sys_id, csv_str, user=user)
+                    self._send_json(res)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # Conversion y Clonacion de Sistema Producto a Nueva Version de Base de Datos
+            elif path == "/api/systems/convert-version":
+                user = self._require_auth(allowed_roles=["analyst"])
+                if not user:
+                    return
+                from econode_studio.infrastructure.version_matcher_adapter import convert_product_system_version
+                sys_id = int(body.get("system_id", 0))
+                target_ver = str(body.get("target_version", "ecoinvent_311"))
+                proc_map = body.get("process_mappings", {})
+                flow_map = body.get("flow_mappings", {})
+                custom_name = body.get("custom_name")
+
+                if not sys_id:
+                    self._send_error_json("Campo 'system_id' es requerido", 400)
+                    return
+
+                try:
+                    res = convert_product_system_version(
+                        conn,
+                        system_id=sys_id,
+                        target_db_id=target_ver,
+                        process_mappings=proc_map,
+                        flow_mappings=flow_map,
+                        custom_name=custom_name,
+                        user_email=user.get("email"),
+                        user_id=user.get("id")
+                    )
                     self._send_json(res)
                 except Exception as e:
                     self._send_error_json(str(e), 400)

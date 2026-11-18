@@ -676,7 +676,35 @@ const I18N_DICTIONARY = {
  "epd.meta_verif_type": "Tipo de Verificacion",
  "epd.meta_verifier": "Verificador / Organismo",
  "epd.meta_scenarios": "Notas de Escenarios y Supuestos Tecnicos (A2, A4, C1-C4, D)",
- "epd.meta_save": "Guardar Metadatos EPD"
+ "epd.meta_save": "Guardar Metadatos EPD",
+
+    // Version Match Modal (Apple HIG)
+    "canvas.version_match_btn": "Cruce Version",
+    "canvas.version_match_title": "Cruce de version y compatibilidad de base de datos",
+    "ver_match.modal_title": "Cruce y Compatibilidad de Base de Datos",
+    "ver_match.select_target_db": "Base de Datos Destino:",
+    "ver_match.total_procs": "Nodos Totales",
+    "ver_match.exact_matches": "Match 100%",
+    "ver_match.loc_diffs": "Variacion Reg.",
+    "ver_match.no_matches": "Sin Coincidencia",
+    "ver_match.proc_table_title": "Mapeo de Nodos del Sistema Producto",
+    "ver_match.col_source_proc": "Proceso Actual",
+    "ver_match.col_status": "Compatibilidad",
+    "ver_match.col_target_proc": "Proceso Destino Asignado",
+    "ver_match.btn_convert_and_switch": "Crear Sistema y Migrar Lienzo",
+    "ver_match.auto_name_label": "Nuevo Sistema Producto:",
+    "ver_match.auto_name_notice": "Generado automaticamente",
+    "ver_match.review_flows": "Ver / Sustituir Flujos",
+    "ver_match.flows_substitute_header": "Flujos con correspondencia opcional:",
+    "ver_match.select_substitute_placeholder": "Buscar proceso sustituto en base destino...",
+    "ver_match.success_toast": "Sistema producto creado y lienzo migrado exitosamente.",
+    "ver_match.flows_notice_text": "Se detectaron flujos elementales no caracterizados en la base destino. Se conservaran como informativos o puedes sustituirlos.",
+    "ver_match.status_summary_ready": "Todos los procesos emparejados. Listo para migrar.",
+    "ver_match.status_summary_pending": "Selecciona procesos de reemplazo para los nodos sin coincidencia.",
+    "ver_match.searching": "Buscando...",
+    "ver_match.no_results": "Sin resultados",
+    "ver_match.uncharacterized_tag": "Informativo (sin caracterizar)",
+    "ver_match.optional_substitute": "Sustituto opcional"
  },
 
  en: {
@@ -1353,7 +1381,35 @@ const I18N_DICTIONARY = {
  "epd.meta_verif_type": "Verification Type",
  "epd.meta_verifier": "Verifier / Certification Body",
  "epd.meta_scenarios": "Technical Scenarios & Assumptions (A2, A4, C1-C4, D)",
- "epd.meta_save": "Save EPD Metadata"
+ "epd.meta_save": "Save EPD Metadata",
+
+    // Version Match Modal (Apple HIG)
+    "canvas.version_match_btn": "Version Cross",
+    "canvas.version_match_title": "Database version match and compatibility",
+    "ver_match.modal_title": "Database Cross-Version Match and Compatibility",
+    "ver_match.select_target_db": "Target Database:",
+    "ver_match.total_procs": "Total Nodes",
+    "ver_match.exact_matches": "100% Match",
+    "ver_match.loc_diffs": "Regional Diff",
+    "ver_match.no_matches": "No Match",
+    "ver_match.proc_table_title": "Product System Nodes Mapping",
+    "ver_match.col_source_proc": "Current Process",
+    "ver_match.col_status": "Compatibility",
+    "ver_match.col_target_proc": "Assigned Target Process",
+    "ver_match.btn_convert_and_switch": "Create System and Switch Canvas",
+    "ver_match.auto_name_label": "New Product System:",
+    "ver_match.auto_name_notice": "Automatically generated",
+    "ver_match.review_flows": "Review / Replace Flows",
+    "ver_match.flows_substitute_header": "Flows with optional substitution:",
+    "ver_match.select_substitute_placeholder": "Search replacement process in target DB...",
+    "ver_match.success_toast": "Product system created and canvas successfully migrated.",
+    "ver_match.flows_notice_text": "Uncharacterized elementary flows detected in target DB. They will be kept as informative or you can substitute them.",
+    "ver_match.status_summary_ready": "All processes mapped. Ready to migrate.",
+    "ver_match.status_summary_pending": "Select replacement processes for unmatched nodes.",
+    "ver_match.searching": "Searching...",
+    "ver_match.no_results": "No results",
+    "ver_match.uncharacterized_tag": "Informative (uncharacterized)",
+    "ver_match.optional_substitute": "Optional substitute"
  }
 };
 

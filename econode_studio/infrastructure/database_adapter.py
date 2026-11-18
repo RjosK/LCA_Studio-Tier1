@@ -1176,6 +1176,7 @@ def search_lci_processes(
     source_info_map = {
         "all": ("Todas las BDs", "all"),
         "ecoinvent_312": ("ecoinvent 3.12", "ecoinvent"),
+        "ecoinvent_311": ("ecoinvent 3.11", "ecoinvent"),
         "glad_network": ("GLAD (UNEP)", "glad"),
         "oekobaudat": ("OEKOBAUDAT", "oekobaudat"),
         "oekobaudat_de": ("OEKOBAUDAT", "oekobaudat"),
@@ -1244,6 +1245,94 @@ def search_lci_processes(
         custom_params.append(limit)
         return [dict(r) for r in conn.execute(custom_sql, custom_params).fetchall()]
 
+    # 2b. ecoinvent 3.11
+    if source_val == "ecoinvent_311":
+        is_pg = getattr(settings, "IS_POSTGRES", False)
+        if is_pg:
+            sql311 = """
+                SELECT p.id, p.code, p.name, p.location, p.reference_amount,
+                       coalesce(p.category_name, 'General') as category_name,
+                       coalesce(p.reference_flow_name, p.name) as reference_flow_name,
+                       coalesce(p.reference_unit, 'kg') as reference_unit,
+                       'ecoinvent_311' as source_code, 'ecoinvent 3.11' as source_label, 'ecoinvent' as source_badge
+                FROM lci_processes_311 p
+                WHERE 1=1
+            """
+            p_params = []
+            if query:
+                terms = _expand_search_terms(query)
+                clauses = []
+                for t in terms:
+                    clauses.append("(p.name ILIKE ? OR p.code ILIKE ?)")
+                    p_params.extend([f"%{t}%", f"%{t}%"])
+                if clauses:
+                    sql311 += f" AND ({' OR '.join(clauses)})"
+            sql311 += " ORDER BY p.name LIMIT ?;"
+            p_params.append(limit)
+            rows = conn.execute(sql311, p_params).fetchall()
+            return [{
+                "id": f"eco311_{r['id']}",
+                "code": r["code"],
+                "name": r["name"],
+                "location": r["location"] or "GLO",
+                "reference_amount": float(r["reference_amount"] or 1.0),
+                "category_name": r["category_name"] or "General",
+                "reference_flow_name": r["reference_flow_name"],
+                "reference_unit": r["reference_unit"] or "kg",
+                "source_code": "ecoinvent_311",
+                "source_label": "ecoinvent 3.11",
+                "source_badge": "ecoinvent"
+            } for r in rows]
+        else:
+            base_dir = getattr(settings, "PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+            p311 = os.path.join(base_dir, "ecoinvent", "ecoinvent_311.db")
+            if not os.path.exists(p311):
+                alt = os.path.join(os.path.dirname(base_dir), "ECONODE_TIER2", "ecoinvent", "ecoinvent_311.db")
+                if os.path.exists(alt):
+                    p311 = alt
+            conn_311 = sqlite3.connect(p311)
+            conn_311.row_factory = sqlite3.Row
+            try:
+                sql311 = """
+                    SELECT p.id, p.code, p.name, coalesce(p.location, 'GLO') as location,
+                           coalesce(p.reference_amount, 1.0) as reference_amount,
+                           coalesce(c.name, 'General') as category_name,
+                           coalesce(f.name, p.name) as reference_flow_name,
+                           coalesce(f.unit_symbol, 'kg') as reference_unit,
+                           'ecoinvent_311' as source_code, 'ecoinvent 3.11' as source_label, 'ecoinvent' as source_badge
+                    FROM processes p
+                    LEFT JOIN categories c ON p.category_id = c.id
+                    LEFT JOIN flows f ON p.reference_flow_id = f.id
+                    WHERE 1=1
+                """
+                p_params = []
+                if query:
+                    terms = _expand_search_terms(query)
+                    clauses = []
+                    for t in terms:
+                        clauses.append("(p.name LIKE ? OR p.code LIKE ?)")
+                        p_params.extend([f"%{t}%", f"%{t}%"])
+                    if clauses:
+                        sql311 += f" AND ({' OR '.join(clauses)})"
+                sql311 += " ORDER BY p.name LIMIT ?;"
+                p_params.append(limit)
+                rows = conn_311.execute(sql311, p_params).fetchall()
+                return [{
+                    "id": f"eco311_{r['id']}",
+                    "code": r["code"],
+                    "name": r["name"],
+                    "location": r["location"] or "GLO",
+                    "reference_amount": float(r["reference_amount"] or 1.0),
+                    "category_name": r["category_name"] or "General",
+                    "reference_flow_name": r["reference_flow_name"],
+                    "reference_unit": r["reference_unit"] or "kg",
+                    "source_code": "ecoinvent_311",
+                    "source_label": "ecoinvent 3.11",
+                    "source_badge": "ecoinvent"
+                } for r in rows]
+            finally:
+                conn_311.close()
+
     # 3. ecoinvent 3.12 (procesos base)
     is_pg = getattr(settings, "IS_POSTGRES", False)
     if is_pg:
@@ -1309,6 +1398,58 @@ def search_lci_processes(
 def get_process_technical_sheet(conn: sqlite3.Connection, process_id: Any) -> Optional[Dict[str, Any]]:
     """Obtiene la ficha técnica con todos sus intercambios tecnosféricos y elementales (soporta ecoinvent y catálogo externo)."""
     str_pid = str(process_id).strip()
+
+    if str_pid.startswith("eco311_"):
+        raw_id_str = str_pid.replace("eco311_", "")
+        if raw_id_str.isdigit():
+            is_pg = getattr(settings, "IS_POSTGRES", False)
+            proc = None
+            if is_pg:
+                proc = conn.execute("SELECT * FROM lci_processes_311 WHERE id = %s;", (int(raw_id_str),)).fetchone()
+            else:
+                base_dir = getattr(settings, "PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+                p311 = os.path.join(base_dir, "ecoinvent", "ecoinvent_311.db")
+                if not os.path.exists(p311):
+                    alt = os.path.join(os.path.dirname(base_dir), "ECONODE_TIER2", "ecoinvent", "ecoinvent_311.db")
+                    if os.path.exists(alt):
+                        p311 = alt
+                conn_311 = sqlite3.connect(p311)
+                conn_311.row_factory = sqlite3.Row
+                try:
+                    proc = conn_311.execute("""
+                        SELECT p.id, p.code, p.name, coalesce(p.location, 'GLO') as location,
+                               coalesce(c.name, 'General') as category_name,
+                               coalesce(f.name, p.name) as reference_flow_name,
+                               coalesce(f.unit_symbol, 'kg') as reference_unit,
+                               coalesce(p.reference_amount, 1.0) as reference_amount,
+                               coalesce(p.description, '') as description
+                        FROM processes p
+                        LEFT JOIN categories c ON p.category_id = c.id
+                        LEFT JOIN flows f ON p.reference_flow_id = f.id
+                        WHERE p.id = ?;
+                    """, (int(raw_id_str),)).fetchone()
+                finally:
+                    conn_311.close()
+
+            if proc:
+                return {
+                    "id": str_pid,
+                    "code": proc["code"],
+                    "name": proc["name"],
+                    "location": proc["location"] or "GLO",
+                    "category_name": proc["category_name"] or "General",
+                    "ref_flow_name": proc["reference_flow_name"] or proc["name"],
+                    "ref_unit": proc["reference_unit"] or "kg",
+                    "reference_amount": float(proc["reference_amount"] or 1.0),
+                    "source_code": "ecoinvent_311",
+                    "provider": "ecoinvent 3.11 (Cutoff Unit)",
+                    "technosphere_inputs": [],
+                    "biosphere_emissions": [],
+                    "waste_outputs": [],
+                    "inputs": [],
+                    "outputs": [],
+                    "description": proc["description"] or ""
+                }
 
     if str_pid.startswith("cat_") or "_" in str_pid:
         raw_id_str = str_pid.split("_")[-1]

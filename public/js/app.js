@@ -191,6 +191,12 @@
     verifyInviteToken: (tok) => api.get("/api/auth/invite/verify?token=" + encodeURIComponent(tok)),
 
     // Systems & Canvas
+    // Version Match and Compatibility
+    getVersionDatabases: () => api.get("/api/version/databases"),
+    matchProductSystemVersion: (sysId, targetVersion) => api.get(`/api/version/match-system?system_id=${encodeURIComponent(sysId)}&target_version=${encodeURIComponent(targetVersion)}`),
+    searchVersionTarget: (targetVersion, q, limit = 20, isFlow = false) => api.get(`/api/version/search-target?target_version=${encodeURIComponent(targetVersion)}&q=${encodeURIComponent(q)}&limit=${limit}&is_flow=${isFlow ? 1 : 0}`),
+    convertProductSystemVersion: (payload) => api.post("/api/systems/convert-version", payload),
+
     getSystems: () => api.get("/api/systems"),
     getSystemCanvas: (sysId) => api.get(`/api/systems/${sysId}/canvas`),
     saveSystemCanvas: (sysId, payload) => api.post(`/api/systems/${sysId}/save`, payload),
@@ -11588,6 +11594,423 @@
     }
   }
 
+  // ==========================================================================
+  // VERSION CROSS-MATCHING AND DATABASE COMPATIBILITY (APPLE HIG ERGONOMICS)
+  // ==========================================================================
+  let currentVersionMatchReport = null;
+  let currentVersionMatchTargetDb = null;
+  let currentVersionMatchSystemId = null;
+  let currentVersionMatchMappings = {};
+  let currentVersionMatchFlowMappings = {};
+  let currentVersionMatchDebounce = null;
+  let currentAvailableDatabases = [];
+
+  async function openVersionMatchModal(systemId) {
+    const sysId = systemId || (state.activeSystem ? state.activeSystem.id : null);
+    if (!sysId) {
+      showNotification(window.I18n.t("ver_match.select_system_first", "Por favor selecciona o abre un sistema producto en el lienzo."));
+      return;
+    }
+    currentVersionMatchSystemId = sysId;
+    currentVersionMatchMappings = {};
+    currentVersionMatchFlowMappings = {};
+    currentVersionMatchReport = null;
+
+    const modal = document.getElementById("modalVersionMatch");
+    if (!modal) return;
+    modal.style.display = "flex";
+    modal.classList.add("active");
+
+    const activeSys = (state.systems || []).find(s => s.id === sysId) || state.activeSystem || {};
+    const currentDbKey = activeSys.source_db || "ecoinvent_312";
+
+    const badgeCurrentDb = document.getElementById("verMatchCurrentDb");
+    if (badgeCurrentDb) {
+      badgeCurrentDb.textContent = currentDbKey === "ecoinvent_312" ? "ecoinvent 3.12" :
+                                   currentDbKey === "ecoinvent_311" ? "ecoinvent 3.11" :
+                                   currentDbKey.replace("_", " ");
+    }
+
+    const selectTarget = document.getElementById("selectTargetDatabase");
+    if (selectTarget) {
+      selectTarget.innerHTML = `<option value="">${window.I18n.t("ver_match.searching", "Cargando bases...")}</option>`;
+      try {
+        const dbRes = await api.getVersionDatabases();
+        if (dbRes && dbRes.databases) {
+          currentAvailableDatabases = dbRes.databases;
+          selectTarget.innerHTML = "";
+          let defaultTarget = "";
+          dbRes.databases.forEach(db => {
+            const opt = document.createElement("option");
+            opt.value = db.id;
+            opt.textContent = `${db.name} (${db.version}) - ${db.process_count.toLocaleString()} procesos`;
+            selectTarget.appendChild(opt);
+            if (!defaultTarget && db.id !== currentDbKey) {
+              defaultTarget = db.id;
+            }
+          });
+          if (defaultTarget) {
+            selectTarget.value = defaultTarget;
+          }
+        }
+      } catch (err) {
+        console.error("Error loading version databases:", err);
+      }
+    }
+
+    await loadVersionMatchDiagnostic();
+  }
+
+  function closeVersionMatchModal() {
+    const modal = document.getElementById("modalVersionMatch");
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+    document.querySelectorAll(".ver-match-results-dropdown").forEach(d => d.style.display = "none");
+  }
+
+  async function onTargetDatabaseChange() {
+    currentVersionMatchMappings = {};
+    currentVersionMatchFlowMappings = {};
+    await loadVersionMatchDiagnostic();
+  }
+
+  async function loadVersionMatchDiagnostic() {
+    const selectTarget = document.getElementById("selectTargetDatabase");
+    const targetDb = selectTarget ? selectTarget.value : "ecoinvent_311";
+    currentVersionMatchTargetDb = targetDb;
+
+    const summaryEl = document.getElementById("verMatchStatusSummary");
+    if (summaryEl) summaryEl.textContent = window.I18n.t("ver_match.searching", "Analizando compatibilidad...");
+
+    const tbody = document.getElementById("verMatchTableBody");
+    if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 11px;">
+        <span class="apple-spinner-micro" style="margin-right: 6px;"></span> Evaluando procesos y flujos en base destino...
+      </td></tr>`;
+    }
+
+    const btnSubmit = document.getElementById("btnSubmitVersionConversion");
+    if (btnSubmit) btnSubmit.disabled = true;
+
+    try {
+      const report = await api.matchProductSystemVersion(currentVersionMatchSystemId, targetDb);
+      currentVersionMatchReport = report;
+
+      const elTotal = document.getElementById("verMatchTotalProcs");
+      const elExact = document.getElementById("verMatchExactMatches");
+      const elLoc = document.getElementById("verMatchLocDiffs");
+      const elNone = document.getElementById("verMatchNoMatches");
+      const elScore = document.getElementById("verMatchCompatScore");
+
+      if (elTotal) elTotal.textContent = report.total_nodes;
+      if (elExact) elExact.textContent = report.exact_matches;
+      if (elLoc) elLoc.textContent = report.location_diffs;
+      if (elNone) elNone.textContent = report.no_matches;
+      if (elScore) {
+        const score = Math.round(report.compatibility_score || 0);
+        elScore.textContent = `${score}%`;
+        elScore.className = `badge-pill mono ${score >= 90 ? "badge-green" : score >= 60 ? "badge-yellow" : "badge-red"}`;
+      }
+
+      const elName = document.getElementById("verMatchAutoNamePreview");
+      const elCode = document.getElementById("verMatchAutoCodePreview");
+      if (elName) elName.textContent = report.auto_generated_name || "--";
+      if (elCode) elCode.textContent = report.auto_generated_code || "--";
+
+      const flowsAlert = document.getElementById("verMatchFlowsAlert");
+      const flowsItems = document.getElementById("verMatchFlowsItems");
+      if (flowsAlert) {
+        if (report.flow_issues && report.flow_issues.length > 0) {
+          flowsAlert.style.display = "block";
+          if (flowsItems) {
+            flowsItems.innerHTML = report.flow_issues.map(f => `
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 10.5px; background: #FFFFFF; padding: 5px 8px; border-radius: 5px; border: 1px solid rgba(146, 64, 14, 0.2);">
+                <div>
+                  <strong style="color: #0F172A;">${escapeHtml(f.flow_name || f.flow_code)}</strong>
+                  <span class="mono" style="color: #64748B; margin-left: 4px;">(${escapeHtml(f.unit || "")})</span>
+                  <div style="font-size: 9.5px; color: #92400E;">${escapeHtml(f.issue || "")}</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span class="badge-pill badge-yellow" style="font-size: 9px;">${window.I18n.t("ver_match.uncharacterized_tag", "Informativo")}</span>
+                  <button type="button" class="btn btn-secondary btn-sm" onclick="window.EconodeApp.promptFlowSubstitution('${escapeHtml(f.flow_code)}', '${escapeHtml(f.flow_name).replace(/'/g, "\\'")}')" style="height: 22px; padding: 0 6px; font-size: 9.5px;">Sustituir</button>
+                </div>
+              </div>
+            `).join("");
+          }
+        } else {
+          flowsAlert.style.display = "none";
+        }
+      }
+
+      renderVersionMatchTable();
+    } catch (err) {
+      console.error("Error evaluating version match:", err);
+      if (tbody) {
+        tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 24px; color: #EF4444; font-size: 11px;">
+          Error al evaluar compatibilidad: ${escapeHtml(err.message)}
+        </td></tr>`;
+      }
+    }
+  }
+
+  function renderVersionMatchTable() {
+    const tbody = document.getElementById("verMatchTableBody");
+    if (!tbody || !currentVersionMatchReport) return;
+
+    const nodes = currentVersionMatchReport.nodes || [];
+    if (nodes.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 11px;">
+        No hay nodos de procesos en este sistema producto.
+      </td></tr>`;
+      return;
+    }
+
+    let rowsHtml = "";
+    nodes.forEach(node => {
+      const nodeId = node.node_id;
+      const status = node.status;
+      const suggested = node.suggested_match;
+
+      if (status === "EXACT_MATCH" && suggested) {
+        currentVersionMatchMappings[nodeId] = suggested.id;
+      } else if (status === "LOCATION_DIFF" && suggested) {
+        if (!currentVersionMatchMappings[nodeId]) {
+          currentVersionMatchMappings[nodeId] = suggested.id;
+        }
+      }
+
+      let statusBadge = "";
+      let targetContent = "";
+
+      if (status === "EXACT_MATCH") {
+        statusBadge = `<span class="ver-match-badge ver-match-badge-exact">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          ${window.I18n.t("ver_match.exact_matches", "Match 100%")}
+        </span>`;
+        targetContent = `<div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+          <div style="min-width: 0;">
+            <div style="font-weight: 600; color: #0F172A; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(suggested.name)}">${escapeHtml(suggested.name)}</div>
+            <div style="font-size: 10px; color: #64748B;">${escapeHtml(suggested.database || "")} · ${escapeHtml(suggested.reference_unit || "")}</div>
+          </div>
+          <span class="badge-pill badge-green mono" style="font-size: 9.5px; padding: 1px 6px;">${escapeHtml(suggested.location || "GLO")}</span>
+        </div>`;
+      } else if (status === "LOCATION_DIFF") {
+        statusBadge = `<span class="ver-match-badge ver-match-badge-loc">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+          ${window.I18n.t("ver_match.loc_diffs", "Variacion Reg.")}
+        </span>`;
+        const altLocations = node.alternative_locations || [];
+        const currentTargetId = currentVersionMatchMappings[nodeId] || (suggested ? suggested.id : "");
+        const optionsHtml = altLocations.map(alt => `
+          <option value="${escapeHtml(alt.id)}" ${alt.id === currentTargetId ? "selected" : ""}>
+            [${escapeHtml(alt.location)}] ${escapeHtml(alt.name || (suggested ? suggested.name : ""))}
+          </option>
+        `).join("");
+
+        targetContent = `<div style="display: flex; flex-direction: column; gap: 4px;">
+          <select class="ver-match-select" onchange="window.EconodeApp.onSelectLocationVariation('${escapeHtml(nodeId)}', this.value)" style="width: 100%;">
+            ${optionsHtml}
+          </select>
+          <div style="font-size: 9.5px; color: #854D0E;">Region original: <strong>${escapeHtml(node.source_location || "GLO")}</strong> no disponible en destino.</div>
+        </div>`;
+      } else {
+        const assignedTarget = currentVersionMatchMappings[nodeId];
+        statusBadge = assignedTarget ? `
+          <span class="ver-match-badge ver-match-badge-exact" id="badgeStatus_${nodeId}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Sustituido
+          </span>` : `
+          <span class="ver-match-badge ver-match-badge-none" id="badgeStatus_${nodeId}">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+            ${window.I18n.t("ver_match.no_matches", "Sin Coincidencia")}
+          </span>`;
+
+        targetContent = `
+          <div class="ver-match-search-box" id="searchBox_${nodeId}">
+            <input type="text" class="ver-match-input" id="substituteInput_${nodeId}" placeholder="${window.I18n.t("ver_match.select_substitute_placeholder", "Buscar proceso sustituto en base destino...")}" oninput="window.EconodeApp.onSearchSubstituteProcess('${escapeHtml(nodeId)}', this.value)" autocomplete="off">
+            <div class="ver-match-results-dropdown" id="dropdown_${nodeId}" style="display: none;"></div>
+          </div>
+        `;
+      }
+
+      rowsHtml += `
+        <tr>
+          <td style="padding: 9px 12px; vertical-align: middle;">
+            <div style="font-weight: 600; color: #0F172A; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${escapeHtml(node.source_node_name)}">
+              ${escapeHtml(node.source_node_name)}
+            </div>
+            <div style="display: flex; align-items: center; gap: 5px; margin-top: 2px;">
+              <span class="badge-pill badge-blue mono" style="font-size: 9px; padding: 1px 5px;">${escapeHtml(node.source_location || "GLO")}</span>
+              <span class="mono" style="font-size: 9.5px; color: #64748B;">${escapeHtml(node.source_process_code || "")}</span>
+            </div>
+          </td>
+          <td style="padding: 9px 12px; text-align: center; vertical-align: middle;">
+            ${statusBadge}
+          </td>
+          <td style="padding: 9px 12px; vertical-align: middle;">
+            ${targetContent}
+          </td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = rowsHtml;
+    checkVersionConversionReadiness();
+  }
+
+  function onSelectLocationVariation(nodeId, targetProcessId) {
+    currentVersionMatchMappings[nodeId] = targetProcessId;
+    checkVersionConversionReadiness();
+  }
+
+  function onSearchSubstituteProcess(nodeId, query) {
+    if (currentVersionMatchDebounce) clearTimeout(currentVersionMatchDebounce);
+    const dropdown = document.getElementById(`dropdown_${nodeId}`);
+    if (!dropdown) return;
+
+    const trimmed = (query || "").trim();
+    if (trimmed.length < 2) {
+      dropdown.style.display = "none";
+      return;
+    }
+
+    currentVersionMatchDebounce = setTimeout(async () => {
+      try {
+        const res = await api.searchVersionTarget(currentVersionMatchTargetDb, trimmed, 15, false);
+        const items = res.items || [];
+        if (items.length === 0) {
+          dropdown.innerHTML = `<div style="padding: 8px 10px; font-size: 10.5px; color: var(--text-muted);">${window.I18n.t("ver_match.no_results", "Sin resultados en la base destino")}</div>`;
+          dropdown.style.display = "block";
+          return;
+        }
+
+        dropdown.innerHTML = items.map(item => `
+          <div class="ver-match-result-item" onclick="window.EconodeApp.onSelectSubstituteProcess('${escapeHtml(nodeId)}', '${escapeHtml(item.id)}', '${escapeHtml(item.name).replace(/'/g, "\\'")}', '${escapeHtml(item.location)}')">
+            <div style="min-width: 0; flex: 1;">
+              <div style="font-weight: 600; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(item.name)}</div>
+              <div style="font-size: 9.5px; color: #64748B;">${escapeHtml(item.database || "")} · ${escapeHtml(item.reference_unit || "")}</div>
+            </div>
+            <span class="badge-pill badge-blue mono" style="font-size: 9px; margin-left: 6px;">${escapeHtml(item.location || "GLO")}</span>
+          </div>
+        `).join("");
+        dropdown.style.display = "block";
+      } catch (err) {
+        console.error("Error searching target database:", err);
+      }
+    }, 250);
+  }
+
+  function onSelectSubstituteProcess(nodeId, targetProcessId, targetName, location) {
+    currentVersionMatchMappings[nodeId] = targetProcessId;
+
+    const input = document.getElementById(`substituteInput_${nodeId}`);
+    if (input) {
+      input.value = `${targetName} [${location}]`;
+    }
+
+    const dropdown = document.getElementById(`dropdown_${nodeId}`);
+    if (dropdown) dropdown.style.display = "none";
+
+    const badge = document.getElementById(`badgeStatus_${nodeId}`);
+    if (badge) {
+      badge.className = "ver-match-badge ver-match-badge-exact";
+      badge.innerHTML = `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> Sustituido`;
+    }
+
+    checkVersionConversionReadiness();
+  }
+
+  function toggleVersionMatchFlowsList() {
+    const container = document.getElementById("verMatchFlowsListContainer");
+    if (!container) return;
+    const isHidden = container.style.display === "none" || !container.style.display;
+    container.style.display = isHidden ? "block" : "none";
+  }
+
+  async function promptFlowSubstitution(flowCode, flowName) {
+    const query = prompt(`Buscar flujo sustituto en ${currentVersionMatchTargetDb} para:\n${flowName} (${flowCode}):`, flowName);
+    if (!query) return;
+    try {
+      const res = await api.searchVersionTarget(currentVersionMatchTargetDb, query, 10, true);
+      const items = res.items || [];
+      if (items.length === 0) {
+        alert("No se encontraron flujos similares en la base destino.");
+        return;
+      }
+      const choice = prompt(`Selecciona el numero de flujo sustituto:\n` + items.map((it, idx) => `${idx + 1}. ${it.name} (${it.reference_unit || it.unit || ""}) [${it.id}]`).join("\n"), "1");
+      const idx = parseInt(choice, 10) - 1;
+      if (!isNaN(idx) && items[idx]) {
+        currentVersionMatchFlowMappings[flowCode] = items[idx].id;
+        showNotification(`Flujo ${flowCode} asignado a ${items[idx].name}`);
+      }
+    } catch (err) {
+      alert("Error al buscar flujos: " + err.message);
+    }
+  }
+
+  function checkVersionConversionReadiness() {
+    const btnSubmit = document.getElementById("btnSubmitVersionConversion");
+    const summaryEl = document.getElementById("verMatchStatusSummary");
+    if (!currentVersionMatchReport) return;
+
+    const nodes = currentVersionMatchReport.nodes || [];
+    const missingNodes = nodes.filter(n => !currentVersionMatchMappings[n.node_id]);
+
+    if (missingNodes.length === 0) {
+      if (btnSubmit) btnSubmit.disabled = false;
+      if (summaryEl) summaryEl.textContent = window.I18n.t("ver_match.status_summary_ready", "Todos los procesos emparejados. Listo para migrar.");
+    } else {
+      if (btnSubmit) btnSubmit.disabled = true;
+      if (summaryEl) summaryEl.textContent = window.I18n.t("ver_match.status_summary_pending", `Faltan ${missingNodes.length} nodos por mapear.`);
+    }
+  }
+
+  async function submitVersionConversion() {
+    const btnSubmit = document.getElementById("btnSubmitVersionConversion");
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = `<span class="apple-spinner-micro" style="margin-right: 6px;"></span> Migrando...`;
+    }
+
+    try {
+      const payload = {
+        system_id: currentVersionMatchSystemId,
+        target_version: currentVersionMatchTargetDb,
+        process_mappings: currentVersionMatchMappings,
+        flow_mappings: currentVersionMatchFlowMappings
+      };
+
+      const res = await api.convertProductSystemVersion(payload);
+      if (res && res.success) {
+        closeVersionMatchModal();
+        showNotification(res.message || window.I18n.t("ver_match.success_toast", "Sistema producto creado y lienzo migrado exitosamente."));
+
+        await loadDashboard();
+
+        if (res.new_system_id) {
+          await openSystem(res.new_system_id, true);
+        }
+      } else {
+        alert(res.error || "No se pudo realizar la conversion de version.");
+        if (btnSubmit) {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span data-i18n="ver_match.btn_convert_and_switch">Crear Sistema y Migrar Lienzo</span>`;
+        }
+      }
+    } catch (err) {
+      console.error("Error during version conversion:", err);
+      alert("Error al migrar version: " + err.message);
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span data-i18n="ver_match.btn_convert_and_switch">Crear Sistema y Migrar Lienzo</span>`;
+      }
+    }
+  }
+
+
+
   function openVaultFromInfo() {
     const targetId = currentInfoSystemId;
     closeSystemInfoModal();
@@ -13079,6 +13502,15 @@
     getNodes: () => state.canvasNodes,
     getEdges: () => state.canvasEdges,
     closeModal: (id) => closeModal(id),
+    openVersionMatchModal: (id) => openVersionMatchModal(id),
+    closeVersionMatchModal: () => closeVersionMatchModal(),
+    onTargetDatabaseChange: () => onTargetDatabaseChange(),
+    onSelectLocationVariation: (nodeId, val) => onSelectLocationVariation(nodeId, val),
+    onSearchSubstituteProcess: (nodeId, q) => onSearchSubstituteProcess(nodeId, q),
+    onSelectSubstituteProcess: (nodeId, tId, name, loc) => onSelectSubstituteProcess(nodeId, tId, name, loc),
+    toggleVersionMatchFlowsList: () => toggleVersionMatchFlowsList(),
+    promptFlowSubstitution: (code, name) => promptFlowSubstitution(code, name),
+    submitVersionConversion: () => submitVersionConversion(),
     openSystemInfoModal: (id) => openSystemInfoModal(id),
     closeSystemInfoModal: () => closeSystemInfoModal(),
     openCanvasFromInfo: () => openCanvasFromInfo(),

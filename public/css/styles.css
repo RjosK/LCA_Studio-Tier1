@@ -6263,3 +6263,116 @@ body.role-client #reportHighlightTooltip {
     -webkit-overflow-scrolling: touch;
   }
 }
+
+/* ==========================================================================
+   DATABASE VERSION MATCH MODAL (APPLE HIG ERGONOMICS)
+   ========================================================================== */
+#modalVersionMatch .modal-dialog {
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.ver-match-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  white-space: nowrap;
+}
+
+.ver-match-badge-exact {
+  background: #DCFCE7;
+  color: #166534;
+  border: 1px solid #BBF7D0;
+}
+
+.ver-match-badge-loc {
+  background: #FEF9C3;
+  color: #854D0E;
+  border: 1px solid #FEF08A;
+}
+
+.ver-match-badge-none {
+  background: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.ver-match-select {
+  font-size: 11px;
+  height: 26px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  background: #FFFFFF;
+  color: #0F172A;
+  max-width: 100%;
+}
+
+.ver-match-search-box {
+  position: relative;
+  width: 100%;
+}
+
+.ver-match-input {
+  width: 100%;
+  font-size: 11px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #0F172A;
+  box-sizing: border-box;
+}
+
+.ver-match-input:focus {
+  outline: none;
+  border-color: #0284C7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+
+.ver-match-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  z-index: 1050;
+  margin-top: 2px;
+}
+
+.ver-match-result-item {
+  padding: 6px 10px;
+  font-size: 10.5px;
+  cursor: pointer;
+  border-bottom: 1px solid #F1F5F9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.1s ease;
+}
+
+.ver-match-result-item:last-child {
+  border-bottom: none;
+}
+
+.ver-match-result-item:hover {
+  background: #F8FAFC;
+  color: #0284C7;
+}
+
+@media (max-width: 1024px) {
+  #modalVersionMatch .modal-dialog {
+    width: 98vw;
+    margin: 10px auto;
+  }
+}
