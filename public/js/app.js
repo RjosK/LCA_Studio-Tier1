@@ -11648,6 +11648,9 @@
           currentAvailableDatabases = dbRes.databases;
           selectTarget.innerHTML = "";
           let defaultTarget = "";
+          if (currentDbKey === "simapro") {
+            defaultTarget = "ecoinvent_311";
+          }
           dbRes.databases.forEach(db => {
             const opt = document.createElement("option");
             opt.value = db.id;

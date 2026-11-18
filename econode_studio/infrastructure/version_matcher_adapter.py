@@ -47,7 +47,35 @@ SIMAPRO_ECOINVENT_ALIASES: Dict[str, str] = {
     "benzene, pentachloro-": "pentachlorobenzene",
     "benzene, hexachloro-": "hexachlorobenzene",
     "phenol, pentachloro-": "pentachlorophenol",
-    "iron (ii)": "iron, ion",
+    "iron (ii)": "iron ion",
+    "iron ii": "iron ion",
+    "iron (iii)": "iron ion",
+    "iron iii": "iron ion",
+    "iron, ion": "iron ion",
+    "iron ion": "iron ion",
+    "copper, ion": "copper ion",
+    "copper (i)": "copper ion",
+    "copper i": "copper ion",
+    "copper (ii)": "copper ion",
+    "copper ii": "copper ion",
+    "lead (ii)": "lead ii",
+    "lead ii": "lead ii",
+    "zinc (ii)": "zinc ii",
+    "zinc ii": "zinc ii",
+    "cadmium (ii)": "cadmium ii",
+    "cadmium ii": "cadmium ii",
+    "barium (ii)": "barium ii",
+    "barium ii": "barium ii",
+    "manganese (ii)": "manganese ii",
+    "manganese ii": "manganese ii",
+    "cobalt (ii)": "cobalt ii",
+    "cobalt ii": "cobalt ii",
+    "nickel (ii)": "nickel ii",
+    "nickel ii": "nickel ii",
+    "chromium (iii)": "chromium iii",
+    "chromium iii": "chromium iii",
+    "chromium (vi)": "chromium vi",
+    "chromium vi": "chromium vi",
     "bod5 (biological oxygen demand), ch": "bod5, biological oxygen demand",
     "cod (chemical oxygen demand), ch": "cod, chemical oxygen demand",
     "transformation, from grassland/pasture/meadow": "transformation, from grassland, natural (non-use)",
@@ -83,10 +111,18 @@ def normalize_flow_name(raw_name: str) -> str:
     if not raw_name:
         return ""
     n = re.sub(r"\s*\[.*?\]", "", raw_name).strip()
+
+    # 1. Verificar alias directo antes de manipular numeracion romana
+    lower_raw = n.lower().strip()
+    if lower_raw in SIMAPRO_ECOINVENT_ALIASES:
+        return SIMAPRO_ECOINVENT_ALIASES[lower_raw]
+
+    # 2. Normalizar numerales romanos: e.g. Cadmium (II) -> Cadmium II
     n = re.sub(r"\(([I|V|X]+)\)", r"\1", n).strip()
     lower_n = n.lower().strip()
     if lower_n in SIMAPRO_ECOINVENT_ALIASES:
         return SIMAPRO_ECOINVENT_ALIASES[lower_n]
+
     if lower_n.startswith("particulates,"):
         return lower_n.replace("particulates,", "particulate matter,")
     if lower_n.endswith(", ch"):

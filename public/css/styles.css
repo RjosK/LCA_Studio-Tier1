@@ -6268,8 +6268,27 @@ body.role-client #reportHighlightTooltip {
    DATABASE VERSION MATCH MODAL (APPLE HIG ERGONOMICS)
    ========================================================================== */
 #modalVersionMatch .modal-dialog {
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 88vh !important;
+  overflow: hidden !important;
   border-radius: 12px;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+#modalVersionMatch .modal-header {
+  flex-shrink: 0 !important;
+}
+
+#modalVersionMatch .modal-body {
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+}
+
+#modalVersionMatch .modal-footer {
+  flex-shrink: 0 !important;
 }
 
 .ver-match-badge {
