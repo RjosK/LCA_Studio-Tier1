@@ -256,7 +256,7 @@ def ensure_product_systems_columns(conn: Any):
         return
     if getattr(settings, "IS_POSTGRES", False):
         try:
-            with conn:
+            try:
                 conn.execute("""
                     CREATE TABLE IF NOT EXISTS projects (
                         id BIGSERIAL PRIMARY KEY,
@@ -271,35 +271,55 @@ def ensure_product_systems_columns(conn: Any):
                         updated_at TIMESTAMPTZ DEFAULT NOW()
                     );
                 """)
-                pg_cols = [
-                    ("project_id", "BIGINT DEFAULT NULL"),
-                    ("owner_id", "TEXT DEFAULT 'analyst_carla'"),
-                    ("owner_email", "VARCHAR(255) DEFAULT 'carla.mendez@econode.io'"),
-                    ("owner_name", "VARCHAR(255) DEFAULT 'Carla Méndez'"),
-                    ("owner_role", "VARCHAR(32) DEFAULT 'analyst'"),
-                    ("owner_org", "VARCHAR(255) DEFAULT 'BioPack Industrial S.A. de C.V.'"),
-                    ("category", "VARCHAR(128) DEFAULT 'Polímeros'"),
-                    ("geography", "VARCHAR(64) DEFAULT '[MX]'"),
-                    ("status", "VARCHAR(64) DEFAULT 'in_audit'"),
-                    ("compliance_rate", "VARCHAR(32) DEFAULT '100.0%'"),
-                    ("collaborators_json", "TEXT DEFAULT '[]'"),
-                    ("parameters_json", "TEXT DEFAULT '{}'"),
-                    ("db_profile", "VARCHAR(128) DEFAULT 'ecoinvent 3.12 (Cutoff Unit)'")
-                ]
-                for col_name, col_def in pg_cols:
-                    try:
-                        conn.execute(f"ALTER TABLE product_systems ADD COLUMN IF NOT EXISTS {col_name} {col_def};")
-                    except Exception:
-                        pass
+                if hasattr(conn, "commit"):
+                    conn.commit()
+            except Exception:
+                if hasattr(conn, "rollback"):
+                    conn.rollback()
+
+            pg_cols = [
+                ("project_id", "BIGINT DEFAULT NULL"),
+                ("owner_id", "TEXT DEFAULT 'analyst_carla'"),
+                ("owner_email", "VARCHAR(255) DEFAULT 'carla.mendez@econode.io'"),
+                ("owner_name", "VARCHAR(255) DEFAULT 'Carla Méndez'"),
+                ("owner_role", "VARCHAR(32) DEFAULT 'analyst'"),
+                ("owner_org", "VARCHAR(255) DEFAULT 'BioPack Industrial S.A. de C.V.'"),
+                ("category", "VARCHAR(128) DEFAULT 'Polímeros'"),
+                ("geography", "VARCHAR(64) DEFAULT '[MX]'"),
+                ("status", "VARCHAR(64) DEFAULT 'in_audit'"),
+                ("compliance_rate", "VARCHAR(32) DEFAULT '100.0%'"),
+                ("collaborators_json", "TEXT DEFAULT '[]'"),
+                ("parameters_json", "TEXT DEFAULT '{}'"),
+                ("db_profile", "VARCHAR(128) DEFAULT 'ecoinvent 3.12 (Cutoff Unit)'"),
+                ("created_at", "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP"),
+                ("updated_at", "TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP")
+            ]
+            for col_name, col_def in pg_cols:
                 try:
-                    conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_project ON product_systems(project_id);")
-                    conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_owner_email ON product_systems(owner_email);")
-                    conn.execute("CREATE INDEX IF NOT EXISTS idx_product_system_nodes_sys ON product_system_nodes(system_id);")
+                    conn.execute(f"ALTER TABLE product_systems ADD COLUMN IF NOT EXISTS {col_name} {col_def};")
+                    if hasattr(conn, "commit"):
+                        conn.commit()
+                except Exception:
+                    if hasattr(conn, "rollback"):
+                        conn.rollback()
+
+            try:
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_project ON product_systems(project_id);")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_product_systems_owner_email ON product_systems(owner_email);")
+                conn.execute("CREATE INDEX IF NOT EXISTS idx_product_system_nodes_sys ON product_system_nodes(system_id);")
+                if hasattr(conn, "commit"):
+                    conn.commit()
+            except Exception:
+                if hasattr(conn, "rollback"):
+                    conn.rollback()
+
+            _PRODUCT_SYSTEMS_COLUMNS_CHECKED = True
+        except Exception:
+            if hasattr(conn, "rollback"):
+                try:
+                    conn.rollback()
                 except Exception:
                     pass
-            _PRODUCT_SYSTEMS_COLUMNS_CHECKED = True
-        except Exception as e:
-            pass
         return
 
     ensure_custom_tables_and_views(conn)
@@ -383,9 +403,6 @@ def list_product_systems(
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
                coalesce(s.parameters_json, '{}') as parameters_json,
-               coalesce(s.created_at, datetime('now')) as created_at,
-               coalesce(s.updated_at, datetime('now')) as updated_at,
-               coalesce(s.db_profile, 'ecoinvent 3.12 (Cutoff Unit)') as db_profile,
                s.project_id,
                pr.name as project_name,
                pr.code as project_code
@@ -404,9 +421,6 @@ def list_product_systems(
                coalesce(s.compliance_rate, '0.0%') as compliance_rate,
                coalesce(s.collaborators_json, '[]') as collaborators_json,
                coalesce(s.parameters_json, '{}') as parameters_json,
-               coalesce(s.created_at, datetime('now')) as created_at,
-               coalesce(s.updated_at, datetime('now')) as updated_at,
-               coalesce(s.db_profile, 'ecoinvent 3.12 (Cutoff Unit)') as db_profile,
                NULL as project_id,
                NULL as project_name,
                NULL as project_code
@@ -430,6 +444,11 @@ def list_product_systems(
             """
             rows = conn.execute(q, (clean_email, clean_uid, clean_email, email_like, email_like)).fetchall()
     except Exception as e:
+        if hasattr(conn, "rollback"):
+            try:
+                conn.rollback()
+            except Exception:
+                pass
         # Fallback a consulta segura
         try:
             if (not clean_email and not clean_uid) or is_local_sqlite or is_admin:
@@ -446,7 +465,15 @@ def list_product_systems(
                 """
                 rows = conn.execute(q, (clean_email, clean_uid, clean_email, email_like, email_like)).fetchall()
         except Exception as e2:
-            rows = []
+            if hasattr(conn, "rollback"):
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            try:
+                rows = conn.execute("SELECT * FROM product_systems ORDER BY id DESC;").fetchall()
+            except Exception:
+                rows = []
 
     # Conteo agrupado en una única consulta para eliminar N+1 roundtrips a la base de datos
     counts_map = {}
@@ -489,18 +516,34 @@ def list_product_systems(
             collabs = []
 
         # Tiempos de creación y actualización con fallback seguro
-        c_at = r["created_at"] if "created_at" in r.keys() and r["created_at"] else "2026-10-10 12:00:00"
-        u_at = r["updated_at"] if "updated_at" in r.keys() and r["updated_at"] else c_at
+        c_at = None
+        u_at = None
+        if "created_at" in r.keys() and r["created_at"]:
+            c_at = str(r["created_at"])
+        if "updated_at" in r.keys() and r["updated_at"]:
+            u_at = str(r["updated_at"])
 
-        # Deducción inteligente de la versión de base de datos
-        db_prof = r["db_profile"] if "db_profile" in r.keys() and r["db_profile"] else "ecoinvent 3.12 (Cutoff Unit)"
+        if not c_at and isinstance(p_obj, dict):
+            c_at = p_obj.get("created_at")
+            u_at = p_obj.get("updated_at")
+
         code_str = str(r["code"] or "")
         name_str = str(r["name"] or "")
+
+        if not c_at:
+            c_at = "2026-11-12 18:30:00" if (source_format == "simapro" or "SP-" in code_str) else "2026-11-16 10:00:00"
+        if not u_at:
+            u_at = c_at
+
+        # Deducción inteligente de la versión de base de datos
+        db_prof = "ecoinvent 3.12 (Cutoff Unit)"
         if source_format == "simapro" or code_str.startswith("SP-") or "simapro" in name_str.lower():
             db_prof = "SimaPro 9.5 (Imported CSV) / ecoinvent 3.12"
         elif epd_cfg:
             pcr_cat = epd_cfg.get("pcr_category", "Concrete & Cement") if isinstance(epd_cfg, dict) else "Concrete & Cement"
             db_prof = f"ecoinvent 3.12 + SmartEPD Part B ({pcr_cat})"
+        elif "db_profile" in r.keys() and r["db_profile"]:
+            db_prof = r["db_profile"]
 
         results.append({
             "id": r["id"],
@@ -633,6 +676,10 @@ def create_product_system(
     except Exception:
         pass
 
+    from datetime import datetime
+    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    init_params = json.dumps({"created_at": now_str, "updated_at": now_str}, ensure_ascii=False)
+
     with conn:
         try:
             cur = conn.execute("""
@@ -641,8 +688,8 @@ def create_product_system(
                     owner_id, owner_email, owner_name, owner_role, owner_org,
                     category, geography, status, compliance_rate, project_id
                 )
-                VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%', ?)
-            """, (name, code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography, project_id))
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%', ?)
+            """, (name, code, target_amount, description, init_params, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography, project_id))
             return cur.lastrowid
         except Exception as err:
             err_str = str(err).lower()
@@ -654,8 +701,8 @@ def create_product_system(
                         owner_id, owner_email, owner_name, owner_role, owner_org,
                         category, geography, status, compliance_rate, project_id
                     )
-                    VALUES (?, ?, ?, ?, '{}', ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%', ?)
-                """, (name, unique_code, target_amount, description, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography, project_id))
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', '0.0%', ?)
+                """, (name, unique_code, target_amount, description, init_params, owner_id, owner_email, owner_name, owner_role, owner_org, category, geography, project_id))
                 return cur.lastrowid
             raise err
 
@@ -996,7 +1043,20 @@ def save_system_canvas(conn: sqlite3.Connection, system_id: int, nodes: List[Dic
         params["canvas_edges"] = edges or []
         if palette is not None:
             params["palette_processes"] = palette
-        conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = datetime('now') WHERE id = ?;", (json.dumps(params, ensure_ascii=False), system_id))
+        from datetime import datetime
+        now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        params["updated_at"] = now_str
+        if "created_at" not in params:
+            params["created_at"] = now_str
+        try:
+            conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (json.dumps(params, ensure_ascii=False), system_id))
+        except Exception:
+            if hasattr(conn, "rollback"):
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params, ensure_ascii=False), system_id))
 
         # 3. Mantener consistencia relacional en product_system_nodes
         conn.execute("DELETE FROM product_system_nodes WHERE system_id = ?", (system_id,))
@@ -1655,9 +1715,23 @@ def save_system_parameter(conn: Any, system_id: int, param_data: Dict[str, Any])
     else:
         current_params.append(normalized_param)
 
+    from datetime import datetime
+    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    params_dict["updated_at"] = now_str
+    if "created_at" not in params_dict:
+        params_dict["created_at"] = now_str
+
     params_dict["parameters"] = current_params
     with conn:
-        conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = datetime('now') WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+        try:
+            conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+        except Exception:
+            if hasattr(conn, "rollback"):
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
 
     return normalized_param
 
@@ -1681,8 +1755,20 @@ def delete_system_parameter(conn: Any, system_id: int, param_id: str) -> bool:
         else:
             return False
 
+    from datetime import datetime
+    now_str = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+    params_dict["updated_at"] = now_str
+
     new_params = [p for p in current_params if str(p.get("id")) != str(param_id)]
     params_dict["parameters"] = new_params
     with conn:
-        conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = datetime('now') WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+        try:
+            conn.execute("UPDATE product_systems SET parameters_json = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
+        except Exception:
+            if hasattr(conn, "rollback"):
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            conn.execute("UPDATE product_systems SET parameters_json = ? WHERE id = ?;", (json.dumps(params_dict, ensure_ascii=False), system_id))
     return True

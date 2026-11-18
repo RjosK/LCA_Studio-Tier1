@@ -10914,9 +10914,6 @@
       btnToggleSticky.addEventListener("click", () => {
         state.showCanvasStickyNotes = !state.showCanvasStickyNotes;
         updateCanvasHeaderToolbar();
-      if (document.getElementById("modalSystemInfo")?.classList.contains("active") && currentInfoSystemId) {
-        openSystemInfoModal(currentInfoSystemId);
-      }
         renderCanvasStage();
         const isEn = window.I18n && window.I18n.getCurrentLanguage && window.I18n.getCurrentLanguage() === "en";
         showNotification(state.showCanvasStickyNotes ? 
@@ -13122,6 +13119,9 @@
       updateCanvasHeaderToolbar();
       if (state.selectedNode) {
         inspectNode(state.selectedNode);
+      }
+      if (document.getElementById("modalSystemInfo")?.classList.contains("active") && currentInfoSystemId) {
+        openSystemInfoModal(currentInfoSystemId);
       }
       updateUserUI();
     }
