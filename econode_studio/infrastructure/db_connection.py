@@ -42,7 +42,10 @@ class PostgresCursorProxy:
         if "?" in cleaned_query:
             cleaned_query = cleaned_query.replace("%", "%%").replace("?", "%s")
         elif "%" in cleaned_query and params:
-            cleaned_query = cleaned_query.replace("%", "%%")
+            if "%s" in cleaned_query:
+                cleaned_query = re.sub(r"%(?!s)", "%%", cleaned_query)
+            else:
+                cleaned_query = cleaned_query.replace("%", "%%")
 
         # 2. Convertir INSERT OR IGNORE a INSERT ... ON CONFLICT DO NOTHING
         if "INSERT OR IGNORE INTO" in cleaned_query.upper():

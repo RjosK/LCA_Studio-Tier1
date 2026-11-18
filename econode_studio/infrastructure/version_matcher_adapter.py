@@ -148,8 +148,8 @@ def search_database_processes(conn: Any, db_id: str, query: str = "", limit: int
             sql = """
                 SELECT id, code, name, location, reference_flow_name, reference_unit, category_name
                 FROM lci_processes_311
-                WHERE (name ILIKE %s OR code ILIKE %s)
-                ORDER BY name LIMIT %s;
+                WHERE (name ILIKE ? OR code ILIKE ?)
+                ORDER BY name LIMIT ?;
             """
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
         else:
@@ -258,8 +258,8 @@ def search_database_processes(conn: Any, db_id: str, query: str = "", limit: int
             sql = """
                 SELECT id, code, name, location, reference_flow_name, reference_unit, category_name
                 FROM lci_processes
-                WHERE (name ILIKE %s OR code ILIKE %s)
-                ORDER BY name LIMIT %s;
+                WHERE (name ILIKE ? OR code ILIKE ?)
+                ORDER BY name LIMIT ?;
             """
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
         else:
@@ -294,7 +294,7 @@ def search_database_flows(conn: Any, db_id: str, query: str = "", limit: int = 2
 
     if db_id == "ecoinvent_311":
         if is_pg:
-            sql = "SELECT id, code, name, flow_type, unit_symbol FROM lci_flows_311 WHERE (name ILIKE %s OR code ILIKE %s) ORDER BY name LIMIT %s;"
+            sql = "SELECT id, code, name, flow_type, unit_symbol FROM lci_flows_311 WHERE (name ILIKE ? OR code ILIKE ?) ORDER BY name LIMIT ?;"
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
         else:
             conn_311 = _get_sqlite_311_connection()
@@ -306,7 +306,7 @@ def search_database_flows(conn: Any, db_id: str, query: str = "", limit: int = 2
     else:
         # Default ecoinvent 3.12 / flows
         if is_pg:
-            sql = "SELECT id, code, name, flow_type, unit_symbol FROM lci_flows WHERE (name ILIKE %s OR code ILIKE %s) ORDER BY name LIMIT %s;"
+            sql = "SELECT id, code, name, flow_type, unit_symbol FROM lci_flows WHERE (name ILIKE ? OR code ILIKE ?) ORDER BY name LIMIT ?;"
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
         else:
             sql = "SELECT id, code, name, flow_type, unit_symbol FROM flows WHERE (name LIKE ? OR code LIKE ?) ORDER BY name LIMIT ?;"
