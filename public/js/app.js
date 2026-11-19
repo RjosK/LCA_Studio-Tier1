@@ -11722,14 +11722,16 @@
 
       const elTotal = document.getElementById("verMatchTotalProcs");
       const elExact = document.getElementById("verMatchExactMatches");
+      const elFore = document.getElementById("verMatchForegroundProcs");
       const elLoc = document.getElementById("verMatchLocDiffs");
       const elNone = document.getElementById("verMatchNoMatches");
       const elScore = document.getElementById("verMatchCompatScore");
 
       if (elTotal) elTotal.textContent = report.total_nodes;
-      if (elExact) elExact.textContent = report.exact_matches;
-      if (elLoc) elLoc.textContent = report.location_diffs;
-      if (elNone) elNone.textContent = report.no_matches;
+      if (elExact) elExact.textContent = report.exact_matches || 0;
+      if (elFore) elFore.textContent = report.foreground_matches || report.foreground_count || 0;
+      if (elLoc) elLoc.textContent = report.location_diffs || 0;
+      if (elNone) elNone.textContent = report.no_matches || 0;
       if (elScore) {
         const score = Math.round(report.compatibility_score || 0);
         elScore.textContent = `${score}%`;

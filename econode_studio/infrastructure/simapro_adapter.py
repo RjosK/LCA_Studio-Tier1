@@ -537,12 +537,13 @@ def inspect_simapro_csv(content: str) -> Dict[str, Any]:
         "root_outputs_count": len(root_node.get("outputs", [])),
         "categories": cats,
         "waste_treatment_count": waste_count,
+        "waste_treatments_count": waste_count,
         "version": header.get("SimaPro") or header.get("CSV Format version") or "9.0.0"
     }
 
 
 def build_simapro_graph(
-    raw_procs: List[Dict[str, Any]],
+    raw_procs: Any,
     mode: str = "full",
     start_idx: int = 1
 ) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -552,6 +553,9 @@ def build_simapro_graph(
     - Si mode == 'full': Reconstruye todos los procesos como nodos, resuelve conexiones por PlatformId
       o nombres canonicos, y aplica distribucion topologica por niveles (DAG) en el lienzo.
     """
+    if isinstance(raw_procs, tuple) and len(raw_procs) == 2 and isinstance(raw_procs[1], list):
+        raw_procs = raw_procs[1]
+
     if not raw_procs:
         return [], []
 

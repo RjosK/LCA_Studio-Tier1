@@ -229,22 +229,44 @@ def _get_target_db_meta(target_id: str) -> Dict[str, Any]:
         "badge": "all"
     }
 
+_SQLITE_311_CONN: Optional[sqlite3.Connection] = None
+
 def _get_sqlite_311_connection() -> sqlite3.Connection:
-    """Retorna conexion a ecoinvent_311.db en entorno SQLite."""
+    """Retorna conexion singleton a ecoinvent_311.db en entorno SQLite."""
+    global _SQLITE_311_CONN
+    if _SQLITE_311_CONN is not None:
+        return _SQLITE_311_CONN
+
     base_dir = getattr(settings, "PROJECT_ROOT", os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
     p311 = os.path.join(base_dir, "ecoinvent", "ecoinvent_311.db")
     if not os.path.exists(p311):
         alt = os.path.join(os.path.dirname(base_dir), "ECONODE_TIER2", "ecoinvent", "ecoinvent_311.db")
         if os.path.exists(alt):
             p311 = alt
-    conn = sqlite3.connect(p311)
+    conn = sqlite3.connect(p311, check_same_thread=False)
     conn.row_factory = sqlite3.Row
-    return conn
+    _SQLITE_311_CONN = conn
+    return _SQLITE_311_CONN
+
+_DB_PROC_CACHE: Dict[Tuple[str, str, int], List[Dict[str, Any]]] = {}
+_DB_FLOW_CACHE: Dict[Tuple[str, str, int], List[Dict[str, Any]]] = {}
+_SIMAPRO_PROCS_CACHE: Optional[List[Dict[str, Any]]] = None
 
 def search_database_processes(conn: Any, db_id: str, query: str = "", limit: int = 25) -> List[Dict[str, Any]]:
-    """Buscador generico de procesos en una base de datos especifica."""
+    """Buscador generico de procesos en una base de datos especifica con cache en memoria."""
+    clean_q = (query or "").strip()
+    cache_key = (str(db_id), clean_q.lower(), limit)
+    if cache_key in _DB_PROC_CACHE:
+        return _DB_PROC_CACHE[cache_key]
+
+    res = _search_database_processes_impl(conn, db_id, clean_q, limit)
+    if len(_DB_PROC_CACHE) > 2500:
+        _DB_PROC_CACHE.clear()
+    _DB_PROC_CACHE[cache_key] = res
+    return res
+
+def _search_database_processes_impl(conn: Any, db_id: str, clean_q: str, limit: int) -> List[Dict[str, Any]]:
     is_pg = getattr(settings, "IS_POSTGRES", False)
-    clean_q = query.strip()
     like_q = f"%{clean_q}%" if clean_q else "%"
 
     if db_id == "ecoinvent_311":
@@ -258,21 +280,19 @@ def search_database_processes(conn: Any, db_id: str, query: str = "", limit: int
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
         else:
             conn_311 = _get_sqlite_311_connection()
-            try:
-                sql = """
-                    SELECT p.id, p.code, p.name, coalesce(p.location, 'GLO') as location,
-                           coalesce(f.name, p.name) as reference_flow_name,
-                           coalesce(f.unit_symbol, 'kg') as reference_unit,
-                           coalesce(c.name, 'General') as category_name
-                    FROM processes p
-                    LEFT JOIN categories c ON p.category_id = c.id
-                    LEFT JOIN flows f ON p.reference_flow_id = f.id
-                    WHERE (p.name LIKE ? OR p.code LIKE ?)
-                    ORDER BY p.name LIMIT ?;
-                """
-                rows = conn_311.execute(sql, (like_q, like_q, limit)).fetchall()
-            finally:
-                conn_311.close()
+            sql = """
+                SELECT p.ID as id, p.REF_ID as code, p.NAME as name, coalesce(l.CODE, 'GLO') as location,
+                       coalesce(f.NAME, p.NAME) as reference_flow_name,
+                       'kg' as reference_unit,
+                       coalesce(c.NAME, 'General') as category_name
+                FROM TBL_PROCESSES p
+                LEFT JOIN TBL_LOCATIONS l ON p.F_LOCATION = l.ID
+                LEFT JOIN TBL_CATEGORIES c ON p.F_CATEGORY = c.ID
+                LEFT JOIN TBL_FLOWS f ON p.F_QUANTITATIVE_REFERENCE = f.ID
+                WHERE (p.NAME LIKE ? OR p.REF_ID LIKE ?)
+                ORDER BY p.NAME LIMIT ?;
+            """
+            rows = conn_311.execute(sql, (like_q, like_q, limit)).fetchall()
         return [{
             "id": f"eco311_{r['id']}",
             "raw_id": r["id"],
@@ -332,29 +352,40 @@ def search_database_processes(conn: Any, db_id: str, query: str = "", limit: int
         } for r in rows]
 
     elif db_id == "simapro":
-        sql = """
-            SELECT p.id, p.code, p.name, p.location,
-                   coalesce(c.name, 'SimaPro Imported') as category_name,
-                   coalesce(f.name, p.name) as reference_flow_name,
-                   coalesce(f.unit_symbol, 'kg') as reference_unit
-            FROM processes p
-            LEFT JOIN categories c ON p.category_id = c.id
-            LEFT JOIN flows f ON p.reference_flow_id = f.id
-            WHERE (p.code LIKE 'SP-%' OR lower(p.name) LIKE '%simapro%')
-              AND (p.name LIKE ? OR p.code LIKE ?)
-            ORDER BY p.name LIMIT ?;
-        """
-        rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
-        return [{
-            "id": r["id"],
-            "raw_id": r["id"],
-            "code": r["code"],
-            "name": r["name"],
-            "location": r["location"] or "GLO",
-            "unit": r["reference_unit"] or "kg",
-            "category": r["category_name"] or "General",
-            "database": _get_target_db_meta(db_id)["name"]
-        } for r in rows]
+        global _SIMAPRO_PROCS_CACHE
+        if "_SIMAPRO_PROCS_CACHE" not in globals() or _SIMAPRO_PROCS_CACHE is None:
+            try:
+                raw_sp = conn.execute("""
+                    SELECT p.id, p.code, p.name, p.location,
+                           coalesce(c.name, 'SimaPro Imported') as category_name,
+                           coalesce(f.name, p.name) as reference_flow_name,
+                           coalesce(f.unit_symbol, 'kg') as reference_unit
+                    FROM processes p
+                    LEFT JOIN categories c ON p.category_id = c.id
+                    LEFT JOIN flows f ON p.reference_flow_id = f.id
+                    WHERE (p.code LIKE 'SP-%' OR lower(p.name) LIKE '%simapro%');
+                """).fetchall()
+                _SIMAPRO_PROCS_CACHE = [{
+                    "id": r["id"],
+                    "raw_id": r["id"],
+                    "code": r["code"] or "",
+                    "name": r["name"] or "",
+                    "location": r["location"] or "GLO",
+                    "unit": r["reference_unit"] or "kg",
+                    "category": r["category_name"] or "General",
+                    "database": _get_target_db_meta(db_id)["name"]
+                } for r in raw_sp]
+            except Exception:
+                _SIMAPRO_PROCS_CACHE = []
+
+        q_lower = clean_q.lower()
+        if not q_lower:
+            return _SIMAPRO_PROCS_CACHE[:limit]
+        matched = [
+            p for p in _SIMAPRO_PROCS_CACHE
+            if q_lower in p["name"].lower() or q_lower in p["code"].lower()
+        ]
+        return matched[:limit]
 
     else:
         # Default: ecoinvent 3.12
@@ -391,9 +422,13 @@ def search_database_processes(conn: Any, db_id: str, query: str = "", limit: int
         } for r in rows]
 
 def search_database_flows(conn: Any, db_id: str, query: str = "", limit: int = 25) -> List[Dict[str, Any]]:
-    """Buscador generico de flujos en una base de datos especifica."""
+    """Buscador generico de flujos en una base de datos especifica con cache en memoria."""
+    clean_q = (query or "").strip()
+    cache_key = (str(db_id), clean_q.lower(), limit)
+    if cache_key in _DB_FLOW_CACHE:
+        return _DB_FLOW_CACHE[cache_key]
+
     is_pg = getattr(settings, "IS_POSTGRES", False)
-    clean_q = query.strip()
     like_q = f"%{clean_q}%" if clean_q else "%"
 
     if db_id == "ecoinvent_311":
@@ -402,11 +437,8 @@ def search_database_flows(conn: Any, db_id: str, query: str = "", limit: int = 2
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
         else:
             conn_311 = _get_sqlite_311_connection()
-            try:
-                sql = "SELECT id, code, name, flow_type, unit_symbol FROM flows WHERE (name LIKE ? OR code LIKE ?) ORDER BY name LIMIT ?;"
-                rows = conn_311.execute(sql, (like_q, like_q, limit)).fetchall()
-            finally:
-                conn_311.close()
+            sql = "SELECT id, code, name, flow_type, unit_symbol FROM flows WHERE (name LIKE ? OR code LIKE ?) ORDER BY name LIMIT ?;"
+            rows = conn_311.execute(sql, (like_q, like_q, limit)).fetchall()
     else:
         # Default ecoinvent 3.12 / flows
         if is_pg:
@@ -416,13 +448,18 @@ def search_database_flows(conn: Any, db_id: str, query: str = "", limit: int = 2
             sql = "SELECT id, code, name, flow_type, unit_symbol FROM flows WHERE (name LIKE ? OR code LIKE ?) ORDER BY name LIMIT ?;"
             rows = conn.execute(sql, (like_q, like_q, limit)).fetchall()
 
-    return [{
+    res = [{
         "id": r["id"],
         "code": r["code"],
         "name": r["name"],
         "flow_type": r["flow_type"] or "PRODUCT_FLOW",
         "unit": r["unit_symbol"] or "kg"
     } for r in rows]
+
+    if len(_DB_FLOW_CACHE) > 2500:
+        _DB_FLOW_CACHE.clear()
+    _DB_FLOW_CACHE[cache_key] = res
+    return res
 
 def _resolve_process_location(conn: Any, process_id: Any, fallback_loc: Optional[str] = None) -> str:
     """Resuelve la localizacion geografica canonica del proceso consultando la base de datos."""
@@ -454,12 +491,14 @@ def _resolve_process_location(conn: Any, process_id: Any, fallback_loc: Optional
         else:
             try:
                 conn_311 = _get_sqlite_311_connection()
-                try:
-                    r311 = conn_311.execute("SELECT location FROM processes WHERE id = ? LIMIT 1;", (int_id,)).fetchone()
-                    if r311 and r311["location"]:
-                        return str(r311["location"]).strip()
-                finally:
-                    conn_311.close()
+                r311 = conn_311.execute("""
+                    SELECT coalesce(l.CODE, 'GLO') as location
+                    FROM TBL_PROCESSES p
+                    LEFT JOIN TBL_LOCATIONS l ON p.F_LOCATION = l.ID
+                    WHERE p.ID = ? LIMIT 1;
+                """, (int_id,)).fetchone()
+                if r311 and r311["location"]:
+                    return str(r311["location"]).strip()
             except Exception:
                 pass
 
@@ -523,6 +562,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
     processes_match = []
     flows_match = []
     exact_count = 0
+    foreground_count = 0
     loc_diff_count = 0
     no_match_count = 0
     characterized_flows = 0
@@ -582,20 +622,38 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
             batch_flow_map = {}
             if flow_name_keys:
                 try:
-                    tbl_f = "lci_flows_311" if target_db_id == "ecoinvent_311" and is_pg else ("flows" if not is_pg else "lci_flows")
-                    pl_f = ", ".join(["?"] * len(flow_name_keys))
-                    for fr in conn.execute(f"SELECT id, name, unit_symbol FROM {tbl_f} WHERE LOWER(name) IN ({pl_f});", tuple(flow_name_keys)).fetchall():
-                        batch_flow_map[fr["name"].strip().lower()] = fr
+                    if target_db_id == "ecoinvent_311" and not is_pg:
+                        conn_311 = _get_sqlite_311_connection()
+                        pl_f = ", ".join(["?"] * len(flow_name_keys))
+                        for fr in conn_311.execute(f"SELECT id, name, unit_symbol FROM flows WHERE LOWER(name) IN ({pl_f});", tuple(flow_name_keys)).fetchall():
+                            batch_flow_map[fr["name"].strip().lower()] = fr
+                    else:
+                        tbl_f = "lci_flows_311" if target_db_id == "ecoinvent_311" and is_pg else ("flows" if not is_pg else "lci_flows")
+                        pl_f = ", ".join(["?"] * len(flow_name_keys))
+                        for fr in conn.execute(f"SELECT id, name, unit_symbol FROM {tbl_f} WHERE LOWER(name) IN ({pl_f});", tuple(flow_name_keys)).fetchall():
+                            batch_flow_map[fr["name"].strip().lower()] = fr
                 except Exception:
                     pass
 
             batch_proc_map = {}
             if proc_name_keys:
                 try:
-                    tbl_p = "lci_processes_311" if target_db_id == "ecoinvent_311" and is_pg else ("processes" if not is_pg else "lci_processes")
-                    pl_p = ", ".join(["?"] * len(proc_name_keys))
-                    for pr in conn.execute(f"SELECT id, name, location FROM {tbl_p} WHERE LOWER(name) IN ({pl_p});", tuple(proc_name_keys)).fetchall():
-                        batch_proc_map[pr["name"].strip().lower()] = pr
+                    if target_db_id == "ecoinvent_311" and not is_pg:
+                        conn_311 = _get_sqlite_311_connection()
+                        pl_p = ", ".join(["?"] * len(proc_name_keys))
+                        sql_311_p = f"""
+                            SELECT p.ID as id, p.NAME as name, coalesce(l.CODE, 'GLO') as location
+                            FROM TBL_PROCESSES p
+                            LEFT JOIN TBL_LOCATIONS l ON p.F_LOCATION = l.ID
+                            WHERE LOWER(p.NAME) IN ({pl_p});
+                        """
+                        for pr in conn_311.execute(sql_311_p, tuple(proc_name_keys)).fetchall():
+                            batch_proc_map[pr["name"].strip().lower()] = pr
+                    else:
+                        tbl_p = "lci_processes_311" if target_db_id == "ecoinvent_311" and is_pg else ("processes" if not is_pg else "lci_processes")
+                        pl_p = ", ".join(["?"] * len(proc_name_keys))
+                        for pr in conn.execute(f"SELECT id, name, location FROM {tbl_p} WHERE LOWER(name) IN ({pl_p});", tuple(proc_name_keys)).fetchall():
+                            batch_proc_map[pr["name"].strip().lower()] = pr
                 except Exception:
                     pass
 
@@ -801,15 +859,15 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
 
             if node_flow_issues == 0:
                 node_status = "FOREGROUND_CUSTOM"
-                exact_count += 1
-                confidence = 1.0
+                foreground_count += 1
+                confidence = 0.98
                 target_proc_id = node_id
                 target_name = f"{src_name} (Conservado)"
                 msg = f"Modelo de primer plano conservado. Se transfieren {len(inputs)} insumos y {len(outputs)} emisiones compatibles a {target_meta['short_label']}."
             else:
                 node_status = "EXCHANGES_PENDING"
                 no_match_count += 1
-                confidence = round(max(0.0, 1.0 - (node_flow_issues / max(1, len(inputs) + len(outputs)))), 2)
+                confidence = round(max(0.1, 0.95 * (1.0 - (node_flow_issues / max(1, len(inputs) + len(outputs))))), 2)
                 target_proc_id = None
                 target_name = f"{src_name} ({node_flow_issues} insumos sin equivalencia)"
                 msg = f"Modelo de primer plano con {node_flow_issues} intercambios sin equivalencia directa en {target_meta['short_label']}. Requiere revisión o sustitución."
@@ -939,7 +997,7 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
     total_proc = len(nodes)
     total_flows = len(flows_match)
     total_components = total_proc + total_flows
-    matched_components = (exact_count * 1.0) + (loc_diff_count * 0.85) + characterized_flows
+    matched_components = (exact_count * 1.0) + (foreground_count * 0.98) + (loc_diff_count * 0.85) + characterized_flows
     comp_pct = round((matched_components / max(1, total_components)) * 100.0, 1) if total_components > 0 else 100.0
     ready = (no_match_count == 0)
 
@@ -985,6 +1043,8 @@ def match_system_to_database(conn: Any, system_id: int, target_db_id: str) -> Di
         "processes_count": total_proc,
         "total_nodes": total_proc,
         "exact_matches": exact_count,
+        "foreground_matches": foreground_count,
+        "foreground_count": foreground_count,
         "location_diffs": loc_diff_count,
         "no_matches": no_match_count,
         "compatibility_percentage": comp_pct,

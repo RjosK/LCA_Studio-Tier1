@@ -56,24 +56,32 @@ class TestVersionCrossMatching(unittest.TestCase):
             cls.token = "test_token"
 
         cls.headers = {"Authorization": f"Bearer {cls.token}"}
-        cls.port = 8898
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.bind(('', 0))
+            cls.port = s.getsockname()[1]
+
         cls.base_url = f"http://localhost:{cls.port}"
 
         server_script = os.path.join(BASE_DIR, "econode_studio", "server.py")
         cls.server_proc = subprocess.Popen(
             [sys.executable, server_script, "--port", str(cls.port)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
-        time.sleep(2.5)
+        for _ in range(25):
+            try:
+                requests.get(f"{cls.base_url}/api/version/databases", timeout=0.5)
+                break
+            except Exception:
+                time.sleep(0.2)
 
     @classmethod
     def tearDownClass(cls):
         if hasattr(cls, "server_proc") and cls.server_proc:
             try:
-                cls.server_proc.terminate()
-                cls.server_proc.wait(timeout=3)
+                cls.server_proc.kill()
+                cls.server_proc.wait(timeout=2)
             except Exception:
                 pass
 
@@ -117,7 +125,7 @@ class TestVersionCrossMatching(unittest.TestCase):
         with get_active_db_connection() as conn:
             systems = list_product_systems(conn)
             self.assertGreater(len(systems), 0, "Needs at least one system to test matching")
-            test_sys_id = systems[0]["id"]
+            test_sys_id = next((s["id"] for s in systems if s["id"] < 1300), systems[0]["id"])
             
             report = match_system_to_database(conn, test_sys_id, "ecoinvent_311")
             self.assertIsNotNone(report)
@@ -139,7 +147,7 @@ class TestVersionCrossMatching(unittest.TestCase):
     def test_05_convert_product_system_version(self):
         with get_active_db_connection() as conn:
             systems = list_product_systems(conn)
-            source_sys = systems[0]
+            source_sys = next((s for s in systems if s["id"] < 1300), systems[0])
             sys_id = source_sys["id"]
             
             # Match first to get suggested mappings
@@ -181,7 +189,7 @@ class TestVersionCrossMatching(unittest.TestCase):
         # 3. GET /api/version/match-system
         with get_active_db_connection() as conn:
             systems = list_product_systems(conn)
-            sys_id = systems[0]["id"]
+            sys_id = next((s["id"] for s in systems if s["id"] < 1300), systems[0]["id"])
             
         res_match = requests.get(f"{self.base_url}/api/version/match-system?system_id={sys_id}&target_version=ecoinvent_311", headers=self.headers)
         self.assertEqual(res_match.status_code, 200)
@@ -200,6 +208,7 @@ class TestVersionCrossMatching(unittest.TestCase):
             "selectTargetDatabase",
             "verMatchTotalProcs",
             "verMatchExactMatches",
+            "verMatchForegroundProcs",
             "verMatchLocDiffs",
             "verMatchNoMatches",
             "verMatchCompatScore",
@@ -246,6 +255,7 @@ class TestVersionCrossMatching(unittest.TestCase):
             "ver_match.select_target_db",
             "ver_match.total_procs",
             "ver_match.exact_matches",
+            "ver_match.foreground_matches",
             "ver_match.loc_diffs",
             "ver_match.no_matches",
             "ver_match.proc_table_title",
@@ -294,6 +304,8 @@ class TestVersionCrossMatching(unittest.TestCase):
                 self.assertIsNotNone(report)
                 self.assertTrue(report["is_ready_for_conversion"])
                 self.assertEqual(report["no_matches"], 0)
+                self.assertEqual(report["exact_matches"], 0, "Foreground process must not be counted as exact database match")
+                self.assertEqual(report["foreground_matches"], 1, "Foreground process must be counted as foreground match")
                 self.assertGreaterEqual(report["compatibility_score"], 90.0)
                 
                 # Verify node is FOREGROUND_CUSTOM

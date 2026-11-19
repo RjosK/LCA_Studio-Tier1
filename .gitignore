@@ -15,6 +15,7 @@ venv/
 # Heavy Database & Raw ecoinvent Dumps (> 100MB violates GitHub limits)
 ecoinvent/
 ecoinvent_cutoff.db
+*.db
 *.zolca
 *.db-journal
 *.db-wal

@@ -3013,21 +3013,25 @@
         </div>
 
         <!-- METRICAS DE DIAGNOSTICO -->
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;" id="verMatchMetricsGrid">
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;" id="verMatchMetricsGrid">
           <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 10px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.total_procs">Nodos Totales</div>
+            <div style="font-size: 9.5px; color: var(--text-muted); font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.total_procs">Nodos Totales</div>
             <div style="font-size: 18px; font-weight: 700; color: #0F172A; margin-top: 2px;" id="verMatchTotalProcs">0</div>
           </div>
           <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 10px; color: #059669; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.exact_matches">Match 100%</div>
+            <div style="font-size: 9.5px; color: #059669; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.exact_matches">Match BD 100%</div>
             <div style="font-size: 18px; font-weight: 700; color: #059669; margin-top: 2px;" id="verMatchExactMatches">0</div>
           </div>
+          <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 8px; padding: 8px 10px; text-align: center;">
+            <div style="font-size: 9.5px; color: #4F46E5; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.foreground_matches">Procesos Propios</div>
+            <div style="font-size: 18px; font-weight: 700; color: #4F46E5; margin-top: 2px;" id="verMatchForegroundProcs">0</div>
+          </div>
           <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 10px; color: #D97706; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.loc_diffs">Variación Reg.</div>
+            <div style="font-size: 9.5px; color: #D97706; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.loc_diffs">Variación Reg.</div>
             <div style="font-size: 18px; font-weight: 700; color: #D97706; margin-top: 2px;" id="verMatchLocDiffs">0</div>
           </div>
           <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 8px; padding: 8px 10px; text-align: center;">
-            <div style="font-size: 10px; color: #DC2626; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.no_matches">Sin Coincidencia</div>
+            <div style="font-size: 9.5px; color: #DC2626; font-weight: 600; text-transform: uppercase;" data-i18n="ver_match.no_matches">Sin Coincidencia</div>
             <div style="font-size: 18px; font-weight: 700; color: #DC2626; margin-top: 2px;" id="verMatchNoMatches">0</div>
           </div>
         </div>
@@ -3043,20 +3047,20 @@
           </div>
           <div id="verMatchFlowsListContainer" style="display: none; margin-top: 10px; padding-top: 8px; border-top: 1px dashed rgba(146, 64, 14, 0.3);">
             <div style="font-weight: 600; margin-bottom: 6px;" data-i18n="ver_match.flows_substitute_header">Flujos con correspondencia opcional:</div>
-            <div id="verMatchFlowsItems" style="display: flex; flex-direction: column; gap: 6px;"></div>
+            <div id="verMatchFlowsItems" style="display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; padding-right: 4px;"></div>
           </div>
         </div>
 
         <!-- TABLA DE EMPAREJAMIENTO DE PROCESOS -->
-        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 9px; overflow: hidden;">
-          <div style="padding: 10px 14px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center;">
+        <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 9px; overflow: hidden; display: flex; flex-direction: column;">
+          <div style="padding: 10px 14px; background: #F8FAFC; border-bottom: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
             <span style="font-size: 11.5px; font-weight: 600; color: #0F172A;" data-i18n="ver_match.proc_table_title">Mapeo de Nodos del Sistema Producto</span>
             <span style="font-size: 10.5px; color: var(--text-muted);" id="verMatchStatusSummary">Analizando compatibilidad...</span>
           </div>
-          <div style="overflow-x: auto;">
+          <div style="overflow-x: auto; overflow-y: auto; max-height: 260px;">
             <table class="data-table" style="margin: 0; width: 100%; min-width: 580px;">
-              <thead>
-                <tr style="background: #FAFBFD;">
+              <thead style="position: sticky; top: 0; z-index: 2; background: #FAFBFD;">
+                <tr>
                   <th style="font-size: 10.5px; width: 34%;" data-i18n="ver_match.col_source_proc">Proceso Actual</th>
                   <th style="font-size: 10.5px; width: 18%; text-align: center;" data-i18n="ver_match.col_status">Compatibilidad</th>
                   <th style="font-size: 10.5px; width: 48%;" data-i18n="ver_match.col_target_proc">Proceso Destino Asignado</th>
@@ -3081,7 +3085,7 @@
 
       </div>
 
-      <div class="modal-footer" style="padding: 14px 22px; border-top: 1px solid #E2E8F0; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; gap: 8px; background: #FAFBFD;">
+      <div class="modal-footer" style="padding: 14px 22px; border-top: 1px solid #E2E8F0; flex-shrink: 0; display: flex; justify-content: flex-end; align-items: center; gap: 8px; background: #FAFBFD; position: sticky; bottom: 0; z-index: 10;">
         <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeVersionMatchModal()" style="border-radius: 7px; height: 32px; padding: 0 14px; font-weight: 500; font-size: 11px;" data-i18n="common.cancel">Cancelar</button>
         <button class="btn btn-primary btn-sm" id="btnSubmitVersionConversion" onclick="window.EconodeApp.submitVersionConversion()" style="border-radius: 7px; height: 32px; padding: 0 16px; font-weight: 600; font-size: 11px; background: #18232C; color: #FFFFFF; border: none; box-shadow: 0 1px 3px rgba(24,35,44,0.15); display: inline-flex; align-items: center; gap: 6px;" disabled>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
