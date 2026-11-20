@@ -158,9 +158,23 @@ class TestIsoAcvReport(unittest.TestCase):
             self.assertEqual(r_pdf.status_code, 200, f"Expected 200 but got {r_pdf.status_code}: {r_pdf.text}")
             self.assertEqual(r_pdf.headers.get("Content-Type"), "application/pdf")
             self.assertTrue(r_pdf.content.startswith(b"%PDF"))
+
+            # 3. Direct demo login without password for local/offline testing
+            r_login = requests.post(f"http://127.0.0.1:{port}/api/auth/login", json={"user_id": "analyst"})
+            self.assertEqual(r_login.status_code, 200, f"Expected 200 on demo login: {r_login.text}")
+            self.assertTrue(r_login.json().get("authenticated"))
+            self.assertEqual(r_login.json().get("user", {}).get("role"), "analyst")
         finally:
             proc.terminate()
             proc.wait()
+
+    def test_javascript_syntax_integrity(self):
+        """Run node --check on all public JS files to strictly prevent SyntaxErrors from ever landing."""
+        import subprocess
+        for script_name in ["app.js", "i18n.js"]:
+            script_path = os.path.join(self.base_dir, "public", "js", script_name)
+            res = subprocess.run(["node", "--check", script_path], capture_output=True, text=True)
+            self.assertEqual(res.returncode, 0, f"JavaScript SyntaxError detected in {script_name}:\n{res.stderr}")
 
     def test_zero_emojis_in_report_files(self):
         """Enforce strict zero emoji rule across all modified report files."""
