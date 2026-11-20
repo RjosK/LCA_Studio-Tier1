@@ -44,6 +44,10 @@ class Settings:
         "AUDIT_DB_PATH",
         os.path.join(DATA_DIR, "econode_audit.db")
     )
+    EMISSION_FACTORS_DB_PATH: str = os.getenv(
+        "EMISSION_FACTORS_DB_PATH",
+        os.path.join(DATA_DIR, "econode_emission_factors.db")
+    )
 
     # Almacenamiento Documental
     STORAGE_BACKEND: str = os.getenv("STORAGE_BACKEND", "supabase" if bool(os.getenv("SUPABASE_URL")) else "local")

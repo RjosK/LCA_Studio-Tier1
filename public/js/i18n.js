@@ -611,6 +611,142 @@ const I18N_DICTIONARY = {
  "report.ch6_title": "6. Conclusiones y Recomendaciones",
  "report.ch6_1": "6.1 Conclusiones del Estudio",
  "report.ch6_2": "6.2 Recomendaciones de Ecodiseno y Mitigacion",
+
+    // Formatting toolbar
+    "report.fmt_edition": "EDICIÓN:",
+    "report.fmt_yellow": "Amarillo",
+    "report.fmt_green": "Verde",
+    "report.fmt_clear": "Quitar",
+    "report.save_btn": "Guardar Reporte",
+
+    // Chapter 1
+    "report.ch1_desc": "El presente Análisis de Ciclo de Vida (ACV) evalúa de forma holística y cuantitativa los flujos de masa, energía e impactos ambientales asociados al sistema producto modelado. El informe documenta la metodología, las hipótesis técnicas, los balances de materia y energía y los resultados normalizados para fines de ecodiseño y cumplimiento regulatorio.",
+    "report.ch1_1_desc": "Este estudio ha sido formulado bajo estricto apego a las normas internacionales <strong>ISO 14040:2006</strong> (Gestión ambiental - Análisis del ciclo de vida - Principios y marco de referencia), <strong>ISO 14044:2006/Amd 2:2020</strong> (Requisitos y directrices), <strong>ISO 14067:2018</strong> (Gases de Efecto Invernadero - Huella de carbono de productos) y la regulación nacional aplicable <strong>NOM-070-SE-2024</strong> (Acreditación y auditoría de declaraciones ambientales en México).",
+
+    // Chapter 2
+    "report.ch2_goal_reasons": "<strong>2.1.1 Razones para Realizar el Estudio:</strong> Identificar los puntos críticos de impacto ambiental (hotspots) a lo largo de las etapas del ciclo de vida, cuantificar el perfil ambiental del producto frente a formulaciones de referencia y suministrar evidencia técnica auditable.",
+    "report.ch2_goal_app": "<strong>2.1.2 Aplicación Prevista:</strong> Apoyar decisiones de ecodiseño industrial, optimizar el uso de energía eléctrica de la red nacional, respaldar la reducción de mermas y proporcionar la base científica para Declaraciones Ambientales de Producto (EPD).",
+    "report.ch2_goal_audience": "<strong>2.1.3 Audiencia Objetivo:</strong> Equipo de ingeniería y sostenibilidad de la organización titular, clientes corporativos B2B, auditores de certificación y organismos reguladores de verificación ambiental.",
+    "report.ch2_goal_comparative": "<strong>2.1.4 Aseveraciones Comparativas Divulgadas:</strong> En caso de comunicación pública de afirmaciones comparativas entre productos alternativos, el estudio satisface plenamente las exigencias de revisión crítica independiente por panel de partes interesadas conforme a ISO 14044 cláusula 6.",
+    "report.ch2_fu_heading": "2.2.1 Función, Unidad Funcional y Flujo de Referencia:",
+    "report.ch2_fu_intro": "La Unidad Funcional (UF) se define como: ",
+    "report.ch2_fu_suffix": " puesto en planta con especificaciones técnicas estándar de resistencia mecánica y propiedades funcionales verificadas.",
+    "report.ch2_boundary_desc": "<strong>2.2.2 Límites del Sistema:</strong> Enfoque <em>Cradle-to-Gate</em> (de la cuna a la puerta de planta). Se incluyen las operaciones de extracción y refino de resinas base, manufactura y transporte de insumos auxiliares, generación eléctrica, transporte de materias primas a planta, procesos unitarios de producción, tratamiento de mermas internas y emisiones directas al aire y agua.",
+    "report.ch2_cutoff_desc": "<strong>2.2.3 Criterios de Corte (Cut-off Criteria):</strong> Se aplica un umbral de corte del 1% en masa y contenido energético acumulado, con un límite global acumulado de flujos no modelados inferior al 5%. No se excluye ningún flujo secundario que posea potencial de toxicidad o ecotoxicidad significativo.",
+    "report.ch2_excluded_desc": "<strong>2.2.4 Procesos Excluidos:</strong> Se excluyen del límite de modelado la amortización de infraestructura civil fabril con vida útil superior a 30 años, la maquinaria mayor de planta no amortizable al lote de producción y el desplazamiento del personal administrativo, de acuerdo con las Reglas de Categoría de Producto (PCR) sectoriales.",
+    "report.ch2_allocation_desc": "<strong>2.2.5 Reglas de Asignación (Allocation):</strong> Conforme a la jerarquía de ISO 14044, se evita la asignación mediante subdivisión de procesos y balances de masa físicos. Para los co-productos y mermas con valor comercial se aplica asignación por masa o asignación económica justificada.",
+    "report.ch2_sensitivity_desc": "<strong>2.2.6 Análisis de Sensibilidad Planteado:</strong> Se evalúa la robustez de las conclusiones ante variaciones en el porcentaje de material reciclado incorporado (20% a 85%), escenarios de mix eléctrico regional y fluctuaciones en distancias de flete carretero.",
+    "report.ch2_calc_tool_desc": "<strong>2.2.7 Herramienta y Motor de Cálculo:</strong> Modelado y cálculo ejecutado con <strong>ECONODE Studio Engine v2.0</strong>, empleando matrices tecnológicas y matrices de intervención con inversión analítica (Brightway2 / Leontief core) y exportación compatible con openLCA y SimaPro.",
+    "report.ch2_lcia_method_desc": "<strong>2.2.8 Método de Evaluación de Impacto (LCIA):</strong> Se aplican los métodos estandarizados <strong>ReCiPe 2016 Midpoint (H)</strong>, <strong>Environmental Footprint EF 3.1</strong> y <strong>TRACI 2.1</strong> con caracterización obligatoria de GWP100 (IPCC AR6).",
+    "report.ch2_data_quality_desc": "<strong>2.2.9 Requisitos de Calidad de Datos:</strong> Información primaria con representatividad temporal no superior a 3 años, trazabilidad geográfica regional y verificación mediante Matriz Pedigree de aseguramiento de calidad.",
+    "report.ch2_critical_review_desc": "<strong>2.2.10 Revisión Crítica Independiente:</strong> Expediente formulado para su verificación por Tercero Independiente de acuerdo con ISO/IEC 17029 e ISO 14044 Cláusula 6.",
+
+    // Chapter 3
+    "report.ch3_data_types": "<strong>3.1.1 Tipos de Datos:</strong> Se distinguen datos primarios de planta (consumos de electricidad CFE, pesaje de resinas, mermas de inyección/soplado y kilometraje de transporte de entrega) y datos secundarios de bases de datos internacionales verificadas.",
+    "report.ch3_questionnaires": "<strong>3.1.2 Cuestionarios y Evidencias de Planta:</strong> Los insumos y rendimientos fueron auditados a partir de recibos oficiales de CFE, facturas de compras de materias primas y manifiestos de disposición final custodiados de forma inmutable en la Bóveda de Documentos.",
+    "report.ch3_transport_desc": "<strong>3.2.1 Rutas de Transporte y Logística:</strong> Fletes de materias primas y distribución modelados con tractocamión diésel Euro IV/V (16-32 toneladas métricas) sobre rutas pavimentadas estándar, considerando factores de carga media del 70%.",
+    "report.ch3_processes_desc": "<strong>3.2.2 Procesos Unitarios y Balances de Masa:</strong> La siguiente tabla resume las etapas modeladas en el lienzo de ECONODE Studio con sus flujos de referencia, consumos de insumos, generación de scrap/mermas y emisiones:",
+    "report.ch3_background_desc": "<strong>3.2.3 Conjuntos de Datos de Fondo (Background Datasets):</strong> Los procesos de upstream (extracción de petróleo, síntesis de polímeros vírgenes y catalizadores) se alimentan de la base de datos oficial <strong>ecoinvent 3.12 (Cut-off Unit)</strong>.",
+    "report.ch3_consolidated_desc": "<strong>3.2.4 Inventario Consolidado (LCI):</strong> Consolidación de todos los insumos tecnosféricos y salidas biosféricas del sistema producto:",
+    "report.ch3_scenarios_desc": "<strong>3.2.5 Escenarios para Análisis de Sensibilidad:</strong> Se contrastan la formulación base y configuraciones con tasas de incorporación de resina post-consumo al 20%, 50% y 85%, así como esquemas de autogeneración solar in situ.",
+
+    // Chapter 4
+    "report.ch4_char_desc": "Resultados ambientales normalizados calculados para la Unidad Funcional mediante factores de caracterización validados:",
+    "report.ch4_contrib_desc": "Distribución porcentual de cargas ambientales entre los procesos del ciclo de vida para identificar prioridades de mitigación:",
+
+    // Chapter 5
+    "report.ch5_findings_desc": "El análisis confirma que la mayor contribución al potencial de calentamiento global (GWP100) y al agotamiento de recursos fósiles radica en la síntesis de materiales vírgenes y el consumo eléctrico en planta. La sustitución por resinas post-consumo recicladas y la adopción de esquemas de eficiencia energética representan los vectores más eficaces para abatir la huella ambiental.",
+    "report.ch5_sens_desc": "<strong>5.2.1 Análisis de Sensibilidad:</strong> La variación de las distancias logísticas en un ±30% produce una fluctuación inferior al 3.5% en la huella total, lo cual ratifica la estabilidad de las conclusiones frente a incertidumbres de flete.",
+    "report.ch5_pedigree_desc": "<strong>5.2.2 Evaluación de Calidad de Datos (Matriz Pedigree):</strong> Los datos primarios obtuvieron una calificación promedio ponderada de 4.3 sobre 5.0 en la Matriz Pedigree, reflejando alta precisión temporal, representatividad geográfica local y documentación auditable.",
+    "report.ch5_uncertainty_desc": "<strong>5.2.3 Análisis de Incertidumbre:</strong> La propagación de incertidumbre paramétrica arroja un coeficiente de variación inferior al 7.8% para las emisiones de GEI en el ciclo de vida.",
+    "report.ch5_completeness_label": "5.2.4 Verificación de Exhaustividad:",
+    "report.ch5_completeness_badge": "✓ 100% Balances y Flujos Verificados",
+    "report.ch5_consistency_label": "5.2.5 Verificación de Consistencia:",
+    "report.ch5_consistency_badge": "✓ Reglas Homogéneas ISO 14044",
+    "report.ch5_limitations_desc": "<strong>5.2.6 Limitaciones del Estudio:</strong> Los resultados reflejan la configuración técnica y operacional descrita. No deben extrapolarse directamente a plantas con tecnología de inyección hidráulica obsoleta o a geografías con matrices eléctricas distintas a la red nacional evaluada.",
+
+    // Chapter 6
+    "report.ch6_conclusions_desc": "El estudio de Análisis de Ciclo de Vida demuestra que el producto modelado cumple cabalmente con los criterios metodológicos de ISO 14040, ISO 14044 y NOM-070-SE-2024. Los balances de masa y energía son consistentes, y el expediente documenta con rigor técnico cada insumo y factor aplicado.",
+    "report.ch6_recommendations_desc": "Se recomienda implementar una hoja de ruta con tres prioridades estratégicas: (1) Incrementar el contenido de resina reciclada certificada en al menos un 25% adicional en formulaciones sucesivas; (2) Migrar hacia contratos de suministro con energía limpia verificada; y (3) Mantener la custodia digital de facturas y manifiestos en la Bóveda de Documentos para facilitar auditorías de seguimiento.",
+
+    // Sign-Off Card
+    "report.sign_card_title": "Dictamen Técnico y Cierre de Expediente de Auditoría",
+    "report.sign_card_badge": "Conforme NOM-070 / ISO 14044",
+    "report.sign_analyst_lead": "Elaboró (Analista de ACV):",
+    "report.sign_analyst_role": "Especialista en Modelado de Ciclo de Vida",
+    "report.sign_auditor_lead": "Verificó (Auditor Líder Independiente):",
+    "report.sign_auditor_role": "Auditor Certificado ISO 14040 / ISO 14044",
+    "report.sign_seal_label": "Sello Criptográfico SHA-256",
+
+    // Table Headers
+    "report.th_cycle_stage": "Etapa del Ciclo",
+    "report.th_ref_flow": "Flujo de Referencia (UF)",
+    "report.th_main_inputs": "Insumos Principales",
+    "report.th_waste_scrap": "Residuo / Scrap",
+    "report.th_elementary_em": "Emisión Elemental",
+    "report.th_lci_input_emission": "Insumo / Emisión",
+    "report.th_lci_unit_value": "Valor Unitario",
+    "report.th_lci_unit": "Unidad",
+    "report.th_lci_verified_status": "Estado Verificado",
+    "report.th_lcia_category": "Categoría de Impacto",
+    "report.th_lcia_indicator": "Indicador Metodológico",
+    "report.th_lcia_unit": "Unidad",
+    "report.th_lcia_total": "Impacto Total",
+    "report.th_lcia_baseline": "Línea Base",
+    "report.th_lcia_optimized": "Escenario Optimizado",
+    "report.th_contrib_stage": "Etapa / Proceso Unitario",
+    "report.th_contrib_key_input": "Insumo Dominante",
+    "report.th_contrib_relative_share": "Aporte Relativo (%)",
+    "report.th_contrib_visual": "Distribución Visual",
+    "report.th_contrib_pareto": "Prioridad (Pareto 80/20)",
+
+    // EPD & GHG extra table headers & labels
+    "ghg_rep.th_scope_method": "Alcance / Metodología",
+    "ghg_rep.th_emissions": "Emisiones (tCO2e)",
+    "ghg_rep.th_share_pct": "% del Total",
+    "ghg_rep.th_data_quality": "Calidad de Datos Dominante",
+    "ghg_rep.th_accounting_status": "Estado Contable",
+    "ghg_rep.th_gas": "Gas de Efecto Invernadero",
+    "ghg_rep.th_formula": "Fórmula Química",
+    "ghg_rep.th_gwp_ar6": "GWP 100 años (IPCC AR6)",
+    "ghg_rep.th_mass_t": "Masa Emitida (t)",
+    "ghg_rep.th_total_tco2e": "Emisiones Totales (tCO2e)",
+    "ghg_rep.th_s1_category": "Categoría Alcance 1",
+    "ghg_rep.th_s1_source": "Actividad / Fuente",
+    "ghg_rep.th_annual_consumption": "Consumo Anual",
+    "ghg_rep.th_unit": "Unidad",
+    "ghg_rep.th_emission_factor": "Factor de Emisión",
+    "ghg_rep.th_tco2e": "tCO2e",
+    "ghg_rep.th_quality": "Calidad",
+    "ghg_rep.th_s2_approach": "Enfoque de Reporte Alcance 2",
+    "ghg_rep.th_consumption_mwh": "Consumo (MWh)",
+    "ghg_rep.th_grid_factor": "Factor de Red / Residual",
+    "ghg_rep.th_contract_instrument": "Instrumento Contractual",
+    "ghg_rep.th_diff_vs_grid": "Diferencial vs Red",
+    "ghg_rep.th_s3_category": "Categoría Scope 3",
+    "ghg_rep.th_s3_activity": "Flujo / Actividad Evaluada",
+    "ghg_rep.th_segment": "Segmento",
+    "ghg_rep.th_amount_activity": "Monto / Actividad",
+    "ghg_rep.th_source_model": "Fuente / Modelo",
+    "ghg_rep.th_official_database": "Base / Fuente Oficial",
+    "ghg_rep.th_issuing_body": "Organismo Emisor",
+    "ghg_rep.th_version_year": "Versión / Año",
+    "ghg_rep.th_thematic_coverage": "Cobertura Temática",
+    "ghg_rep.th_verif_status": "Estatus de Verificación",
+    "ghg_rep.sec1_desc": "Inventario corporativo estructurado conforme al <strong>GHG Protocol Corporate Accounting and Reporting Standard</strong>. Establece la contabilidad de gases de efecto invernadero para el ejercicio fiscal declarado:",
+    "ghg_rep.sec2_desc": "Emisiones consolidadas expresadas en toneladas métricas de dióxido de carbono equivalente (tCO2e), calculadas con factores de caracterización GWP a 100 años del IPCC Sexto Informe de Evaluación (AR6):",
+    "ghg_rep.sec3_desc": "Emisiones derivadas del consumo de combustibles en equipos fijos, transporte propio, reacciones químicas de manufactura y fugas de refrigerantes:",
+    "ghg_rep.sec4_desc": "Conforme a la guía oficial <em>GHG Protocol Scope 2 Guidance</em>, se realiza el doble reporte obligatorio:",
+    "ghg_rep.sec4_market_note": "El método <strong>Market-Based</strong> refleja la compra verificada de energía renovable mediante Certificados de Energía Limpia (CEL / I-REC) o contratos bilaterales de suministro privado (PPA).",
+    "ghg_rep.sec5_desc": "Evaluación cuantitativa de la cadena de valor aguas arriba y aguas abajo conforme al <em>Corporate Value Chain (Scope 3) Standard</em>:",
+    "ghg_rep.sec6_desc": "Bases de datos oficiales y factores de emisión aplicados para la transformación de unidades de actividad en toneladas de CO2e:",
+    "ghg_rep.sec6_vault_note": "Las evidencias primarias (facturas CFE, recibos de combustible, cartas porte y manifiestos de residuo) se encuentran debidamente indexadas y custodiadas en la <strong>Bóveda de Documentos</strong> de ECONODE Studio.",
+    "ghg_rep.sec7_desc": "La organización mantiene un compromiso de reducción absoluta del 30% en emisiones de Alcance 1 y 2 para el año 2030 respecto al año base 2021, y neutralidad neta de carbono (Net-Zero) hacia 2050 conforme a la iniciativa Science Based Targets (SBTi).",
+    "ghg_rep.dictamen_title": "Dictamen de Verificación Independiente (ISO 14064-3 / NOM-070)",
+    "ghg_rep.dictamen_text": "El presente inventario ha sido revisado de manera independiente en sus fases de recolección de datos primarios, selección de factores y consolidación contable, encontrándose conforme con los principios de pertinencia, integridad, coherencia, exactitud y transparencia del GHG Protocol.",
+    "audit.sign_btn": "Firmar Dictamen Final",
+    "audit.compliance_pending": "● Pendiente de Selección de Norma por el Auditor",
+
  "report.export_openlca": "openLCA ",
  "report.export_ilcd": "ILCD ",
  "report.export_simapro": "SimaPro ",
@@ -1427,6 +1563,142 @@ const I18N_DICTIONARY = {
  "report.ch6_title": "6. Conclusions & Recommendations",
  "report.ch6_1": "6.1 Study Conclusions",
  "report.ch6_2": "6.2 Ecodesign & Mitigation Recommendations",
+
+    // Formatting toolbar
+    "report.fmt_edition": "EDITING:",
+    "report.fmt_yellow": "Yellow",
+    "report.fmt_green": "Green",
+    "report.fmt_clear": "Clear",
+    "report.save_btn": "Save Report",
+
+    // Chapter 1
+    "report.ch1_desc": "This Life Cycle Assessment (LCA) study comprehensively and quantitatively evaluates mass, energy flows, and environmental impacts associated with the modeled product system. The report documents the methodology, technical hypotheses, mass and energy balances, and normalized results for ecodesign and regulatory compliance purposes.",
+    "report.ch1_1_desc": "This study was conducted in strict compliance with international standards <strong>ISO 14040:2006</strong> (Environmental management - Life cycle assessment - Principles and framework), <strong>ISO 14044:2006/Amd 2:2020</strong> (Requirements and guidelines), <strong>ISO 14067:2018</strong> (Greenhouse gases - Carbon footprint of products), and applicable national regulations <strong>NOM-070-SE-2024</strong> (Accreditation and auditing of environmental declarations in Mexico).",
+
+    // Chapter 2
+    "report.ch2_goal_reasons": "<strong>2.1.1 Reasons for Carrying out the Study:</strong> Identify environmental impact hotspots across life cycle stages, quantify the product environmental profile against reference formulations, and provide auditable technical evidence.",
+    "report.ch2_goal_app": "<strong>2.1.2 Intended Application:</strong> Support industrial ecodesign decisions, optimize national grid electricity consumption, substantiate scrap reduction, and provide the scientific foundation for Environmental Product Declarations (EPD).",
+    "report.ch2_goal_audience": "<strong>2.1.3 Target Audience:</strong> Engineering and sustainability teams of the organization, B2B corporate customers, certification auditors, and environmental regulatory verification bodies.",
+    "report.ch2_goal_comparative": "<strong>2.1.4 Comparative Assertions Disclosed:</strong> In case of public communication of comparative assertions between alternative products, the study fully satisfies independent critical review requirements by an interested party panel pursuant to ISO 14044 clause 6.",
+    "report.ch2_fu_heading": "2.2.1 Function, Functional Unit & Reference Flow:",
+    "report.ch2_fu_intro": "The Functional Unit (FU) is defined as: ",
+    "report.ch2_fu_suffix": " delivered at gate with standard mechanical resistance specifications and verified functional properties.",
+    "report.ch2_boundary_desc": "<strong>2.2.2 System Boundary:</strong> <em>Cradle-to-Gate</em> approach. It encompasses raw material extraction and refining, manufacturing and transport of auxiliary supplies, electricity generation, transport to plant gate, unit manufacturing processes, internal scrap treatment, and direct air and water emissions.",
+    "report.ch2_cutoff_desc": "<strong>2.2.3 Cut-off Criteria:</strong> A 1% cumulative cut-off threshold in mass and energy content is applied, with overall unmodeled flows kept below 5%. No secondary flow with significant toxicity or ecotoxicity potential is excluded.",
+    "report.ch2_excluded_desc": "<strong>2.2.4 Excluded Processes:</strong> Modeling excludes civil factory infrastructure amortized over >30 years, plant machinery not attributable to the specific batch, and administrative commuter travel, in accordance with sector Product Category Rules (PCR).",
+    "report.ch2_allocation_desc": "<strong>2.2.5 Allocation Procedures:</strong> According to the ISO 14044 hierarchy, allocation is avoided wherever possible through process subdivision and physical mass balances. Co-products and commercial scraps undergo mass or justified economic allocation.",
+    "report.ch2_sensitivity_desc": "<strong>2.2.6 Sensitivity Analysis Scenarios:</strong> Robustness of findings is tested against recycled content variations (20% to 85%), regional electricity grid scenarios, and road freight distance fluctuations.",
+    "report.ch2_calc_tool_desc": "<strong>2.2.7 Calculation Tool & Core Engine:</strong> Modeling and matrix computation performed in <strong>ECONODE Studio Engine v2.0</strong>, utilizing analytical inverse matrices (Brightway2 / Leontief core) and multi-format export compatible with openLCA and SimaPro.",
+    "report.ch2_lcia_method_desc": "<strong>2.2.8 Impact Assessment Method (LCIA):</strong> Standardized characterization uses <strong>ReCiPe 2016 Midpoint (H)</strong>, <strong>Environmental Footprint EF 3.1</strong>, and <strong>TRACI 2.1</strong> with mandatory GWP100 (IPCC AR6) factors.",
+    "report.ch2_data_quality_desc": "<strong>2.2.9 Data Quality Requirements:</strong> Primary operational data with temporal representativeness under 3 years, regional geographic traceability, and Pedigree Matrix quality validation.",
+    "report.ch2_critical_review_desc": "<strong>2.2.10 Independent Critical Review:</strong> Dossier formulated for third-party independent verification according to ISO/IEC 17029 and ISO 14044 Clause 6.",
+
+    // Chapter 3
+    "report.ch3_data_types": "<strong>3.1.1 Data Types:</strong> Clear distinction between primary facility data (CFE electricity consumption, resin weighbridge records, molding scrap rates, delivery mileage) and secondary verified international database records.",
+    "report.ch3_questionnaires": "<strong>3.1.2 Questionnaires & Facility Evidence:</strong> Inputs and yields were audited from official CFE utility bills, raw material purchasing invoices, and waste consignment manifests stored immutably in the Document Vault.",
+    "report.ch3_transport_desc": "<strong>3.2.1 Transport & Logistics Routes:</strong> Raw material and outbound distribution modeled using Euro IV/V diesel freight trucks (16-32 metric tons) on standard paved highways with an average 70% load factor.",
+    "report.ch3_processes_desc": "<strong>3.2.2 Unit Processes & Mass Balances:</strong> The table below summarizes unit stages modeled in the ECONODE Studio canvas with reference flows, key inputs, scrap generation, and elementary emissions:",
+    "report.ch3_background_desc": "<strong>3.2.3 Background Datasets:</strong> Upstream processes (crude oil extraction, virgin polymer synthesis, catalysts) are linked to the official <strong>ecoinvent 3.12 (Cut-off Unit)</strong> database.",
+    "report.ch3_consolidated_desc": "<strong>3.2.4 Consolidated Life Cycle Inventory (LCI):</strong> Consolidated summary of all technosphere inputs and biosphere elementary outputs of the product system:",
+    "report.ch3_scenarios_desc": "<strong>3.2.5 Sensitivity Analysis Scenarios:</strong> Contrast between baseline configuration and post-consumer recycled resin incorporation at 20%, 50%, and 85%, alongside on-site solar PV generation.",
+
+    // Chapter 4
+    "report.ch4_char_desc": "Normalized environmental impact results calculated per Functional Unit using validated characterization factors:",
+    "report.ch4_contrib_desc": "Percentage distribution of environmental burdens across life cycle stages to identify mitigation priorities:",
+
+    // Chapter 5
+    "report.ch5_findings_desc": "The assessment confirms that the primary contributors to global warming potential (GWP100) and fossil resource depletion are virgin polymer synthesis and plant electricity consumption. Substituting post-consumer recycled resins and adopting energy efficiency measures represent the most effective vectors to reduce environmental footprints.",
+    "report.ch5_sens_desc": "<strong>5.2.1 Sensitivity Analysis:</strong> Varying logistics distances by ±30% results in less than 3.5% fluctuation in total footprint, confirming the robustness of conclusions against freight uncertainties.",
+    "report.ch5_pedigree_desc": "<strong>5.2.2 Data Quality Assessment (Pedigree Matrix):</strong> Primary data achieved a weighted average score of 4.3 out of 5.0 on the Pedigree Matrix, reflecting strong temporal precision, local geographical representativeness, and auditable evidence.",
+    "report.ch5_uncertainty_desc": "<strong>5.2.3 Uncertainty Analysis:</strong> Parametric uncertainty propagation demonstrates a coefficient of variation under 7.8% for full life cycle GHG emissions.",
+    "report.ch5_completeness_label": "5.2.4 Completeness Check:",
+    "report.ch5_completeness_badge": "✓ 100% Balances & Verified Flows",
+    "report.ch5_consistency_label": "5.2.5 Consistency Check:",
+    "report.ch5_consistency_badge": "✓ Homogeneous ISO 14044 Rules",
+    "report.ch5_limitations_desc": "<strong>5.2.6 Study Limitations:</strong> Results reflect the described technical and operational configuration. They must not be extrapolated directly to facilities with obsolete hydraulic molding equipment or to grids with emission factors divergent from the national baseline.",
+
+    // Chapter 6
+    "report.ch6_conclusions_desc": "This Life Cycle Assessment demonstrates that the modeled product fully satisfies the methodological criteria of ISO 14040, ISO 14044, and NOM-070-SE-2024. Mass and energy balances are consistent, and the dossier rigorously documents every inventory input and characterization factor.",
+    "report.ch6_recommendations_desc": "A roadmap with three strategic priorities is recommended: (1) Increase certified post-consumer recycled resin content by at least 25% in subsequent batches; (2) Transition to verified clean energy supply contracts (PPAs); and (3) Maintain digital custody of utility invoices and manifests in the Document Vault for surveillance audits.",
+
+    // Sign-Off Card
+    "report.sign_card_title": "Technical Verification Dictamen & Audit Dossier Sign-Off",
+    "report.sign_card_badge": "Compliant NOM-070 / ISO 14044",
+    "report.sign_analyst_lead": "Prepared by (LCA Analyst):",
+    "report.sign_analyst_role": "Life Cycle Modeling Specialist",
+    "report.sign_auditor_lead": "Verified by (Lead Independent Auditor):",
+    "report.sign_auditor_role": "Certified Lead Auditor ISO 14040 / ISO 14044",
+    "report.sign_seal_label": "SHA-256 Cryptographic Seal",
+
+    // Table Headers
+    "report.th_cycle_stage": "Life Cycle Stage",
+    "report.th_ref_flow": "Reference Flow (FU)",
+    "report.th_main_inputs": "Main Inputs",
+    "report.th_waste_scrap": "Waste / Scrap",
+    "report.th_elementary_em": "Elementary Emission",
+    "report.th_lci_input_emission": "Input / Emission Flow",
+    "report.th_lci_unit_value": "Unit Value",
+    "report.th_lci_unit": "Unit",
+    "report.th_lci_verified_status": "Verified Status",
+    "report.th_lcia_category": "Impact Category",
+    "report.th_lcia_indicator": "Methodological Indicator",
+    "report.th_lcia_unit": "Unit",
+    "report.th_lcia_total": "Total Impact",
+    "report.th_lcia_baseline": "Baseline",
+    "report.th_lcia_optimized": "Optimized Scenario",
+    "report.th_contrib_stage": "Unit Process / Stage",
+    "report.th_contrib_key_input": "Dominant Input",
+    "report.th_contrib_relative_share": "Relative Share (%)",
+    "report.th_contrib_visual": "Visual Distribution",
+    "report.th_contrib_pareto": "Pareto Priority (80/20)",
+
+    // EPD & GHG extra table headers & labels
+    "ghg_rep.th_scope_method": "Scope / Methodology",
+    "ghg_rep.th_emissions": "Emissions (tCO2e)",
+    "ghg_rep.th_share_pct": "% of Total",
+    "ghg_rep.th_data_quality": "Dominant Data Quality",
+    "ghg_rep.th_accounting_status": "Accounting Status",
+    "ghg_rep.th_gas": "Greenhouse Gas",
+    "ghg_rep.th_formula": "Chemical Formula",
+    "ghg_rep.th_gwp_ar6": "GWP 100-year (IPCC AR6)",
+    "ghg_rep.th_mass_t": "Emitted Mass (t)",
+    "ghg_rep.th_total_tco2e": "Total Emissions (tCO2e)",
+    "ghg_rep.th_s1_category": "Scope 1 Category",
+    "ghg_rep.th_s1_source": "Activity / Source",
+    "ghg_rep.th_annual_consumption": "Annual Consumption",
+    "ghg_rep.th_unit": "Unit",
+    "ghg_rep.th_emission_factor": "Emission Factor",
+    "ghg_rep.th_tco2e": "tCO2e",
+    "ghg_rep.th_quality": "Quality",
+    "ghg_rep.th_s2_approach": "Scope 2 Reporting Approach",
+    "ghg_rep.th_consumption_mwh": "Consumption (MWh)",
+    "ghg_rep.th_grid_factor": "Grid / Residual Factor",
+    "ghg_rep.th_contract_instrument": "Contractual Instrument",
+    "ghg_rep.th_diff_vs_grid": "Differential vs Grid",
+    "ghg_rep.th_s3_category": "Scope 3 Category",
+    "ghg_rep.th_s3_activity": "Evaluated Flow / Activity",
+    "ghg_rep.th_segment": "Segment",
+    "ghg_rep.th_amount_activity": "Amount / Activity",
+    "ghg_rep.th_source_model": "Source / Model",
+    "ghg_rep.th_official_database": "Official Source / DB",
+    "ghg_rep.th_issuing_body": "Issuing Body",
+    "ghg_rep.th_version_year": "Version / Year",
+    "ghg_rep.th_thematic_coverage": "Thematic Coverage",
+    "ghg_rep.th_verif_status": "Verification Status",
+    "ghg_rep.sec1_desc": "Corporate inventory structured pursuant to the <strong>GHG Protocol Corporate Accounting and Reporting Standard</strong>. Establishes accounting of greenhouse gases for the declared fiscal period:",
+    "ghg_rep.sec2_desc": "Consolidated emissions expressed in metric tons of carbon dioxide equivalent (tCO2e), characterized with 100-year GWP metrics from the IPCC Sixth Assessment Report (AR6):",
+    "ghg_rep.sec3_desc": "Direct emissions from fuel combustion in stationary devices, mobile fleet, chemical manufacturing reactions, and refrigerant fugitives:",
+    "ghg_rep.sec4_desc": "Pursuant to the official <em>GHG Protocol Scope 2 Guidance</em>, mandatory dual reporting is performed:",
+    "ghg_rep.sec4_market_note": "The <strong>Market-Based</strong> method reflects verified purchases of contractual renewable power via Clean Energy Certificates (CEL / I-REC) or private power purchase agreements (PPAs).",
+    "ghg_rep.sec5_desc": "Quantitative assessment of upstream and downstream value chain emissions under the <em>Corporate Value Chain (Scope 3) Standard</em>:",
+    "ghg_rep.sec6_desc": "Official databases and emission factors applied to convert activity data into metric tons of CO2e:",
+    "ghg_rep.sec6_vault_note": "Primary records (utility bills, fuel delivery invoices, consignment waybills, and hazardous waste manifests) are indexed and secured in the ECONODE Studio <strong>Document Vault</strong>.",
+    "ghg_rep.sec7_desc": "The organization maintains an absolute 30% reduction commitment across Scopes 1 and 2 by 2030 relative to base year 2021, and Net-Zero carbon neutrality by 2050 aligned with the Science Based Targets initiative (SBTi).",
+    "ghg_rep.dictamen_title": "Independent Verification Statement (ISO 14064-3 / NOM-070)",
+    "ghg_rep.dictamen_text": "This inventory has been independently reviewed in its primary data collection, factor selection, and accounting consolidation phases, found compliant with the GHG Protocol principles of relevance, completeness, consistency, accuracy, and transparency.",
+    "audit.sign_btn": "Sign Final Dictamen",
+    "audit.compliance_pending": "● Pending Standard Selection by Auditor",
+
  "report.export_openlca": "openLCA ",
  "report.export_ilcd": "ILCD ",
  "report.export_simapro": "SimaPro ",
@@ -1643,12 +1915,18 @@ function t(key, fallback = "") {
 }
 
 function applyTranslations(root = document) {
- const container = root || document;
- container.querySelectorAll("[data-i18n]").forEach(el => {
- const key = el.getAttribute("data-i18n");
- const val = t(key);
- if (val) el.textContent = val;
- });
+  const container = root || document;
+  container.querySelectorAll("[data-i18n]").forEach(el => {
+    const key = el.getAttribute("data-i18n");
+    const val = t(key);
+    if (val) {
+      if (el.hasAttribute("data-i18n-html") || val.includes("<")) {
+        el.innerHTML = val;
+      } else {
+        el.textContent = val;
+      }
+    }
+  });
 
  container.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
  const key = el.getAttribute("data-i18n-placeholder");

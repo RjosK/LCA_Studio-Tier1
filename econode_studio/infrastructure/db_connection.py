@@ -38,6 +38,11 @@ class PostgresCursorProxy:
         # Eliminar punto y coma final para evitar errores de sintaxis al anexar cláusulas (RETURNING, ON CONFLICT)
         cleaned_query = cleaned_query.rstrip(";").strip()
 
+        # Convertir SQLite INTEGER PRIMARY KEY AUTOINCREMENT a PostgreSQL SERIAL PRIMARY KEY
+        if "AUTOINCREMENT" in cleaned_query.upper():
+            cleaned_query = re.sub(r"\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b", "SERIAL PRIMARY KEY", cleaned_query, flags=re.IGNORECASE)
+            cleaned_query = re.sub(r"\bAUTOINCREMENT\b", "", cleaned_query, flags=re.IGNORECASE)
+
         # 1. Convertir '?' a '%s' y escapar '%' literales
         if "?" in cleaned_query:
             cleaned_query = cleaned_query.replace("%", "%%").replace("?", "%s")
@@ -53,9 +58,13 @@ class PostgresCursorProxy:
             if "ON CONFLICT" not in cleaned_query.upper():
                 cleaned_query += " ON CONFLICT DO NOTHING"
 
-        # 3. Convertir INSERT OR REPLACE a INSERT ...
+        # 3. Convertir INSERT OR REPLACE a INSERT ... ON CONFLICT
         if "INSERT OR REPLACE INTO" in cleaned_query.upper():
             cleaned_query = re.sub(r"INSERT\s+OR\s+REPLACE\s+INTO", "INSERT INTO", cleaned_query, flags=re.IGNORECASE)
+            if "tbl_currency_rates" in cleaned_query:
+                cleaned_query += " ON CONFLICT (base_currency, target_currency, reporting_year) DO UPDATE SET rate = EXCLUDED.rate"
+            elif "ON CONFLICT" not in cleaned_query.upper():
+                cleaned_query += " ON CONFLICT DO NOTHING"
 
         # 3b. Convertir LIKE a ILIKE en PostgreSQL para busquedas case-insensitive
         if " LIKE " in cleaned_query.upper():
@@ -66,7 +75,11 @@ class PostgresCursorProxy:
         has_returning = "RETURNING" in cleaned_query.upper()
         if is_insert and not has_returning:
             # Tablas con ID autoincremental en PostgreSQL
-            target_tables = ("product_systems", "custom_processes", "custom_flows", "custom_exchanges", "audit_comments", "documents", "projects")
+            target_tables = (
+                "product_systems", "custom_processes", "custom_flows", "custom_exchanges",
+                "audit_comments", "documents", "projects",
+                "tbl_ghg_inventories", "tbl_ghg_entries", "tbl_emission_factors"
+            )
             if any(tbl in cleaned_query for tbl in target_tables):
                 cleaned_query += " RETURNING id"
 
@@ -124,6 +137,7 @@ class PostgresConnectionProxy:
     """Proxy para conexiones de psycopg2 con compatibilidad con sqlite3.Connection."""
     def __init__(self, pg_conn):
         self._conn = pg_conn
+        self.row_factory = None
 
     def cursor(self):
         cur = self._conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
@@ -138,8 +152,10 @@ class PostgresConnectionProxy:
         return cur.executemany(query, params_list)
 
     def executescript(self, script: str):
+        cleaned = re.sub(r"\bINTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT\b", "SERIAL PRIMARY KEY", script, flags=re.IGNORECASE)
+        cleaned = re.sub(r"\bAUTOINCREMENT\b", "", cleaned, flags=re.IGNORECASE)
         with self._conn.cursor() as cur:
-            cur.execute(script)
+            cur.execute(cleaned)
 
     def commit(self):
         self._conn.commit()

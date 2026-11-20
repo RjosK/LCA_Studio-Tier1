@@ -7,7 +7,7 @@ US EPA 2024, CRE Mexico 2024, ADEME y factores monetarios USEEIO para Scope 3.
 import json
 import sys
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 # Soporte de ejecucion directa o como modulo
 infra_dir = Path(__file__).resolve().parent
@@ -582,49 +582,53 @@ SEED_CURRENCY_RATES = [
     {"base_currency": "USD", "target_currency": "GBP", "rate": 0.80, "reporting_year": 2023},
 ]
 
-def seed_emission_factors(force_reload: bool = False) -> int:
+def seed_emission_factors(force_reload: bool = False, conn: Optional[Any] = None) -> int:
     """Inserta los factores de emision base y tasas de cambio en la base de datos."""
-    init_emission_factors_db()
-    with get_ef_db_connection() as conn:
-        cursor = conn.cursor()
+    if conn is not None:
+        return _execute_seed(conn, force_reload)
+    with get_ef_db_connection() as c:
+        return _execute_seed(c, force_reload)
 
-        # Comprobar si ya existen datos
-        count = cursor.execute("SELECT COUNT(*) FROM tbl_emission_factors;").fetchone()[0]
-        if count > 0 and not force_reload:
-            return count
+def _execute_seed(conn: Any, force_reload: bool = False) -> int:
+    cursor = conn.cursor()
 
-        if force_reload:
-            cursor.execute("DELETE FROM tbl_emission_factors;")
-            cursor.execute("DELETE FROM tbl_currency_rates;")
-            cursor.execute("DELETE FROM tbl_ghg_entries;")
-            cursor.execute("DELETE FROM tbl_ghg_inventories;")
+    # Comprobar si ya existen datos
+    count = cursor.execute("SELECT COUNT(*) FROM tbl_emission_factors;").fetchone()[0]
+    if count > 0 and not force_reload:
+        return count
 
-        # Insertar tasas de cambio
-        for cr in SEED_CURRENCY_RATES:
-            cursor.execute("""
-                INSERT OR REPLACE INTO tbl_currency_rates (base_currency, target_currency, rate, reporting_year)
-                VALUES (?, ?, ?, ?);
-            """, (cr["base_currency"], cr["target_currency"], cr["rate"], cr["reporting_year"]))
+    if force_reload:
+        cursor.execute("DELETE FROM tbl_emission_factors;")
+        cursor.execute("DELETE FROM tbl_currency_rates;")
+        cursor.execute("DELETE FROM tbl_ghg_entries;")
+        cursor.execute("DELETE FROM tbl_ghg_inventories;")
 
-        # Insertar factores de emision
-        inserted = 0
-        for ef in SEED_EMISSION_FACTORS:
-            cursor.execute("""
-                INSERT INTO tbl_emission_factors (
-                    source_database, scope_applicability, activity_category, factor_name,
-                    activity_unit, gwp_factor_value, co2_factor, ch4_factor, n2o_factor,
-                    geographic_scope, valid_year, gwp_standard, uncertainty_pct, metadata_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            """, (
-                ef["source_database"], ef["scope_applicability"], ef["activity_category"], ef["factor_name"],
-                ef["activity_unit"], ef["gwp_factor_value"], ef["co2_factor"], ef["ch4_factor"], ef["n2o_factor"],
-                ef["geographic_scope"], ef["valid_year"], ef["gwp_standard"], ef["uncertainty_pct"], ef["metadata_json"]
-            ))
-            inserted += 1
+    # Insertar tasas de cambio
+    for cr in SEED_CURRENCY_RATES:
+        cursor.execute("""
+            INSERT OR REPLACE INTO tbl_currency_rates (base_currency, target_currency, rate, reporting_year)
+            VALUES (?, ?, ?, ?);
+        """, (cr["base_currency"], cr["target_currency"], cr["rate"], cr["reporting_year"]))
 
-        seed_sample_inventory_if_needed(cursor)
-        conn.commit()
-        return inserted
+    # Insertar factores de emision
+    inserted = 0
+    for ef in SEED_EMISSION_FACTORS:
+        cursor.execute("""
+            INSERT INTO tbl_emission_factors (
+                source_database, scope_applicability, activity_category, factor_name,
+                activity_unit, gwp_factor_value, co2_factor, ch4_factor, n2o_factor,
+                geographic_scope, valid_year, gwp_standard, uncertainty_pct, metadata_json
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """, (
+            ef["source_database"], ef["scope_applicability"], ef["activity_category"], ef["factor_name"],
+            ef["activity_unit"], ef["gwp_factor_value"], ef["co2_factor"], ef["ch4_factor"], ef["n2o_factor"],
+            ef["geographic_scope"], ef["valid_year"], ef["gwp_standard"], ef["uncertainty_pct"], ef["metadata_json"]
+        ))
+        inserted += 1
+
+    seed_sample_inventory_if_needed(cursor)
+    conn.commit()
+    return inserted
 
 if __name__ == "__main__":
     count = seed_emission_factors(force_reload=True)

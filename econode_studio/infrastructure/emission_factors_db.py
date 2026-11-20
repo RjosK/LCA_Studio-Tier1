@@ -11,15 +11,32 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple
 from contextlib import contextmanager
 
+try:
+    from .db_connection import get_db_connection
+except (ImportError, ValueError):
+    try:
+        from econode_studio.infrastructure.db_connection import get_db_connection
+    except (ImportError, ValueError):
+        import sys
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+        from econode_studio.infrastructure.db_connection import get_db_connection
+
 # Ruta por defecto de la base de datos de factores de emision
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
-DATA_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except Exception:
+    pass
 EF_DB_PATH = DATA_DIR / "econode_emission_factors.db"
 
+_EF_TABLES_ENSURED = False
+
 def get_resolved_db_path() -> Path:
-    """Resuelve la ruta de la base de datos adaptandose a Vercel Serverless (/tmp con permisos de escritura)."""
+    """Resuelve la ruta de la base de datos adaptandose a Vercel Serverless (/tmp con permisos de escritura) o entornos locales."""
     if os.environ.get("VERCEL") or not os.access(DATA_DIR, os.W_OK):
-        tmp_path = Path("/tmp") / "econode_emission_factors.db"
+        import tempfile
+        tmp_dir = Path(tempfile.gettempdir())
+        tmp_path = tmp_dir / "econode_emission_factors.db"
         if not tmp_path.exists() and EF_DB_PATH.exists():
             import shutil
             try:
@@ -29,16 +46,35 @@ def get_resolved_db_path() -> Path:
         return tmp_path
     return EF_DB_PATH
 
-def get_ef_db_connection() -> sqlite3.Connection:
-    """Crea y retorna una conexion con timeout y soporte para diccionarios (sqlite3.Row)."""
+def ensure_ef_tables(conn: Any) -> None:
+    """Verifica si las tablas de factores de emision e inventarios existen; si no, las inicializa."""
+    global _EF_TABLES_ENSURED
+    if _EF_TABLES_ENSURED:
+        return
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM tbl_ghg_inventories LIMIT 1;")
+        cur.fetchone()
+        _EF_TABLES_ENSURED = True
+    except Exception:
+        try:
+            _init_emission_factors_schema_on_conn(conn)
+            _EF_TABLES_ENSURED = True
+        except Exception:
+            pass
+
+def get_ef_db_connection() -> Any:
+    """Crea y retorna una conexion con soporte dual para Supabase PostgreSQL y SQLite."""
     target = get_resolved_db_path()
-    conn = sqlite3.connect(str(target), timeout=30.0)
-    conn.row_factory = sqlite3.Row
+    conn = get_db_connection(str(target))
+    if hasattr(conn, "row_factory"):
+        conn.row_factory = sqlite3.Row
     try:
         conn.execute("PRAGMA journal_mode = WAL;")
         conn.execute("PRAGMA foreign_keys = ON;")
     except Exception:
         pass
+    ensure_ef_tables(conn)
     return conn
 
 @contextmanager
@@ -54,95 +90,118 @@ def get_ef_db_session():
     finally:
         conn.close()
 
-def init_emission_factors_db() -> None:
-    """Crea las tablas e indices requeridos para factores de emision e inventarios GHG."""
-    with get_ef_db_session() as conn:
-        cursor = conn.cursor()
+def _init_emission_factors_schema_on_conn(conn: Any) -> None:
+    """Crea las tablas e indices requeridos para factores de emision e inventarios GHG sobre una conexion activa."""
+    cursor = conn.cursor()
 
-        # 1. Tabla de Factores de Emision Universales (GWP)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tbl_emission_factors (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_database TEXT NOT NULL,       -- 'DEFRA_2024', 'EPA_2024', 'CRE_2024', 'ADEME_2024', 'USEEIO_2'
-                scope_applicability TEXT NOT NULL,   -- 'SCOPE_1', 'SCOPE_2', 'SCOPE_3_CAT_1', 'SCOPE_3_CAT_4', 'ALL', etc.
-                activity_category TEXT NOT NULL,     -- 'Stationary Combustion', 'Electricity Grid', 'Freight Transport'
-                factor_name TEXT NOT NULL,           -- 'Diesel (100% mineral)', 'Grid Electricity - Mexico SEN'
-                activity_unit TEXT NOT NULL,         -- 'litres', 'kWh', 'ton.km', 'USD', 'kg'
-                gwp_factor_value REAL NOT NULL,      -- kg CO2e por unidad
-                co2_factor REAL,                     -- kg CO2 por unidad
-                ch4_factor REAL,                     -- kg CH4 por unidad (en kg CO2e)
-                n2o_factor REAL,                     -- kg N2O por unidad (en kg CO2e)
-                geographic_scope TEXT NOT NULL,      -- 'GLO', 'MX', 'US', 'GB', 'EU'
-                valid_year INTEGER NOT NULL,         -- 2024
-                gwp_standard TEXT DEFAULT 'AR5',     -- 'AR4', 'AR5', 'AR6' (GWP100)
-                uncertainty_pct REAL DEFAULT 5.0,    -- % incertidumbre
-                metadata_json TEXT                   -- Detalles adicionales, formulas, URLs
-            );
-        """)
+    # 1. Tabla de Factores de Emision Universales (GWP)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tbl_emission_factors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_database TEXT NOT NULL,
+            scope_applicability TEXT NOT NULL,
+            activity_category TEXT NOT NULL,
+            factor_name TEXT NOT NULL,
+            activity_unit TEXT NOT NULL,
+            gwp_factor_value REAL NOT NULL,
+            co2_factor REAL,
+            ch4_factor REAL,
+            n2o_factor REAL,
+            geographic_scope TEXT NOT NULL,
+            valid_year INTEGER NOT NULL,
+            gwp_standard TEXT DEFAULT 'AR5',
+            uncertainty_pct REAL DEFAULT 5.0,
+            metadata_json TEXT
+        );
+    """)
 
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ef_lookup ON tbl_emission_factors (source_database, scope_applicability);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ef_cat ON tbl_emission_factors (activity_category, geographic_scope);")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ef_name ON tbl_emission_factors (factor_name);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_ef_lookup ON tbl_emission_factors (source_database, scope_applicability);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_ef_cat ON tbl_emission_factors (activity_category, geographic_scope);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_ef_name ON tbl_emission_factors (factor_name);")
 
-        # 2. Tabla de Tipos de Cambio para Calculos Spend-Based
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tbl_currency_rates (
-                base_currency TEXT NOT NULL,         -- 'USD'
-                target_currency TEXT NOT NULL,       -- 'MXN', 'EUR', 'GBP'
-                rate REAL NOT NULL,                  -- 1 USD = X target_currency
-                reporting_year INTEGER NOT NULL,     -- 2024
-                PRIMARY KEY (base_currency, target_currency, reporting_year)
-            );
-        """)
+    # 2. Tabla de Tipos de Cambio para Calculos Spend-Based
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tbl_currency_rates (
+            base_currency TEXT NOT NULL,
+            target_currency TEXT NOT NULL,
+            rate REAL NOT NULL,
+            reporting_year INTEGER NOT NULL,
+            PRIMARY KEY (base_currency, target_currency, reporting_year)
+        );
+    """)
 
-        # 3. Tabla de Inventarios Corporativos GHG Protocol
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tbl_ghg_inventories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                organization_name TEXT NOT NULL,
-                reporting_year INTEGER NOT NULL,
-                consolidation_approach TEXT NOT NULL, -- 'operational_control', 'financial_control', 'equity_share'
-                country_code TEXT DEFAULT 'MX',
-                base_year INTEGER,
-                description TEXT DEFAULT '',
-                status TEXT DEFAULT 'draft',          -- 'draft', 'in_review', 'audited', 'reported'
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        """)
+    # 3. Tabla de Inventarios Corporativos GHG Protocol
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tbl_ghg_inventories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            organization_name TEXT NOT NULL,
+            reporting_year INTEGER NOT NULL,
+            consolidation_approach TEXT NOT NULL,
+            country_code TEXT DEFAULT 'MX',
+            base_year INTEGER,
+            description TEXT DEFAULT '',
+            status TEXT DEFAULT 'draft',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    """)
 
-        # 4. Tabla de Registros de Emision por Alcance (Scope 1, 2, 3)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS tbl_ghg_entries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                inventory_id INTEGER NOT NULL,
-                scope TEXT NOT NULL,                 -- 'SCOPE_1', 'SCOPE_2', 'SCOPE_3'
-                scope_category TEXT NOT NULL,        -- 'stationary_combustion', 'mobile_combustion', 'electricity_location', 'cat_1_purchased_goods', etc.
-                activity_name TEXT NOT NULL,         -- 'Caldera Principal 1', 'Flotilla de Distribucion'
-                calculation_type TEXT NOT NULL,      -- 'activity_based', 'spend_based', 'supplier_specific', 'product_system_lca'
-                activity_amount REAL NOT NULL,
-                activity_unit TEXT NOT NULL,
-                currency TEXT,                       -- 'USD', 'MXN', 'EUR' para spend-based
-                emission_factor_id INTEGER,          -- FK a tbl_emission_factors si aplica
-                emission_factor_value REAL NOT NULL, -- kg CO2e / unidad
-                emission_factor_unit TEXT NOT NULL,
-                emission_factor_source TEXT NOT NULL,
-                product_system_id INTEGER,           -- Referencia al canvas Tier 1 si aplica
-                contractual_instrument TEXT,         -- Para Scope 2 market-based: 'i_rec', 'cel', 'ppa'
-                emissions_kgco2e REAL NOT NULL,
-                emissions_tco2e REAL NOT NULL,
-                data_quality_tier TEXT DEFAULT 'Tier 2', -- 'Tier 1', 'Tier 2', 'Tier 3'
-                notes TEXT DEFAULT '',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (inventory_id) REFERENCES tbl_ghg_inventories (id) ON DELETE CASCADE
-            );
-        """)
+    # 4. Tabla de Registros de Emision por Alcance (Scope 1, 2, 3)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS tbl_ghg_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            inventory_id INTEGER NOT NULL,
+            scope TEXT NOT NULL,
+            scope_category TEXT NOT NULL,
+            activity_name TEXT NOT NULL,
+            calculation_type TEXT NOT NULL,
+            activity_amount REAL NOT NULL,
+            activity_unit TEXT NOT NULL,
+            currency TEXT,
+            emission_factor_id INTEGER,
+            emission_factor_value REAL NOT NULL,
+            emission_factor_unit TEXT NOT NULL,
+            emission_factor_source TEXT NOT NULL,
+            product_system_id INTEGER,
+            contractual_instrument TEXT,
+            emissions_kgco2e REAL NOT NULL,
+            emissions_tco2e REAL NOT NULL,
+            data_quality_tier TEXT DEFAULT 'Tier 2',
+            notes TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (inventory_id) REFERENCES tbl_ghg_inventories (id) ON DELETE CASCADE
+        );
+    """)
 
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ghg_entry_inv ON tbl_ghg_entries (inventory_id, scope);")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_ghg_entry_inv ON tbl_ghg_entries (inventory_id, scope);")
+    conn.commit()
+
+    try:
+        from .seed_emission_factors import seed_emission_factors, seed_sample_inventory_if_needed
+    except (ImportError, ValueError):
+        try:
+            from econode_studio.infrastructure.seed_emission_factors import seed_emission_factors, seed_sample_inventory_if_needed
+        except Exception:
+            seed_emission_factors = None
+            seed_sample_inventory_if_needed = None
+
+    if seed_emission_factors:
+        try:
+            seed_emission_factors(force_reload=False, conn=conn)
+        except Exception:
+            if seed_sample_inventory_if_needed:
+                seed_sample_inventory_if_needed(cursor)
+                conn.commit()
+    elif seed_sample_inventory_if_needed:
         seed_sample_inventory_if_needed(cursor)
         conn.commit()
 
-def seed_sample_inventory_if_needed(cursor: sqlite3.Cursor) -> Optional[int]:
+def init_emission_factors_db() -> None:
+    """Crea las tablas e indices requeridos para factores de emision e inventarios GHG."""
+    with get_ef_db_session() as conn:
+        _init_emission_factors_schema_on_conn(conn)
+
+def seed_sample_inventory_if_needed(cursor: Any) -> Optional[int]:
     """Siembra un inventario corporativo de demostracion si la tabla de inventarios esta vacia."""
     count = cursor.execute("SELECT COUNT(*) FROM tbl_ghg_inventories;").fetchone()[0]
     if count > 0:
