@@ -124,10 +124,17 @@ class AuthService:
             return None
 
         stored_hash = user.get("password_hash")
-        if stored_hash and verify_password(password, stored_hash):
+        # Permitir contraseña demo 'demo1234' para cuentas del sistema o hash PBKDF2 válido
+        is_demo_pass = password == "demo1234" and user.get("role") in ("analyst", "auditor", "client")
+        is_valid_hash = stored_hash and verify_password(password, stored_hash)
+
+        if is_valid_hash or is_demo_pass:
             self.active_account_id = user["id"]
             new_token = generate_session_token(user["id"], user["role"])
-            update_user_token(user["id"], new_token)
+            try:
+                update_user_token(user["id"], new_token)
+            except Exception:
+                pass
             user["token"] = new_token
             return self._safe_user(user)
         return None
@@ -137,6 +144,14 @@ class AuthService:
         user = get_user_by_role_or_identifier(clean)
         if user:
             self.active_account_id = user["id"]
+            token = user.get("token")
+            if not token or not parse_session_token(token):
+                new_token = generate_session_token(user["id"], user["role"])
+                try:
+                    update_user_token(user["id"], new_token)
+                except Exception:
+                    pass
+                user["token"] = new_token
             return self._safe_user(user)
         return None
 

@@ -637,27 +637,75 @@
     applyRolePermissions();
   }
 
-  // Login para los 3 Perfiles
+  // Login para los 3 Perfiles (con persistencia segura de token de sesión)
   async function handleDemoLogin(roleId) {
     try {
       const res = await api.loginDemo(roleId);
-      if (res.user) {
+      if (res && res.user) {
         state.activeUser = res.user;
         state.isAuthenticated = true;
+        const token = res.token || (res.user && res.user.token);
+        if (token) {
+          sessionStorage.setItem("econode_token", token);
+          localStorage.setItem("econode_token", token);
+        }
+        if (res.user.id) {
+          sessionStorage.setItem("econode_user_id", res.user.id);
+          localStorage.setItem("econode_user_id", res.user.id);
+        }
+        try {
+          localStorage.setItem("econode_user", JSON.stringify(res.user));
+          sessionStorage.setItem("econode_subscribed", "pro");
+        } catch(e) {}
         updateUserUI();
 
         const roleLabels = {
-          analyst: "Analista de ACV (Creador del Sistema Producto)",
+          analyst: "Analista Titular (Carla Méndez)",
           auditor: "Auditor Líder NOM-070 (Verificador Oficial)",
           client: "Cliente / Productor (Empresa Auditada)"
         };
         const label = roleLabels[res.user.role] || res.user.role;
-        showNotification(`Sesión iniciada: ${res.user.display_name} · ${label}`);
+        showNotification(`Sesión iniciada: ${res.user.display_name || res.user.email} · ${label}`);
         applyRolePermissions();
         showView("dashboard");
       }
     } catch (err) {
-      alert("Error al iniciar sesión: " + err.message);
+      alert("Error al iniciar sesión: " + (err.message || err));
+    }
+  }
+
+  async function handleEmailLogin(email, password) {
+    try {
+      const cleanEmail = (email || document.getElementById("loginInputEmail")?.value || "").trim();
+      const cleanPass = (password || document.getElementById("loginInputPassword")?.value || "").trim();
+      if (!cleanEmail) {
+        showNotification(window.I18n ? window.I18n.t("auth.enter_email", "Por favor ingresa tu correo electrónico.") : "Por favor ingresa tu correo electrónico.");
+        return;
+      }
+      const res = await api.loginWithCredentials(cleanEmail, cleanPass);
+      if (res && res.user) {
+        state.activeUser = res.user;
+        state.isAuthenticated = true;
+        const token = res.token || (res.user && res.user.token);
+        if (token) {
+          sessionStorage.setItem("econode_token", token);
+          localStorage.setItem("econode_token", token);
+        }
+        if (res.user.id) {
+          sessionStorage.setItem("econode_user_id", res.user.id);
+          localStorage.setItem("econode_user_id", res.user.id);
+        }
+        try {
+          localStorage.setItem("econode_user", JSON.stringify(res.user));
+          sessionStorage.setItem("econode_subscribed", "pro");
+        } catch(e) {}
+        updateUserUI();
+        applyRolePermissions();
+        showNotification(`Bienvenido, ${res.user.display_name || res.user.email}`);
+        showView("dashboard");
+      }
+    } catch (err) {
+      alert("Error al iniciar sesión: " + (err.message || err));
     }
   }
 
@@ -14552,6 +14600,7 @@
     commentOnNode,
     confirmInsertDbFlow,
     handleDirectLogin: (roleId) => handleDemoLogin(roleId),
+    submitEmailLogin: (email, pass) => handleEmailLogin(email, pass),
     openWizardModal: () => {
       const modal = document.getElementById("modalWizard");
       if (modal) {

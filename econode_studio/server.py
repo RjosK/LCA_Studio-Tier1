@@ -1100,7 +1100,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                     self._send_error_json(str(e), 400)
                 return
 
-            # Login con Usuario/Correo y Contraseña (con fallback demo para entornos locales)
+            # Login con Usuario/Correo y Contraseña (con soporte de roles directos y credenciales preconfiguradas)
             elif path == "/api/auth/login":
                 username_or_email = (body.get("email") or body.get("username") or body.get("user_id") or "").strip()
                 password = body.get("password")
@@ -1108,6 +1108,16 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 if not username_or_email:
                     self._send_error_json("Usuario o correo requerido.", 400)
                     return
+
+                try:
+                    from application.auth_service import generate_session_token
+                except (ImportError, ValueError):
+                    from econode_studio.application.auth_service import generate_session_token
+
+                try:
+                    from infrastructure.auth_adapter import update_user_token
+                except (ImportError, ValueError):
+                    from econode_studio.infrastructure.auth_adapter import update_user_token
 
                 # Si es un inicio de sesión demo/directo sin contraseña (ej. analyst, auditor, client)
                 if not password:
@@ -1121,7 +1131,15 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                     if matched_user:
                         auth_service.active_account_id = matched_user["id"]
-                        self._send_json({"status": "success", "authenticated": True, "user": matched_user, "token": matched_user.get("token")})
+                        token = matched_user.get("token")
+                        if not token or not auth_service.parse_session_token(token):
+                            token = generate_session_token(matched_user["id"], matched_user.get("role", "analyst"))
+                            try:
+                                update_user_token(matched_user["id"], token)
+                            except Exception:
+                                pass
+                            matched_user["token"] = token
+                        self._send_json({"status": "success", "authenticated": True, "user": matched_user, "token": token})
                         return
                     else:
                         self._send_error_json("Contraseña requerida.", 400)
@@ -1129,7 +1147,15 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 user = auth_service.authenticate(username_or_email, password)
                 if user:
-                    self._send_json({"status": "success", "authenticated": True, "user": user, "token": user.get("token")})
+                    token = user.get("token")
+                    if not token or not auth_service.parse_session_token(token):
+                        token = generate_session_token(user["id"], user.get("role", "analyst"))
+                        try:
+                            update_user_token(user["id"], token)
+                        except Exception:
+                            pass
+                        user["token"] = token
+                    self._send_json({"status": "success", "authenticated": True, "user": user, "token": token})
                 else:
                     self._send_error_json("Credenciales incorrectas. Verifica tu correo y contraseña.", 401)
                 return

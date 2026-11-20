@@ -26,8 +26,15 @@ from .auth_adapter import (
     list_invitations_by_analyst,
     get_all_invitations,
     mark_invitation_accepted,
-    cancel_invitation
+    cancel_invitation,
+    save_api_key,
+    get_api_key_by_hash,
+    list_user_api_keys,
+    revoke_api_key,
+    update_api_key_last_used,
+    check_and_increment_rate_limit
 )
+from .mcp_server import handle_jsonrpc_request, MCP_TOOLS
 from .audit_adapter import (
     get_audit_db_connection,
     init_audit_db,

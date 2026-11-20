@@ -40,5 +40,10 @@ from .exporters_service import (
     export_csv_use_case, export_nom070_dossier_use_case, export_complete_expediente_use_case,
     export_openlca_jsonld_zip, export_ilcd_xml_zip, export_simapro_csv,
     export_lci_consolidated_csv, export_expediente_nom070_zip,
-    export_pdf_use_case, export_system_pdf_bytes
+    export_pdf_use_case, export_system_pdf_bytes,
+    export_docx_use_case, export_system_docx_bytes
 )
+try:
+    from .epd_service import compute_epd_report_use_case
+except (ImportError, ValueError):
+    pass
