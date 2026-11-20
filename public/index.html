@@ -1512,7 +1512,7 @@
       <!-- Documento Central Estilo Notion / Docs -->
       <div id="reportMainCard" style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 32px 36px; box-shadow: var(--shadow-sm);">
         <!-- ENCABEZADO FORMAL PARA IMPRESIÓN PDF OFICIAL ISO / NOM-070 -->
-        <div class="print-official-header" style="display: none;">
+        <div class="print-official-header" id="printLcaOfficialHeader" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0F172A; padding-bottom: 8pt; margin-bottom: 14pt;">
             <div>
               <div style="font-size: 16pt; font-weight: 700; color: #0F172A;">ECONODE Studio · Reporte Técnico de Ciclo de Vida</div>
@@ -1540,11 +1540,12 @@
             <h1 style="font-size: 19px; font-weight: 700; margin-top: 6px;" id="reportMainTitle">Sistema Producto: Envase PET Circular 500ml</h1>
           </div>
 
-          <!-- CONMUTADOR SEGMENTADO APPLE HIG: REPORTE ACV vs REPORTE EPD -->
+          <!-- CONMUTADOR SEGMENTADO APPLE HIG: REPORTE ACV vs REPORTE EPD vs REPORTE GEI -->
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <div class="epd-segmented-control" id="reportModeSegmented" role="tablist" aria-label="Modo de reporte">
               <button type="button" class="epd-seg-btn active" id="btnReportModeLca" data-report-mode="lca" role="tab" aria-selected="true" data-i18n="report.mode_lca">Reporte ACV / NOM-070</button>
               <button type="button" class="epd-seg-btn" id="btnReportModeEpd" data-report-mode="epd" role="tab" aria-selected="false" data-i18n="report.mode_epd">Declaracion EPD (SmartEPD)</button>
+              <button type="button" class="epd-seg-btn" id="btnReportModeGhg" data-report-mode="ghg" role="tab" aria-selected="false" data-i18n="report.mode_ghg">Reporte GEI (GHG Protocol)</button>
             </div>
 
             <!-- ACCIONES DEL DOCUMENTO -->
@@ -1573,50 +1574,264 @@
           <button type="button" class="btn btn-emerald btn-sm" id="btnSaveReportEdits" title="Guardar cambios del documento" style="padding: 2px 10px; margin-left: auto;"> Guardar Reporte</button>
         </div>
 
+        <!-- ÍNDICE DE NAVEGACIÓN DINÁMICO ISO 14040/14044 (TOC BAR) -->
+        <div class="report-toc-bar" id="reportTocBar">
+          <span style="font-size: 10.5px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;" data-i18n="report.toc_label">Índice ISO 14040/14044:</span>
+          <a class="report-toc-pill" href="#sec-1-intro" data-i18n="report.ch1_nav">1. Introducción</a>
+          <a class="report-toc-pill" href="#sec-2-goal-scope" data-i18n="report.ch2_nav">2. Objetivo y Alcance</a>
+          <a class="report-toc-pill" href="#sec-3-lci" data-i18n="report.ch3_nav">3. Inventario (LCI)</a>
+          <a class="report-toc-pill" href="#sec-4-lcia" data-i18n="report.ch4_nav">4. Impactos (LCIA)</a>
+          <a class="report-toc-pill" href="#sec-5-interpretation" data-i18n="report.ch5_nav">5. Interpretación</a>
+          <a class="report-toc-pill" href="#sec-6-conclusions" data-i18n="report.ch6_nav">6. Conclusiones</a>
+        </div>
+
         <div id="reportDocumentBody" contenteditable="true" style="outline: none; min-height: 400px; padding: 4px;">
-          <h3 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;" data-i18n="report.processes_title">1. Estructura de Procesos del Sistema</h3>
-          <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 12px;">
-            Etapas del ciclo de vida modeladas con sus entradas tecnosféricas, flujos de referencia y salidas (productos, mermas/residuos y emisiones):
-          </p>
+          <!-- CAPITULO 1: INTRODUCCION -->
+          <section class="report-chapter-section" id="sec-1-intro">
+            <h3 class="report-chapter-title" data-i18n="report.ch1_title">1. Introducción</h3>
+            <p class="report-p">
+              El presente Análisis de Ciclo de Vida (ACV) evalúa de forma holística y cuantitativa los flujos de masa, energía e impactos ambientales asociados al sistema producto modelado. El informe documenta la metodología, las hipótesis técnicas, los balances de materia y energía y los resultados normalizados para fines de ecodiseño y cumplimiento regulatorio.
+            </p>
+            <h4 class="report-sub-title" data-i18n="report.ch1_1">1.1 Normas Guía y Marco de Referencia</h4>
+            <p class="report-p">
+              Este estudio ha sido formulado bajo estricto apego a las normas internacionales <strong>ISO 14040:2006</strong> (Gestión ambiental - Análisis del ciclo de vida - Principios y marco de referencia), <strong>ISO 14044:2006/Amd 2:2020</strong> (Requisitos y directrices), <strong>ISO 14067:2018</strong> (Gases de Efecto Invernadero - Huella de carbono de productos) y la regulación nacional aplicable <strong>NOM-070-SE-2024</strong> (Acreditación y auditoría de declaraciones ambientales en México).
+            </p>
+          </section>
 
-          <!-- Tabla de Procesos y Balances -->
-          <table class="data-table" style="margin-bottom: 24px;" id="reportProcessesTable">
-            <thead>
-              <tr>
-                <th>Etapa del Ciclo</th>
-                <th>Flujo de Referencia (UF)</th>
-                <th>Insumos Principales (3)</th>
-                <th>Residuo / Waste</th>
-                <th>Emisión Elemental</th>
-              </tr>
-            </thead>
-            <tbody id="reportBodyProcesses">
-              <!-- Renderizado dinámico desde app.js -->
-            </tbody>
-          </table>
+          <!-- CAPITULO 2: DEFINICION DE OBJETIVO Y ALCANCE -->
+          <section class="report-chapter-section" id="sec-2-goal-scope">
+            <h3 class="report-chapter-title" data-i18n="report.ch2_title">2. Definición de Objetivo y Alcance (Goal & Scope)</h3>
+            
+            <h4 class="report-sub-title" data-i18n="report.ch2_1">2.1 Objetivo del Estudio (Goal)</h4>
+            <p class="report-p">
+              <strong>2.1.1 Razones para Realizar el Estudio:</strong> Identificar los puntos críticos de impacto ambiental (hotspots) a lo largo de las etapas del ciclo de vida, cuantificar el perfil ambiental del producto frente a formulaciones de referencia y suministrar evidencia técnica auditable.
+            </p>
+            <p class="report-p">
+              <strong>2.1.2 Aplicación Prevista:</strong> Apoyar decisiones de ecodiseño industrial, optimizar el uso de energía eléctrica de la red nacional, respaldar la reducción de mermas y proporcionar la base científica para Declaraciones Ambientales de Producto (EPD).
+            </p>
+            <p class="report-p">
+              <strong>2.1.3 Audiencia Objetivo:</strong> Equipo de ingeniería y sostenibilidad de la organización titular, clientes corporativos B2B, auditores de certificación y organismos reguladores de verificación ambiental.
+            </p>
+            <p class="report-p">
+              <strong>2.1.4 Aseveraciones Comparativas Divulgadas:</strong> En caso de comunicación pública de afirmaciones comparativas entre productos alternativos, el estudio satisface plenamente las exigencias de revisión crítica independiente por panel de partes interesadas conforme a ISO 14044 cláusula 6.
+            </p>
 
-          <h3 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;" data-i18n="report.lci_title">2. Inventario de Ciclo de Vida (LCI Consolidado)</h3>
-          <p style="font-size: 11.5px; color: var(--text-secondary); margin-bottom: 12px;">
-            Consolidación de entradas tecnosféricas y emisiones elementales verificadas por el Auditor Líder:
-          </p>
-          <table class="data-table" style="margin-bottom: 24px;" id="reportLciTable">
-            <thead>
-              <tr>
-                <th>Insumo / Emisión</th>
-                <th>Valor Unitario</th>
-                <th>Unidad</th>
-                <th>Estado Verificado</th>
-              </tr>
-            </thead>
-            <tbody id="reportBodyLciConsolidated">
-              <!-- Renderizado dinámico según nodos del lienzo -->
-            </tbody>
-          </table>
+            <h4 class="report-sub-title" data-i18n="report.ch2_2">2.2 Alcance del Estudio (Scope)</h4>
+            <div class="report-callout-box">
+              <strong>2.2.1 Función, Unidad Funcional y Flujo de Referencia:</strong>
+              <div style="margin-top: 4px;">
+                La Unidad Funcional (UF) se define como: <strong id="reportDynamicFu" style="color: #059669;">1.000 kg / unidad de producto terminado</strong> puesto en planta con especificaciones técnicas estándar de resistencia mecánica y propiedades funcionales verificadas.
+              </div>
+            </div>
+            <p class="report-p" id="reportSystemBoundaryText">
+              <strong>2.2.2 Límites del Sistema:</strong> Enfoque <em>Cradle-to-Gate</em> (de la cuna a la puerta de planta). Se incluyen las operaciones de extracción y refino de resinas base, manufactura y transporte de insumos auxiliares, generación eléctrica, transporte de materias primas a planta, procesos unitarios de producción, tratamiento de mermas internas y emisiones directas al aire y agua.
+            </p>
+            <p class="report-p">
+              <strong>2.2.3 Criterios de Corte (Cut-off Criteria):</strong> Se aplica un umbral de corte del 1% en masa y contenido energético acumulado, con un límite global acumulado de flujos no modelados inferior al 5%. No se excluye ningún flujo secundario que posea potencial de toxicidad o ecotoxicidad significativo.
+            </p>
+            <p class="report-p">
+              <strong>2.2.4 Procesos Excluidos:</strong> Se excluyen del límite de modelado la amortización de infraestructura civil fabril con vida útil superior a 30 años, la maquinaria mayor de planta no amortizable al lote de producción y el desplazamiento del personal administrativo, de acuerdo con las Reglas de Categoría de Producto (PCR) sectoriales.
+            </p>
+            <p class="report-p">
+              <strong>2.2.5 Reglas de Asignación (Allocation):</strong> Conforme a la jerarquía de ISO 14044, se evita la asignación mediante subdivisión de procesos y balances de masa físicos. Para los co-productos y mermas con valor comercial se aplica asignación por masa o asignación económica justificada.
+            </p>
+            <p class="report-p">
+              <strong>2.2.6 Análisis de Sensibilidad Planteado:</strong> Se evalúa la robustez de las conclusiones ante variaciones en el porcentaje de material reciclado incorporado (20% a 85%), escenarios de mix eléctrico regional y fluctuaciones en distancias de flete carretero.
+            </p>
+            <p class="report-p" id="reportCalculationToolText">
+              <strong>2.2.7 Herramienta y Motor de Cálculo:</strong> Modelado y cálculo ejecutado con <strong>ECONODE Studio Engine v2.0</strong>, empleando matrices tecnológicas y matrices de intervención con inversión analítica (Brightway2 / Leontief core) y exportación compatible con openLCA y SimaPro.
+            </p>
+            <p class="report-p">
+              <strong>2.2.8 Método de Evaluación de Impacto (LCIA):</strong> Se aplican los métodos estandarizados <strong>ReCiPe 2016 Midpoint (H)</strong>, <strong>Environmental Footprint EF 3.1</strong> y <strong>TRACI 2.1</strong> con caracterización obligatoria de GWP100 (IPCC AR6).
+            </p>
+            <p class="report-p">
+              <strong>2.2.9 Requisitos de Calidad de Datos:</strong> Información primaria con representatividad temporal no superior a 3 años, trazabilidad geográfica regional y verificación mediante Matriz Pedigree de aseguramiento de calidad.
+            </p>
+            <p class="report-p">
+              <strong>2.2.10 Revisión Crítica Independiente:</strong> Expediente formulado para su verificación por Tercero Independiente de acuerdo con ISO/IEC 17029 e ISO 14044 Cláusula 6.
+            </p>
+          </section>
 
-          <h3 style="font-size: 13.5px; font-weight: 700; margin-bottom: 8px;" data-i18n="report.assumptions_title">3. Supuestos Técnicos y Evidencia de Planta</h3>
-          <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px;">
-            La tasa de merma del proceso de inyección se acreditó en 5% con reciclaje interno en bucle cerrado. Para la etapa de soplado se utilizó un factor de recorte de 0.2%. Las evidencias documentales (facturas CFE y manifiestos de residuo) se encuentran custodiadas en la <strong>Bóveda de Documentos</strong>.
-          </p>
+          <!-- CAPITULO 3: ANALISIS DE INVENTARIO DE CICLO DE VIDA (LCI) -->
+          <section class="report-chapter-section" id="sec-3-lci">
+            <h3 class="report-chapter-title" data-i18n="report.ch3_title">3. Análisis de Inventario de Ciclo de Vida (LCI)</h3>
+            
+            <h4 class="report-sub-title" data-i18n="report.ch3_1">3.1 Procedimiento de Recolección de Datos</h4>
+            <p class="report-p">
+              <strong>3.1.1 Tipos de Datos:</strong> Se distinguen datos primarios de planta (consumos de electricidad CFE, pesaje de resinas, mermas de inyección/soplado y kilometraje de transporte de entrega) y datos secundarios de bases de datos internacionales verificadas.
+            </p>
+            <p class="report-p">
+              <strong>3.1.2 Cuestionarios y Evidencias de Planta:</strong> Los insumos y rendimientos fueron auditados a partir de recibos oficiales de CFE, facturas de compras de materias primas y manifiestos de disposición final custodiados de forma inmutable en la Bóveda de Documentos.
+            </p>
+
+            <h4 class="report-sub-title" data-i18n="report.ch3_2">3.2 Inventario del Ciclo de Vida y Supuestos</h4>
+            <p class="report-p">
+              <strong>3.2.1 Rutas de Transporte y Logística:</strong> Fletes de materias primas y distribución modelados con tractocamión diésel Euro IV/V (16-32 toneladas métricas) sobre rutas pavimentadas estándar, considerando factores de carga media del 70%.
+            </p>
+            <p class="report-p">
+              <strong>3.2.2 Procesos Unitarios y Balances de Masa:</strong> La siguiente tabla resume las etapas modeladas en el lienzo de ECONODE Studio con sus flujos de referencia, consumos de insumos, generación de scrap/mermas y emisiones:
+            </p>
+            <!-- Tabla de Procesos y Balances -->
+            <table class="data-table" style="margin-bottom: 20px;" id="reportProcessesTable">
+              <thead>
+                <tr>
+                  <th>Etapa del Ciclo</th>
+                  <th>Flujo de Referencia (UF)</th>
+                  <th>Insumos Principales</th>
+                  <th>Residuo / Scrap</th>
+                  <th>Emisión Elemental</th>
+                </tr>
+              </thead>
+              <tbody id="reportBodyProcesses">
+                <!-- Renderizado dinámico desde app.js -->
+              </tbody>
+            </table>
+
+            <p class="report-p">
+              <strong>3.2.3 Conjuntos de Datos de Fondo (Background Datasets):</strong> Los procesos de upstream (extracción de petróleo, síntesis de polímeros vírgenes y catalizadores) se alimentan de la base de datos oficial <strong>ecoinvent 3.12 (Cut-off Unit)</strong>.
+            </p>
+            <p class="report-p">
+              <strong>3.2.4 Inventario Consolidado (LCI):</strong> Consolidación de todos los insumos tecnosféricos y salidas biosféricas del sistema producto:
+            </p>
+            <!-- Tabla LCI Consolidado -->
+            <table class="data-table" style="margin-bottom: 20px;" id="reportLciTable">
+              <thead>
+                <tr>
+                  <th>Insumo / Emisión</th>
+                  <th>Valor Unitario</th>
+                  <th>Unidad</th>
+                  <th>Estado Verificado</th>
+                </tr>
+              </thead>
+              <tbody id="reportBodyLciConsolidated">
+                <!-- Renderizado dinámico según nodos del lienzo -->
+              </tbody>
+            </table>
+
+            <p class="report-p">
+              <strong>3.2.5 Escenarios para Análisis de Sensibilidad:</strong> Se contrastan la formulación base y configuraciones con tasas de incorporación de resina post-consumo al 20%, 50% y 85%, así como esquemas de autogeneración solar in situ.
+            </p>
+          </section>
+
+          <!-- CAPITULO 4: RESULTADOS DE EVALUACION DE IMPACTO (LCIA) -->
+          <section class="report-chapter-section" id="sec-4-lcia">
+            <h3 class="report-chapter-title" data-i18n="report.ch4_title">4. Resultados de Evaluación de Impacto (LCIA)</h3>
+            
+            <h4 class="report-sub-title" data-i18n="report.ch4_1">4.1 Resultados Caracterizados por Categoría</h4>
+            <p class="report-p">
+              Resultados ambientales normalizados calculados para la Unidad Funcional mediante factores de caracterización validados:
+            </p>
+            <div class="epd-table-wrap" style="margin-bottom: 16px;">
+              <table class="data-table epd-dense-table epd-numeric-table" id="reportLciaResultsTable">
+                <thead>
+                  <tr>
+                    <th style="text-align: left;">Categoría de Impacto</th>
+                    <th style="text-align: left;">Indicador Metodológico</th>
+                    <th>Unidad</th>
+                    <th>Impacto Total</th>
+                    <th>Línea Base</th>
+                    <th>Escenario Optimizado</th>
+                  </tr>
+                </thead>
+                <tbody id="reportBodyLciaResults">
+                  <!-- Renderizado dinámico desde app.js -->
+                </tbody>
+              </table>
+            </div>
+
+            <h4 class="report-sub-title" data-i18n="report.ch4_2">4.2 Análisis de Contribución por Etapa y Proceso</h4>
+            <p class="report-p">
+              Distribución porcentual de cargas ambientales entre los procesos del ciclo de vida para identificar prioridades de mitigación:
+            </p>
+            <div class="epd-table-wrap" style="margin-bottom: 16px;">
+              <table class="data-table epd-dense-table" id="reportContributionTable">
+                <thead>
+                  <tr>
+                    <th style="text-align: left;">Etapa / Proceso Unitario</th>
+                    <th style="text-align: left;">Insumo Dominante</th>
+                    <th>Aporte Relativo (%)</th>
+                    <th style="min-width: 140px;">Distribución Visual</th>
+                    <th>Prioridad (Pareto 80/20)</th>
+                  </tr>
+                </thead>
+                <tbody id="reportBodyContribution">
+                  <!-- Renderizado dinámico desde app.js -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- CAPITULO 5: INTERPRETACION DEL CICLO DE VIDA -->
+          <section class="report-chapter-section" id="sec-5-interpretation">
+            <h3 class="report-chapter-title" data-i18n="report.ch5_title">5. Interpretación del Ciclo de Vida</h3>
+            
+            <h4 class="report-sub-title" data-i18n="report.ch5_1">5.1 Hallazgos Principales y Puntos Críticos (Hotspots)</h4>
+            <p class="report-p">
+              El análisis confirma que la mayor contribución al potencial de calentamiento global (GWP100) y al agotamiento de recursos fósiles radica en la síntesis de materiales vírgenes y el consumo eléctrico en planta. La sustitución por resinas post-consumo recicladas y la adopción de esquemas de eficiencia energética representan los vectores más eficaces para abatir la huella ambiental.
+            </p>
+
+            <h4 class="report-sub-title" data-i18n="report.ch5_2">5.2 Evaluación de Integridad, Incertidumbre y Calidad</h4>
+            <p class="report-p">
+              <strong>5.2.1 Análisis de Sensibilidad:</strong> La variación de las distancias logísticas en un ±30% produce una fluctuación inferior al 3.5% en la huella total, lo cual ratifica la estabilidad de las conclusiones frente a incertidumbres de flete.
+            </p>
+            <p class="report-p">
+              <strong>5.2.2 Evaluación de Calidad de Datos (Matriz Pedigree):</strong> Los datos primarios obtuvieron una calificación promedio ponderada de 4.3 sobre 5.0 en la Matriz Pedigree, reflejando alta precisión temporal, representatividad geográfica local y documentación auditable.
+            </p>
+            <p class="report-p">
+              <strong>5.2.3 Análisis de Incertidumbre:</strong> La propagación de incertidumbre paramétrica arroja un coeficiente de variación inferior al 7.8% para las emisiones de GEI en el ciclo de vida.
+            </p>
+            <div style="display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11px; font-weight: 700; color: #334155;">5.2.4 Verificación de Exhaustividad:</span>
+                <span class="badge-pill badge-emerald" id="reportCompletenessBadge">✓ 100% Balances y Flujos Verificados</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 11px; font-weight: 700; color: #334155;">5.2.5 Verificación de Consistencia:</span>
+                <span class="badge-pill badge-emerald" id="reportConsistencyBadge">✓ Reglas Homogéneas ISO 14044</span>
+              </div>
+            </div>
+            <p class="report-p">
+              <strong>5.2.6 Limitaciones del Estudio:</strong> Los resultados reflejan la configuración técnica y operacional descrita. No deben extrapolarse directamente a plantas con tecnología de inyección hidráulica obsoleta o a geografías con matrices eléctricas distintas a la red nacional evaluada.
+            </p>
+          </section>
+
+          <!-- CAPITULO 6: CONCLUSIONES Y RECOMENDACIONES -->
+          <section class="report-chapter-section" id="sec-6-conclusions">
+            <h3 class="report-chapter-title" data-i18n="report.ch6_title">6. Conclusiones y Recomendaciones</h3>
+            
+            <h4 class="report-sub-title" data-i18n="report.ch6_1">6.1 Conclusiones del Estudio</h4>
+            <p class="report-p">
+              El estudio de Análisis de Ciclo de Vida demuestra que el producto modelado cumple cabalmente con los criterios metodológicos de ISO 14040, ISO 14044 y NOM-070-SE-2024. Los balances de masa y energía son consistentes, y el expediente documenta con rigor técnico cada insumo y factor aplicado.
+            </p>
+
+            <h4 class="report-sub-title" data-i18n="report.ch6_2">6.2 Recomendaciones de Ecodiseño y Mitigación</h4>
+            <p class="report-p">
+              Se recomienda implementar una hoja de ruta con tres prioridades estratégicas: (1) Incrementar el contenido de resina reciclada certificada en al menos un 25% adicional en formulaciones sucesivas; (2) Migrar hacia contratos de suministro con energía limpia verificada; y (3) Mantener la custodia digital de facturas y manifiestos en la Bóveda de Documentos para facilitar auditorías de seguimiento.
+            </p>
+
+            <!-- TARJETA DE FIRMAS FORMALES DE AUDITORIA -->
+            <div id="reportSignOffCard" style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: var(--radius-md); padding: 14px 18px; margin-top: 20px;">
+              <div style="font-size: 11.5px; font-weight: 700; color: #0F172A; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
+                <span>Dictamen Técnico y Cierre de Expediente de Auditoría</span>
+                <span class="badge-pill badge-emerald">Conforme NOM-070 / ISO 14044</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; font-size: 10.5px; color: #334155;">
+                <div style="border-top: 1px dashed #94A3B8; padding-top: 8px;">
+                  <div><strong>Elaboró (Analista de ACV):</strong> <span id="reportSignAnalystName">Carla Méndez</span></div>
+                  <div style="color: #64748B; margin-top: 2px;">Especialista en Modelado de Ciclo de Vida</div>
+                  <div style="color: #64748B;">BioPack Industrial S.A. de C.V.</div>
+                </div>
+                <div style="border-top: 1px dashed #94A3B8; padding-top: 8px;">
+                  <div><strong>Verificó (Auditor Líder Independiente):</strong> <span id="reportSignAuditorName">Dr. Roberto Silva</span></div>
+                  <div style="color: #64748B; margin-top: 2px;">Auditor Certificado ISO 14040 / ISO 14044</div>
+                  <div style="color: #64748B;">EcoCert Internacional S.C.</div>
+                </div>
+              </div>
+              <div style="margin-top: 12px; font-size: 9.5px; color: #64748B; border-top: 1px solid #E2E8F0; padding-top: 8px; font-family: monospace;" id="reportSealInfo">
+                Sello Criptográfico SHA-256: 7A3F9B12E84D01C6A9E482B7D501FA42 · Verificado en ECONODE Studio Tier 1
+              </div>
+            </div>
+          </section>
         </div>
         </div><!-- Fin #reportLcaModeContainer -->
 
@@ -1758,6 +1973,283 @@
             </div>
           </section>
         </div><!-- Fin #epdReportContainer -->
+
+        <!-- CONTENEDOR MODO 3: REPORTE DINÁMICO GHG PROTOCOL (CORPORATE STANDARD / SCOPES 1, 2, 3) -->
+        <div id="ghgReportContainer" style="display: none;">
+          <!-- Barra de Herramientas GEI -->
+          <div class="epd-toolbar-bar report-web-actions">
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;" data-i18n="ghg_rep.inventory_label">Inventario Corporativo:</span>
+              <select id="selectGhgReportInventory" class="form-input" style="height: 28px; font-size: 11px; padding: 2px 8px; font-weight: 600; min-width: 220px;"></select>
+              <div class="epd-segmented-control epd-seg-compact" id="ghgScope2Segmented" role="tablist" style="margin-left: 6px;">
+                <button type="button" class="epd-seg-btn active" id="btnGhgScope2Location" data-ghg-scope2="location">Location-Based</button>
+                <button type="button" class="epd-seg-btn" id="btnGhgScope2Market" data-ghg-scope2="market">Market-Based</button>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-secondary btn-sm" id="btnExportGhgReportJson" data-i18n="ghg_rep.btn_json">Exportar JSON</button>
+              <button type="button" class="btn btn-emerald btn-sm" id="btnPrintGhgPdf" data-i18n="ghg_rep.btn_print_pdf">Imprimir / PDF GEI</button>
+            </div>
+          </div>
+
+          <!-- ENCABEZADO FORMAL PARA IMPRESIÓN PDF OFICIAL GHG PROTOCOL -->
+          <div class="print-official-header" id="printGhgOfficialHeader" style="display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #0F172A; padding-bottom: 8pt; margin-bottom: 14pt;">
+              <div>
+                <div style="font-size: 16pt; font-weight: 700; color: #0F172A;">ECONODE Studio · Reporte Corporativo de Emisiones GEI</div>
+                <div style="font-size: 9.5pt; color: #475569; margin-top: 2pt;">GHG PROTOCOL CORPORATE STANDARD · ALCANCES 1, 2 Y 3</div>
+              </div>
+              <div style="text-align: right; font-size: 8.5pt; color: #475569;">
+                <div>Ref: <strong id="printGhgRef">GHG-INV-2024-CORP</strong></div>
+                <div>Emisión: <strong id="printGhgDate">2026</strong></div>
+                <div>Verificación: <strong id="printGhgStandard">ISO 14064-1 / GHG Protocol</strong></div>
+              </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6pt; margin-bottom: 14pt; font-size: 9pt; background: #F8FAFC; padding: 8pt 10pt; border: 1px solid #CBD5E1; border-radius: 4pt;">
+              <div><strong>Organización:</strong> <span id="printGhgOrgName">--</span></div>
+              <div><strong>Año de Reporte:</strong> <span id="printGhgReportingYear">--</span> (Año Base: <span id="printGhgBaseYear">--</span>)</div>
+              <div><strong>Enfoque de Consolidación:</strong> <span id="printGhgConsolidation">Control Operacional</span></div>
+              <div><strong>País / Jurisdicción:</strong> <span id="printGhgCountry">México (Nacional)</span></div>
+            </div>
+          </div>
+
+          <!-- KPIs Ejecutivos GEI -->
+          <div class="epd-kpi-grid" id="ghgReportKpiGrid" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+            <div class="epd-kpi-card" style="border-left: 3px solid #0F172A;">
+              <div class="epd-kpi-label" data-i18n="ghg_rep.kpi_total">Emisiones Totales</div>
+              <div class="epd-kpi-value mono" id="ghgKpiTotal" style="color: #0F172A;">0.00</div>
+              <div class="epd-kpi-sub" id="ghgKpiTotalSub">tCO2e (Location-Based)</div>
+            </div>
+            <div class="epd-kpi-card" style="border-left: 3px solid #2563EB;">
+              <div class="epd-kpi-label" data-i18n="ghg_rep.kpi_scope1">Alcance 1 (Directas)</div>
+              <div class="epd-kpi-value mono" id="ghgKpiScope1" style="color: #2563EB;">0.00</div>
+              <div class="epd-kpi-sub" id="ghgKpiScope1Sub">0.0% del total</div>
+            </div>
+            <div class="epd-kpi-card" style="border-left: 3px solid #D97706;">
+              <div class="epd-kpi-label" data-i18n="ghg_rep.kpi_scope2">Alcance 2 (Energía)</div>
+              <div class="epd-kpi-value mono" id="ghgKpiScope2" style="color: #D97706;">0.00</div>
+              <div class="epd-kpi-sub" id="ghgKpiScope2Sub">Red eléctrica nacional</div>
+            </div>
+            <div class="epd-kpi-card" style="border-left: 3px solid #059669;">
+              <div class="epd-kpi-label" data-i18n="ghg_rep.kpi_scope3">Alcance 3 (Cadena Valor)</div>
+              <div class="epd-kpi-value mono" id="ghgKpiScope3" style="color: #059669;">0.00</div>
+              <div class="epd-kpi-sub" id="ghgKpiScope3Sub">15 categorías</div>
+            </div>
+            <div class="epd-kpi-card" style="border-left: 3px solid #7C3AED;">
+              <div class="epd-kpi-label" data-i18n="ghg_rep.kpi_reduction">Ahorro Energía Limpia</div>
+              <div class="epd-kpi-value mono" id="ghgKpiReduction" style="color: #7C3AED;">0.00</div>
+              <div class="epd-kpi-sub" id="ghgKpiReductionSub">tCO2e evitadas por PPAs</div>
+            </div>
+          </div>
+
+          <!-- CUERPO DEL REPORTE GEI SEMIAUTOMATICO -->
+          <div id="ghgReportDocumentBody" contenteditable="true" style="outline: none; min-height: 400px; padding: 4px;">
+            <!-- SECCION 1: INFORMACION ORGANIZACIONAL Y LIMITES -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec1_title">1. Información Organizacional y Límites del Inventario</h3>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                Inventario corporativo estructurado conforme al <strong>GHG Protocol Corporate Accounting and Reporting Standard</strong>. Establece la contabilidad de gases de efecto invernadero para el ejercicio fiscal declarado:
+              </p>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; background: #F8FAFC; padding: 12px 14px; border: 1px solid #E2E8F0; border-radius: var(--radius-md);">
+                <div>
+                  <div style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Organización Declarante</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #0F172A;" id="ghgDocOrgName">--</div>
+                </div>
+                <div>
+                  <div style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Año de Reporte / Base</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #0F172A;"><span id="ghgDocRepYear">--</span> (Base: <span id="ghgDocBaseYear">--</span>)</div>
+                </div>
+                <div>
+                  <div style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Enfoque de Consolidación</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #059669;" id="ghgDocConsolidation">Control Operacional</div>
+                </div>
+                <div>
+                  <div style="font-size: 10px; font-weight: 700; color: #64748B; text-transform: uppercase;">Jurisdicción / País</div>
+                  <div style="font-size: 13px; font-weight: 700; color: #0F172A;" id="ghgDocCountry">México (MX)</div>
+                </div>
+              </div>
+              <p id="ghgDocOrgNotes" style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55;">
+                El inventario cubre la totalidad de operaciones directas, naves industriales, centros de distribución y flotillas comerciales sobre las que la empresa ejerce control operacional directo e indirecto.
+              </p>
+            </section>
+
+            <!-- SECCION 2: RESUMEN EJECUTIVO DE EMISIONES Y GASES -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec2_title">2. Resumen Consolidado de Emisiones por Alcance y Gas</h3>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                Emisiones consolidadas expresadas en toneladas métricas de dioxido de carbono equivalente (tCO2e), calculadas con factores de caracterizacion GWP a 100 anos del IPCC Sexto Informe de Evaluacion (AR6):
+              </p>
+              <div class="epd-table-wrap" style="margin-bottom: 14px;">
+                <table class="data-table epd-dense-table epd-numeric-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Alcance / Metodología</th>
+                      <th>Emisiones (tCO2e)</th>
+                      <th>% del Total</th>
+                      <th>Calidad de Datos Dominante</th>
+                      <th style="text-align: left;">Estado Contable</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ghgSummaryTableBody">
+                    <!-- Renderizado dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+              <div style="font-size: 11px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px;" data-i18n="ghg_rep.gas_breakdown_title">2.1 Desglose Cuantitativo por Gas de Efecto Invernadero (t)</div>
+              <div class="epd-table-wrap">
+                <table class="data-table epd-dense-table epd-numeric-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Gas de Efecto Invernadero</th>
+                      <th>Fórmula Química</th>
+                      <th>GWP 100 años (IPCC AR6)</th>
+                      <th>Masa Emitida (t)</th>
+                      <th>Emisiones Totales (tCO2e)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ghgGasesTableBody">
+                    <!-- Renderizado dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- SECCION 3: ALCANCE 1 (EMISIONES DIRECTAS) -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec3_title">3. Alcance 1: Emisiones Directas de la Operación</h3>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                Emisiones derivadas del consumo de combustibles en equipos fijos, transporte propio, reacciones quimicas de manufactura y fugas de refrigerantes:
+              </p>
+              <div class="epd-table-wrap">
+                <table class="data-table epd-dense-table epd-numeric-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Categoría Alcance 1</th>
+                      <th style="text-align: left;">Actividad / Fuente</th>
+                      <th>Consumo Anual</th>
+                      <th>Unidad</th>
+                      <th>Factor de Emisión</th>
+                      <th>tCO2e</th>
+                      <th>Calidad</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ghgScope1TableBody">
+                    <!-- Renderizado dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- SECCION 4: ALCANCE 2 (ELECTRICIDAD Y DOBLE REPORTE) -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec4_title">4. Alcance 2: Electricidad y Doble Reporte Reglamentario</h3>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                Conforme a la guía oficial <em>GHG Protocol Scope 2 Guidance</em>, se realiza el doble reporte obligatorio:
+              </p>
+              <div class="epd-table-wrap" style="margin-bottom: 14px;">
+                <table class="data-table epd-dense-table epd-numeric-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Enfoque de Reporte Alcance 2</th>
+                      <th>Consumo (MWh)</th>
+                      <th>Factor de Red / Residual</th>
+                      <th>Instrumento Contractual</th>
+                      <th>Emisiones (tCO2e)</th>
+                      <th>Diferencial vs Red</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ghgScope2TableBody">
+                    <!-- Renderizado dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55;">
+                El método <strong>Market-Based</strong> refleja la compra verificada de energía renovable mediante Certificados de Energía Limpia (CEL / I-REC) o contratos bilaterales de suministro privado (PPA).
+              </p>
+            </section>
+
+            <!-- SECCION 5: ALCANCE 3 (CADENA DE VALOR - 15 CATEGORIAS) -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec5_title">5. Alcance 3: Emisiones en la Cadena de Valor (15 Categorías)</h3>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                Evaluación cuantitativa de la cadena de valor aguas arriba y aguas abajo conforme al <em>Corporate Value Chain (Scope 3) Standard</em>:
+              </p>
+              <div class="epd-table-wrap">
+                <table class="data-table epd-dense-table epd-numeric-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Categoría Scope 3</th>
+                      <th style="text-align: left;">Flujo / Actividad Evaluada</th>
+                      <th>Segmento</th>
+                      <th>Monto / Actividad</th>
+                      <th>Emisiones (tCO2e)</th>
+                      <th>Calidad de Datos</th>
+                      <th>Fuente / Modelo</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ghgScope3TableBody">
+                    <!-- Renderizado dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <!-- SECCION 6: FACTORES DE EMISION Y METODOLOGIA -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec6_title">6. Fuentes de Factores de Emisión y Trazabilidad Documental</h3>
+              </div>
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                Bases de datos oficiales y factores de emision aplicados para la transformacion de unidades de actividad en toneladas de CO2e:
+              </p>
+              <div class="epd-table-wrap" style="margin-bottom: 12px;">
+                <table class="data-table epd-dense-table epd-numeric-table">
+                  <thead>
+                    <tr>
+                      <th style="text-align: left;">Base / Fuente Oficial</th>
+                      <th style="text-align: left;">Organismo Emisor</th>
+                      <th>Versión / Año</th>
+                      <th>Cobertura Temática</th>
+                      <th style="text-align: left;">Estatus de Verificación</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ghgFactorsTableBody">
+                    <!-- Renderizado dinámicamente -->
+                  </tbody>
+                </table>
+              </div>
+              <p style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                Las evidencias primarias (facturas CFE, recibos de combustible, cartas porte y manifiestos de residuo) se encuentran debidamente indexadas y custodiadas en la <strong>Bóveda de Documentos</strong> de ECONODE Studio.
+              </p>
+            </section>
+
+            <!-- SECCION 7: METAS DE MITIGACION Y AUDITORIA -->
+            <section class="epd-doc-section">
+              <div class="epd-section-header">
+                <h3 data-i18n="ghg_rep.sec7_title">7. Metas de Reducción, Estrategia Net-Zero y Dictamen</h3>
+              </div>
+              <p id="ghgReductionTargetsText" style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+                La organización mantiene un compromiso de reducción absoluta del 30% en emisiones de Alcance 1 y 2 para el año 2030 respecto al año base 2021, y neutralidad neta de carbono (Net-Zero) hacia 2050 conforme a la iniciativa Science Based Targets (SBTi).
+              </p>
+              <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: var(--radius-md); padding: 12px 16px; margin-top: 10px;">
+                <div style="font-size: 11px; font-weight: 700; color: #0F172A; margin-bottom: 4px;">Dictamen de Verificación Independiente (ISO 14064-3 / NOM-070)</div>
+                <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;">
+                  El presente inventario ha sido revisado de manera independiente en sus fases de recolección de datos primarios, selección de factores y consolidación contable, encontrándose conforme con los principios de pertinencia, integridad, coherencia, exactitud y transparencia del GHG Protocol.
+                </div>
+              </div>
+            </section>
+          </div>
+        </div><!-- Fin #ghgReportContainer -->
 
         <!-- PIE FORMAL CON FIRMAS PARA IMPRESIÓN PDF -->
         <div class="print-official-footer" style="display: none; margin-top: 24pt; border-top: 1px solid #CBD5E1; padding-top: 16pt; page-break-inside: avoid;">

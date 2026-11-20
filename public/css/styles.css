@@ -2325,6 +2325,96 @@ mark.report-highlight {
   }
 }
 
+/* ========================================================================= */
+/* ISO 14040/14044 DYNAMIC LCA REPORT STYLES                                */
+/* ========================================================================= */
+.report-toc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #F8FAFC;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  overflow-x: auto;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  backdrop-filter: blur(8px);
+}
+
+.report-toc-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.report-toc-pill:hover {
+  background: #0F172A;
+  color: #FFFFFF;
+  border-color: #0F172A;
+  transform: translateY(-1px);
+}
+
+.report-chapter-section {
+  margin-bottom: 28px;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 20px;
+}
+
+.report-chapter-section:last-child {
+  border-bottom: none;
+}
+
+.report-chapter-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0F172A;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.report-sub-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1E293B;
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.report-p {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+.report-callout-box {
+  background: #F8FAFC;
+  border-left: 3px solid #059669;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 11px;
+  line-height: 1.55;
+  color: #334155;
+}
+
 /* Canvas Interactivity & Interactive Disconnect Edges */
 #canvasNodesLayer {
   pointer-events: none;
@@ -6231,6 +6321,118 @@ body.role-client #reportHighlightTooltip {
   }
   .epd-doc-section {
     page-break-inside: avoid;
+  }
+}
+
+/* ==========================================================================
+   GHG PROTOCOL CORPORATE DYNAMIC REPORT (APPLE HIG ERGONOMICS)
+   ========================================================================== */
+#ghgReportContainer {
+  margin-top: 12px;
+}
+
+#ghgReportKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 1100px) {
+  #ghgReportKpiGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  #ghgReportKpiGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.badge-scope1 {
+  display: inline-flex;
+  align-items: center;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-scope2 {
+  display: inline-flex;
+  align-items: center;
+  background: #FFFBEB;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-scope3 {
+  display: inline-flex;
+  align-items: center;
+  background: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.badge-tier1 {
+  display: inline-flex;
+  align-items: center;
+  background: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #6EE7B7;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.badge-tier2 {
+  display: inline-flex;
+  align-items: center;
+  background: #EFF6FF;
+  color: #1E40AF;
+  border: 1px solid #93C5FD;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.badge-tier3 {
+  display: inline-flex;
+  align-items: center;
+  background: #F8FAFC;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+@media print {
+  body.report-mode-ghg #printLcaOfficialHeader,
+  body.report-mode-epd #printLcaOfficialHeader {
+    display: none !important;
+  }
+  body.report-mode-ghg #printGhgOfficialHeader {
+    display: block !important;
+  }
+  body.report-mode-lca #printGhgOfficialHeader,
+  body.report-mode-epd #printGhgOfficialHeader {
+    display: none !important;
   }
 }
 
