@@ -1642,16 +1642,16 @@
 
         <!-- BARRA DE EDICIÓN RICA ESTILO NOTION / WORD -->
         <div id="reportFormattingToolbar" style="display: flex; gap: 6px; align-items: center; padding: 6px 12px; background: #F8FAFC; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 16px; flex-wrap: wrap;">
-          <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-right: 4px;">EDICIÓN:</span>
+          <span style="font-size: 10px; font-weight: 700; color: var(--text-muted); margin-right: 4px;" data-i18n="report.fmt_edition">EDICIÓN:</span>
           <button type="button" class="btn btn-secondary btn-sm" id="btnFmtBold" title="Negrita" style="padding: 2px 8px; font-weight: 700;">B</button>
           <button type="button" class="btn btn-secondary btn-sm" id="btnFmtItalic" title="Cursiva" style="padding: 2px 8px; font-style: italic;">I</button>
           <button type="button" class="btn btn-secondary btn-sm" id="btnFmtUnderline" title="Subrayado" style="padding: 2px 8px; text-decoration: underline;">U</button>
           <div style="height: 16px; width: 1px; background: var(--border-color); margin: 0 4px;"></div>
-          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtHighlightYellow" title="Resaltar Amarillo" style="padding: 2px 8px; background: #FEF08A; color: #854D0E; font-weight: 600;"> Amarillo</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtHighlightGreen" title="Resaltar Verde (Conforme)" style="padding: 2px 8px; background: #BBF7D0; color: #166534; font-weight: 600;"> Verde</button>
-          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtClearHighlight" title="Limpiar Resaltado" style="padding: 2px 8px;">&times; Quitar</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtHighlightYellow" title="Resaltar Amarillo" style="padding: 2px 8px; background: #FEF08A; color: #854D0E; font-weight: 600;" data-i18n="report.fmt_yellow">Amarillo</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtHighlightGreen" title="Resaltar Verde (Conforme)" style="padding: 2px 8px; background: #BBF7D0; color: #166534; font-weight: 600;" data-i18n="report.fmt_green">Verde</button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnFmtClearHighlight" title="Limpiar Resaltado" style="padding: 2px 8px;">&times; <span data-i18n="report.fmt_clear">Quitar</span></button>
           <div style="height: 16px; width: 1px; background: var(--border-color); margin: 0 4px;"></div>
-          <button type="button" class="btn btn-emerald btn-sm" id="btnSaveReportEdits" title="Guardar cambios del documento" style="padding: 2px 10px; margin-left: auto;"> Guardar Reporte</button>
+          <button type="button" class="btn btn-emerald btn-sm" id="btnSaveReportEdits" title="Guardar cambios del documento" style="padding: 2px 10px; margin-left: auto;" data-i18n="report.save_btn">Guardar Reporte</button>
         </div>
 
         <!-- ÍNDICE DE NAVEGACIÓN DINÁMICO ISO 14040/14044 (TOC BAR) -->
@@ -1669,11 +1669,11 @@
           <!-- CAPITULO 1: INTRODUCCION -->
           <section class="report-chapter-section" id="sec-1-intro">
             <h3 class="report-chapter-title" data-i18n="report.ch1_title">1. Introducción</h3>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch1_desc">
               El presente Análisis de Ciclo de Vida (ACV) evalúa de forma holística y cuantitativa los flujos de masa, energía e impactos ambientales asociados al sistema producto modelado. El informe documenta la metodología, las hipótesis técnicas, los balances de materia y energía y los resultados normalizados para fines de ecodiseño y cumplimiento regulatorio.
             </p>
             <h4 class="report-sub-title" data-i18n="report.ch1_1">1.1 Normas Guía y Marco de Referencia</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch1_1_desc">
               Este estudio ha sido formulado bajo estricto apego a las normas internacionales <strong>ISO 14040:2006</strong> (Gestión ambiental - Análisis del ciclo de vida - Principios y marco de referencia), <strong>ISO 14044:2006/Amd 2:2020</strong> (Requisitos y directrices), <strong>ISO 14067:2018</strong> (Gases de Efecto Invernadero - Huella de carbono de productos) y la regulación nacional aplicable <strong>NOM-070-SE-2024</strong> (Acreditación y auditoría de declaraciones ambientales en México).
             </p>
           </section>
@@ -1683,51 +1683,51 @@
             <h3 class="report-chapter-title" data-i18n="report.ch2_title">2. Definición de Objetivo y Alcance (Goal & Scope)</h3>
             
             <h4 class="report-sub-title" data-i18n="report.ch2_1">2.1 Objetivo del Estudio (Goal)</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_goal_reasons">
               <strong>2.1.1 Razones para Realizar el Estudio:</strong> Identificar los puntos críticos de impacto ambiental (hotspots) a lo largo de las etapas del ciclo de vida, cuantificar el perfil ambiental del producto frente a formulaciones de referencia y suministrar evidencia técnica auditable.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_goal_app">
               <strong>2.1.2 Aplicación Prevista:</strong> Apoyar decisiones de ecodiseño industrial, optimizar el uso de energía eléctrica de la red nacional, respaldar la reducción de mermas y proporcionar la base científica para Declaraciones Ambientales de Producto (EPD).
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_goal_audience">
               <strong>2.1.3 Audiencia Objetivo:</strong> Equipo de ingeniería y sostenibilidad de la organización titular, clientes corporativos B2B, auditores de certificación y organismos reguladores de verificación ambiental.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_goal_comparative">
               <strong>2.1.4 Aseveraciones Comparativas Divulgadas:</strong> En caso de comunicación pública de afirmaciones comparativas entre productos alternativos, el estudio satisface plenamente las exigencias de revisión crítica independiente por panel de partes interesadas conforme a ISO 14044 cláusula 6.
             </p>
 
             <h4 class="report-sub-title" data-i18n="report.ch2_2">2.2 Alcance del Estudio (Scope)</h4>
             <div class="report-callout-box">
-              <strong>2.2.1 Función, Unidad Funcional y Flujo de Referencia:</strong>
+              <strong data-i18n="report.ch2_fu_heading">2.2.1 Función, Unidad Funcional y Flujo de Referencia:</strong>
               <div style="margin-top: 4px;">
-                La Unidad Funcional (UF) se define como: <strong id="reportDynamicFu" style="color: #059669;">1.000 kg / unidad de producto terminado</strong> puesto en planta con especificaciones técnicas estándar de resistencia mecánica y propiedades funcionales verificadas.
+                <span data-i18n="report.ch2_fu_intro">La Unidad Funcional (UF) se define como: </span><strong id="reportDynamicFu" style="color: #059669;">1.000 kg / unidad de producto terminado</strong><span data-i18n="report.ch2_fu_suffix"> puesto en planta con especificaciones técnicas estándar de resistencia mecánica y propiedades funcionales verificadas.</span>
               </div>
             </div>
-            <p class="report-p" id="reportSystemBoundaryText">
+            <p class="report-p" id="reportSystemBoundaryText" data-i18n-html data-i18n="report.ch2_boundary_desc">
               <strong>2.2.2 Límites del Sistema:</strong> Enfoque <em>Cradle-to-Gate</em> (de la cuna a la puerta de planta). Se incluyen las operaciones de extracción y refino de resinas base, manufactura y transporte de insumos auxiliares, generación eléctrica, transporte de materias primas a planta, procesos unitarios de producción, tratamiento de mermas internas y emisiones directas al aire y agua.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_cutoff_desc">
               <strong>2.2.3 Criterios de Corte (Cut-off Criteria):</strong> Se aplica un umbral de corte del 1% en masa y contenido energético acumulado, con un límite global acumulado de flujos no modelados inferior al 5%. No se excluye ningún flujo secundario que posea potencial de toxicidad o ecotoxicidad significativo.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_excluded_desc">
               <strong>2.2.4 Procesos Excluidos:</strong> Se excluyen del límite de modelado la amortización de infraestructura civil fabril con vida útil superior a 30 años, la maquinaria mayor de planta no amortizable al lote de producción y el desplazamiento del personal administrativo, de acuerdo con las Reglas de Categoría de Producto (PCR) sectoriales.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_allocation_desc">
               <strong>2.2.5 Reglas de Asignación (Allocation):</strong> Conforme a la jerarquía de ISO 14044, se evita la asignación mediante subdivisión de procesos y balances de masa físicos. Para los co-productos y mermas con valor comercial se aplica asignación por masa o asignación económica justificada.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_sensitivity_desc">
               <strong>2.2.6 Análisis de Sensibilidad Planteado:</strong> Se evalúa la robustez de las conclusiones ante variaciones en el porcentaje de material reciclado incorporado (20% a 85%), escenarios de mix eléctrico regional y fluctuaciones en distancias de flete carretero.
             </p>
-            <p class="report-p" id="reportCalculationToolText">
+            <p class="report-p" id="reportCalculationToolText" data-i18n-html data-i18n="report.ch2_calc_tool_desc">
               <strong>2.2.7 Herramienta y Motor de Cálculo:</strong> Modelado y cálculo ejecutado con <strong>ECONODE Studio Engine v2.0</strong>, empleando matrices tecnológicas y matrices de intervención con inversión analítica (Brightway2 / Leontief core) y exportación compatible con openLCA y SimaPro.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_lcia_method_desc">
               <strong>2.2.8 Método de Evaluación de Impacto (LCIA):</strong> Se aplican los métodos estandarizados <strong>ReCiPe 2016 Midpoint (H)</strong>, <strong>Environmental Footprint EF 3.1</strong> y <strong>TRACI 2.1</strong> con caracterización obligatoria de GWP100 (IPCC AR6).
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_data_quality_desc">
               <strong>2.2.9 Requisitos de Calidad de Datos:</strong> Información primaria con representatividad temporal no superior a 3 años, trazabilidad geográfica regional y verificación mediante Matriz Pedigree de aseguramiento de calidad.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch2_critical_review_desc">
               <strong>2.2.10 Revisión Crítica Independiente:</strong> Expediente formulado para su verificación por Tercero Independiente de acuerdo con ISO/IEC 17029 e ISO 14044 Cláusula 6.
             </p>
           </section>
@@ -1737,29 +1737,29 @@
             <h3 class="report-chapter-title" data-i18n="report.ch3_title">3. Análisis de Inventario de Ciclo de Vida (LCI)</h3>
             
             <h4 class="report-sub-title" data-i18n="report.ch3_1">3.1 Procedimiento de Recolección de Datos</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch3_data_types">
               <strong>3.1.1 Tipos de Datos:</strong> Se distinguen datos primarios de planta (consumos de electricidad CFE, pesaje de resinas, mermas de inyección/soplado y kilometraje de transporte de entrega) y datos secundarios de bases de datos internacionales verificadas.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch3_questionnaires">
               <strong>3.1.2 Cuestionarios y Evidencias de Planta:</strong> Los insumos y rendimientos fueron auditados a partir de recibos oficiales de CFE, facturas de compras de materias primas y manifiestos de disposición final custodiados de forma inmutable en la Bóveda de Documentos.
             </p>
 
             <h4 class="report-sub-title" data-i18n="report.ch3_2">3.2 Inventario del Ciclo de Vida y Supuestos</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch3_transport_desc">
               <strong>3.2.1 Rutas de Transporte y Logística:</strong> Fletes de materias primas y distribución modelados con tractocamión diésel Euro IV/V (16-32 toneladas métricas) sobre rutas pavimentadas estándar, considerando factores de carga media del 70%.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch3_processes_desc">
               <strong>3.2.2 Procesos Unitarios y Balances de Masa:</strong> La siguiente tabla resume las etapas modeladas en el lienzo de ECONODE Studio con sus flujos de referencia, consumos de insumos, generación de scrap/mermas y emisiones:
             </p>
             <!-- Tabla de Procesos y Balances -->
             <table class="data-table" style="margin-bottom: 20px;" id="reportProcessesTable">
               <thead>
                 <tr>
-                  <th>Etapa del Ciclo</th>
-                  <th>Flujo de Referencia (UF)</th>
-                  <th>Insumos Principales</th>
-                  <th>Residuo / Scrap</th>
-                  <th>Emisión Elemental</th>
+                  <th data-i18n="report.th_cycle_stage">Etapa del Ciclo</th>
+                  <th data-i18n="report.th_ref_flow">Flujo de Referencia (UF)</th>
+                  <th data-i18n="report.th_main_inputs">Insumos Principales</th>
+                  <th data-i18n="report.th_waste_scrap">Residuo / Scrap</th>
+                  <th data-i18n="report.th_elementary_em">Emisión Elemental</th>
                 </tr>
               </thead>
               <tbody id="reportBodyProcesses">
@@ -1767,20 +1767,20 @@
               </tbody>
             </table>
 
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch3_background_desc">
               <strong>3.2.3 Conjuntos de Datos de Fondo (Background Datasets):</strong> Los procesos de upstream (extracción de petróleo, síntesis de polímeros vírgenes y catalizadores) se alimentan de la base de datos oficial <strong>ecoinvent 3.12 (Cut-off Unit)</strong>.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch3_consolidated_desc">
               <strong>3.2.4 Inventario Consolidado (LCI):</strong> Consolidación de todos los insumos tecnosféricos y salidas biosféricas del sistema producto:
             </p>
             <!-- Tabla LCI Consolidado -->
             <table class="data-table" style="margin-bottom: 20px;" id="reportLciTable">
               <thead>
                 <tr>
-                  <th>Insumo / Emisión</th>
-                  <th>Valor Unitario</th>
-                  <th>Unidad</th>
-                  <th>Estado Verificado</th>
+                  <th data-i18n="report.th_lci_input_emission">Insumo / Emisión</th>
+                  <th data-i18n="report.th_lci_unit_value">Valor Unitario</th>
+                  <th data-i18n="report.th_lci_unit">Unidad</th>
+                  <th data-i18n="report.th_lci_verified_status">Estado Verificado</th>
                 </tr>
               </thead>
               <tbody id="reportBodyLciConsolidated">
@@ -1788,7 +1788,7 @@
               </tbody>
             </table>
 
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch3_scenarios_desc">
               <strong>3.2.5 Escenarios para Análisis de Sensibilidad:</strong> Se contrastan la formulación base y configuraciones con tasas de incorporación de resina post-consumo al 20%, 50% y 85%, así como esquemas de autogeneración solar in situ.
             </p>
           </section>
@@ -1798,19 +1798,19 @@
             <h3 class="report-chapter-title" data-i18n="report.ch4_title">4. Resultados de Evaluación de Impacto (LCIA)</h3>
             
             <h4 class="report-sub-title" data-i18n="report.ch4_1">4.1 Resultados Caracterizados por Categoría</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch4_char_desc">
               Resultados ambientales normalizados calculados para la Unidad Funcional mediante factores de caracterización validados:
             </p>
             <div class="epd-table-wrap" style="margin-bottom: 16px;">
               <table class="data-table epd-dense-table epd-numeric-table" id="reportLciaResultsTable">
                 <thead>
                   <tr>
-                    <th style="text-align: left;">Categoría de Impacto</th>
-                    <th style="text-align: left;">Indicador Metodológico</th>
-                    <th>Unidad</th>
-                    <th>Impacto Total</th>
-                    <th>Línea Base</th>
-                    <th>Escenario Optimizado</th>
+                    <th style="text-align: left;" data-i18n="report.th_lcia_category">Categoría de Impacto</th>
+                    <th style="text-align: left;" data-i18n="report.th_lcia_indicator">Indicador Metodológico</th>
+                    <th data-i18n="report.th_lcia_unit">Unidad</th>
+                    <th data-i18n="report.th_lcia_total">Impacto Total</th>
+                    <th data-i18n="report.th_lcia_baseline">Línea Base</th>
+                    <th data-i18n="report.th_lcia_optimized">Escenario Optimizado</th>
                   </tr>
                 </thead>
                 <tbody id="reportBodyLciaResults">
@@ -1820,18 +1820,18 @@
             </div>
 
             <h4 class="report-sub-title" data-i18n="report.ch4_2">4.2 Análisis de Contribución por Etapa y Proceso</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch4_contrib_desc">
               Distribución porcentual de cargas ambientales entre los procesos del ciclo de vida para identificar prioridades de mitigación:
             </p>
             <div class="epd-table-wrap" style="margin-bottom: 16px;">
               <table class="data-table epd-dense-table" id="reportContributionTable">
                 <thead>
                   <tr>
-                    <th style="text-align: left;">Etapa / Proceso Unitario</th>
-                    <th style="text-align: left;">Insumo Dominante</th>
-                    <th>Aporte Relativo (%)</th>
-                    <th style="min-width: 140px;">Distribución Visual</th>
-                    <th>Prioridad (Pareto 80/20)</th>
+                    <th style="text-align: left;" data-i18n="report.th_contrib_stage">Etapa / Proceso Unitario</th>
+                    <th style="text-align: left;" data-i18n="report.th_contrib_key_input">Insumo Dominante</th>
+                    <th data-i18n="report.th_contrib_relative_share">Aporte Relativo (%)</th>
+                    <th style="min-width: 140px;" data-i18n="report.th_contrib_visual">Distribución Visual</th>
+                    <th data-i18n="report.th_contrib_pareto">Prioridad (Pareto 80/20)</th>
                   </tr>
                 </thead>
                 <tbody id="reportBodyContribution">
@@ -1846,31 +1846,31 @@
             <h3 class="report-chapter-title" data-i18n="report.ch5_title">5. Interpretación del Ciclo de Vida</h3>
             
             <h4 class="report-sub-title" data-i18n="report.ch5_1">5.1 Hallazgos Principales y Puntos Críticos (Hotspots)</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch5_findings_desc">
               El análisis confirma que la mayor contribución al potencial de calentamiento global (GWP100) y al agotamiento de recursos fósiles radica en la síntesis de materiales vírgenes y el consumo eléctrico en planta. La sustitución por resinas post-consumo recicladas y la adopción de esquemas de eficiencia energética representan los vectores más eficaces para abatir la huella ambiental.
             </p>
 
             <h4 class="report-sub-title" data-i18n="report.ch5_2">5.2 Evaluación de Integridad, Incertidumbre y Calidad</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch5_sens_desc">
               <strong>5.2.1 Análisis de Sensibilidad:</strong> La variación de las distancias logísticas en un ±30% produce una fluctuación inferior al 3.5% en la huella total, lo cual ratifica la estabilidad de las conclusiones frente a incertidumbres de flete.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch5_pedigree_desc">
               <strong>5.2.2 Evaluación de Calidad de Datos (Matriz Pedigree):</strong> Los datos primarios obtuvieron una calificación promedio ponderada de 4.3 sobre 5.0 en la Matriz Pedigree, reflejando alta precisión temporal, representatividad geográfica local y documentación auditable.
             </p>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch5_uncertainty_desc">
               <strong>5.2.3 Análisis de Incertidumbre:</strong> La propagación de incertidumbre paramétrica arroja un coeficiente de variación inferior al 7.8% para las emisiones de GEI en el ciclo de vida.
             </p>
             <div style="display: flex; gap: 16px; margin: 12px 0; flex-wrap: wrap;">
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 11px; font-weight: 700; color: #334155;">5.2.4 Verificación de Exhaustividad:</span>
-                <span class="badge-pill badge-emerald" id="reportCompletenessBadge">✓ 100% Balances y Flujos Verificados</span>
+                <span style="font-size: 11px; font-weight: 700; color: #334155;" data-i18n="report.ch5_completeness_label">5.2.4 Verificación de Exhaustividad:</span>
+                <span class="badge-pill badge-emerald" id="reportCompletenessBadge" data-i18n="report.ch5_completeness_badge">✓ 100% Balances y Flujos Verificados</span>
               </div>
               <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 11px; font-weight: 700; color: #334155;">5.2.5 Verificación de Consistencia:</span>
-                <span class="badge-pill badge-emerald" id="reportConsistencyBadge">✓ Reglas Homogéneas ISO 14044</span>
+                <span style="font-size: 11px; font-weight: 700; color: #334155;" data-i18n="report.ch5_consistency_label">5.2.5 Verificación de Consistencia:</span>
+                <span class="badge-pill badge-emerald" id="reportConsistencyBadge" data-i18n="report.ch5_consistency_badge">✓ Reglas Homogéneas ISO 14044</span>
               </div>
             </div>
-            <p class="report-p">
+            <p class="report-p" data-i18n-html data-i18n="report.ch5_limitations_desc">
               <strong>5.2.6 Limitaciones del Estudio:</strong> Los resultados reflejan la configuración técnica y operacional descrita. No deben extrapolarse directamente a plantas con tecnología de inyección hidráulica obsoleta o a geografías con matrices eléctricas distintas a la red nacional evaluada.
             </p>
           </section>
@@ -1880,30 +1880,30 @@
             <h3 class="report-chapter-title" data-i18n="report.ch6_title">6. Conclusiones y Recomendaciones</h3>
             
             <h4 class="report-sub-title" data-i18n="report.ch6_1">6.1 Conclusiones del Estudio</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch6_conclusions_desc">
               El estudio de Análisis de Ciclo de Vida demuestra que el producto modelado cumple cabalmente con los criterios metodológicos de ISO 14040, ISO 14044 y NOM-070-SE-2024. Los balances de masa y energía son consistentes, y el expediente documenta con rigor técnico cada insumo y factor aplicado.
             </p>
 
             <h4 class="report-sub-title" data-i18n="report.ch6_2">6.2 Recomendaciones de Ecodiseño y Mitigación</h4>
-            <p class="report-p">
+            <p class="report-p" data-i18n="report.ch6_recommendations_desc">
               Se recomienda implementar una hoja de ruta con tres prioridades estratégicas: (1) Incrementar el contenido de resina reciclada certificada en al menos un 25% adicional en formulaciones sucesivas; (2) Migrar hacia contratos de suministro con energía limpia verificada; y (3) Mantener la custodia digital de facturas y manifiestos en la Bóveda de Documentos para facilitar auditorías de seguimiento.
             </p>
 
             <!-- TARJETA DE FIRMAS FORMALES DE AUDITORIA -->
             <div id="reportSignOffCard" style="background: #F8FAFC; border: 1px solid #CBD5E1; border-radius: var(--radius-md); padding: 14px 18px; margin-top: 20px;">
               <div style="font-size: 11.5px; font-weight: 700; color: #0F172A; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between;">
-                <span>Dictamen Técnico y Cierre de Expediente de Auditoría</span>
-                <span class="badge-pill badge-emerald">Conforme NOM-070 / ISO 14044</span>
+                <span data-i18n="report.sign_card_title">Dictamen Técnico y Cierre de Expediente de Auditoría</span>
+                <span class="badge-pill badge-emerald" data-i18n="report.sign_card_badge">Conforme NOM-070 / ISO 14044</span>
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px; font-size: 10.5px; color: #334155;">
                 <div style="border-top: 1px dashed #94A3B8; padding-top: 8px;">
-                  <div><strong>Elaboró (Analista de ACV):</strong> <span id="reportSignAnalystName">Carla Méndez</span></div>
-                  <div style="color: #64748B; margin-top: 2px;">Especialista en Modelado de Ciclo de Vida</div>
+                  <div><strong data-i18n="report.sign_analyst_lead">Elaboró (Analista de ACV):</strong> <span id="reportSignAnalystName">Carla Méndez</span></div>
+                  <div style="color: #64748B; margin-top: 2px;" data-i18n="report.sign_analyst_role">Especialista en Modelado de Ciclo de Vida</div>
                   <div style="color: #64748B;">BioPack Industrial S.A. de C.V.</div>
                 </div>
                 <div style="border-top: 1px dashed #94A3B8; padding-top: 8px;">
-                  <div><strong>Verificó (Auditor Líder Independiente):</strong> <span id="reportSignAuditorName">Dr. Roberto Silva</span></div>
-                  <div style="color: #64748B; margin-top: 2px;">Auditor Certificado ISO 14040 / ISO 14044</div>
+                  <div><strong data-i18n="report.sign_auditor_lead">Verificó (Auditor Líder Independiente):</strong> <span id="reportSignAuditorName">Dr. Roberto Silva</span></div>
+                  <div style="color: #64748B; margin-top: 2px;" data-i18n="report.sign_auditor_role">Auditor Certificado ISO 14040 / ISO 14044</div>
                   <div style="color: #64748B;">EcoCert Internacional S.C.</div>
                 </div>
               </div>
@@ -2130,7 +2130,7 @@
               <div class="epd-section-header">
                 <h3 data-i18n="ghg_rep.sec1_title">1. Información Organizacional y Límites del Inventario</h3>
               </div>
-              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;">
+              <p style="font-size: 11.5px; color: var(--text-secondary); line-height: 1.55; margin-bottom: 12px;" data-i18n-html data-i18n="ghg_rep.sec1_desc">
                 Inventario corporativo estructurado conforme al <strong>GHG Protocol Corporate Accounting and Reporting Standard</strong>. Establece la contabilidad de gases de efecto invernadero para el ejercicio fiscal declarado:
               </p>
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 14px; background: #F8FAFC; padding: 12px 14px; border: 1px solid #E2E8F0; border-radius: var(--radius-md);">
@@ -2414,7 +2414,7 @@
 
         <!-- Firmar Dictamen -->
         <button class="btn btn-primary btn-sm" id="btnSignAuditDictamen" data-i18n="audit.sign_btn">
-          Firmar Dictamen Final -
+          Firmar Dictamen Final
         </button>
       </div>
     </div>

@@ -11281,14 +11281,20 @@
         },
         body: JSON.stringify({ key_id: keyId })
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        throw new Error(rawText.substring(0, 100) || `Error HTTP ${res.status}`);
+      }
       if (res.ok && data.status === "success") {
         await loadUserApiKeys();
       } else {
         alert(data.message || "No se pudo revocar la clave.");
       }
     } catch (err) {
-      alert("Error de red: " + err.message);
+      alert("Error: " + err.message);
     }
   }
 
