@@ -545,6 +545,17 @@ const I18N_DICTIONARY = {
  "sub.enterprise_title": "Enterprise Corporate",
  "sub.enterprise_sub": "Grandes corporativos e instituciones de certificación.",
 
+ // Developer & MCP Portal
+ "nav.developer_settings": "API / MCP",
+ "dev.title": "Configuración de Desarrollador, API y MCP",
+ "dev.subtitle": "Gestiona tus Personal Access Tokens y conecta asistentes de IA o scripts externos con ECONODE.",
+ "dev.tab_keys": "Mis Claves de API",
+ "dev.tab_mcp": "Conectar IA (MCP Remoto)",
+ "dev.tab_scripts": "Scripts & Automatización",
+ "dev.new_key_title": "Generar Nueva Clave de API",
+ "dev.btn_create_key": "Generar Clave",
+ "dev.warning_raw_key": "Copia esta clave ahora. Por motivos de seguridad, nunca volverá a mostrarse completa.",
+
  // Report sections & actions (ISO 14040 / ISO 14044 / NOM-070)
  "report.processes_title": "1. Estructura de Procesos del Sistema",
  "report.lci_title": "2. Inventario de Ciclo de Vida (LCI Consolidado)",
@@ -1349,6 +1360,17 @@ const I18N_DICTIONARY = {
  "sub.pro_btn": "Activate Professional Plan",
  "sub.enterprise_title": "Enterprise Corporate",
  "sub.enterprise_sub": "Large corporations and verification bodies.",
+
+ // Developer & MCP Portal
+ "nav.developer_settings": "API / MCP",
+ "dev.title": "Developer Settings, API & MCP",
+ "dev.subtitle": "Manage your Personal Access Tokens and connect AI assistants or external automation scripts with ECONODE.",
+ "dev.tab_keys": "My API Keys",
+ "dev.tab_mcp": "Connect AI (Remote MCP)",
+ "dev.tab_scripts": "Scripts & Automation",
+ "dev.new_key_title": "Generate New API Key",
+ "dev.btn_create_key": "Generate Key",
+ "dev.warning_raw_key": "Copy this key now. For security reasons, it will never be displayed in full again.",
 
  // Report sections & actions (ISO 14040 / ISO 14044 / NOM-070)
  "report.processes_title": "1. System Process Structure",

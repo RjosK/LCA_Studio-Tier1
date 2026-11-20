@@ -10182,7 +10182,377 @@
         isUploadingDoc = false;
         if (btnSubmitDoc) {
           btnSubmitDoc.disabled = false;
+          btnSubmitDoc.innerHTML = window.I18n ? window.I18n.t("vault.upload_btn", "Subir a Bóveda ➔") : "Subir a Bóveda ➔";
+        }
+      }
+    };
+
+    if (btnSubmitDoc) {
+      btnSubmitDoc.addEventListener("click", (e) => {
+        e.preventDefault();
+        executeUpload();
+      });
+    }
+
+    if (formUpload) {
+      formUpload.addEventListener("submit", (e) => {
+        e.preventDefault();
+        executeUpload();
+      });
+    }
+  }
+
+  // =========================================================================
+  // 11. MODALES: CONEXIÓN DE NODOS, WIZARD, IMPORT CENTER & AJUSTES
+  // =========================================================================
+
+  // Modal Conectar Nodos
+  function setupConnectNodesModal() {
+    const modal = document.getElementById("modalConnectNodes");
+    const btnClose = document.getElementById("btnCloseConnectModal");
+    const form = document.getElementById("formConnectNodes");
+
+    const close = () => {
+      if (modal) {
+        modal.style.display = "none";
+        modal.classList.remove("active");
+      }
+      cancelConnection();
+    };
+
+    if (btnClose) btnClose.addEventListener("click", close);
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) close();
+      });
+    }
+
+    if (form) {
+      form.addEventListener("submit", (e) => {
+        e.preventDefault();
+
+        let source = state.connectingFromNode;
+        let target = state.connectingToNode;
+
+        const selectSrc = document.getElementById("selectConnectSourceNode");
+        const selectTgt = document.getElementById("selectConnectTargetNode");
+        if ((!source || !target) && selectSrc && selectTgt) {
+          const sId = selectSrc.value;
+          const tId = selectTgt.value;
+          const procs = getAllSystemProcesses();
+          source = procs.find(n => String(n.id) === String(sId) || String(n.process_id) === String(sId));
+          target = procs.find(n => String(n.id) === String(tId) || String(n.process_id) === String(tId));
+        }
+
+        if (!source || !target) {
+          close();
+          return;
+        }
+
+        if (source.id === target.id || String(source.process_id) === String(target.process_id)) {
+          alert("No se puede conectar un proceso consigo mismo.");
+          return;
+        }
+
+        const flowName = (document.getElementById("inputConnectFlowName")?.value || source.reference_flow?.name || "Connected Flow").trim();
+        const amount = parseFloat(document.getElementById("inputConnectAmount")?.value || "1.0");
+        const unit = (document.getElementById("inputConnectUnit")?.value || "kg").trim();
+
+        if (!state.canvasEdges) state.canvasEdges = [];
+        const existingIdx = state.canvasEdges.findIndex(ed => 
+          (String(ed.from) === String(source.id) || String(ed.source_process_id) === String(source.process_id)) &&
+          (String(ed.to) === String(target.id) || String(ed.target_process_id) === String(target.process_id)) &&
+          areFlowsMatching(ed.flow, flowName)
+        );
+
+        if (existingIdx >= 0) {
+          state.canvasEdges[existingIdx].flow = flowName;
+          state.canvasEdges[existingIdx].amount = amount;
+          state.canvasEdges[existingIdx].unit = unit;
+        } else {
+          const newEdge = {
+            id: `edge_${Date.now()}`,
+            from: source.id,
+            to: target.id,
+            source_process_id: source.process_id || source.id,
+            target_process_id: target.process_id || target.id,
+            flow: flowName,
+            amount: amount,
+            unit: unit
+          };
+          state.canvasEdges.push(newEdge);
+        }
+
+        // Registrar o actualizar en entradas del destino
+        if (!target.inputs) target.inputs = [];
+        const matchingInp = target.inputs.find(i => areFlowsMatching(i.name, flowName));
+        if (matchingInp) {
+          matchingInp.origin = source.name;
+          matchingInp.amount = amount;
+          matchingInp.unit = unit;
+        } else {
+          target.inputs.push({
+            name: flowName,
+            amount: amount,
+            unit: unit,
+            is_unit: true,
+            origin: source.name
+          });
+        }
+        if (state.selectedNode && state.selectedNode.id === target.id) {
+          inspectNode(target);
+        }
+
+        syncSystemProcesses();
+        scheduleAutoSaveCanvas();
+        renderCanvasEdges();
+        renderPaletteProcesses();
+        if (state.canvasViewMode === "table") {
+          renderCanvasTableView();
+        } else {
+          renderCanvasStage();
+        }
+        close();
+        showNotification(`Connection created: "${source.name}" ➔ "${target.name}" (${amount} ${unit}).`);
+      });
+    }
+  }
+
+  // Wizard Nuevo Sistema
+  function setupWizardModal() {
+    const modal = document.getElementById("modalWizard");
+    const btnOpen1 = document.getElementById("btnOpenWizardModal");
+    const btnOpen2 = document.getElementById("btnDashNewSystem");
+    const btnClose = document.getElementById("btnCloseWizardModal");
+    const btnCancel = document.getElementById("btnCancelWizard");
+    const btnSubmit = document.getElementById("btnSubmitWizard");
+    const btnModeBlank = document.getElementById("btnWizModeBlank");
+    const btnModeEpd = document.getElementById("btnWizModeEpd");
+    const formBlank = document.getElementById("formWizard");
+    const panelEpd = document.getElementById("wizardEpdTemplatePanel");
+    const footerHint = document.getElementById("wizFooterHint");
+
+    const renderWizardEpdTemplates = () => {
+      const grid = document.getElementById("wizEpdTemplatesGrid");
+      if (!grid) return;
+      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+      const list = state.epdTemplates || [];
+
+      if (list.length === 0) {
+        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 18px; color: var(--text-muted); font-size: 11px;">Cargando plantillas EPD de Cemento y Concreto...</div>`;
+        return;
+      }
+
+      if (!list.some(t => t.template_id === state.selectedEpdTemplateId)) {
+        state.selectedEpdTemplateId = list[0].template_id;
+      }
+
+      grid.innerHTML = list.map(t => {
+        const isSel = t.template_id === state.selectedEpdTemplateId;
+        const title = isEn ? t.name_en : t.name_es;
+        const desc = isEn ? t.short_desc_en : t.short_desc_es;
+        const subBadge = t.sub_sector === "cement"
+          ? (isEn ? "Cement" : "Cemento")
+          : (isEn ? "Concrete" : "Concreto");
+        return `
+          <div class="epd-template-card ${isSel ? "selected" : ""}" data-epd-tpl="${t.template_id}">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+              <span class="badge-pill ${t.sub_sector === "cement" ? "badge-slate" : "badge-blue"}" style="font-size: 9px;">${subBadge}</span>
+              <span class="mono" style="font-size: 9.5px; font-weight: 700; color: var(--accent-emerald);">${escapeHtml(t.declared_unit_amount + " " + t.declared_unit_symbol)} · ${escapeHtml(t.declared_modules.join(","))}</span>
+            </div>
+            <div style="font-size: 11.5px; font-weight: 700; color: #0F172A; line-height: 1.3;">${escapeHtml(title)}</div>
+            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.4;">${escapeHtml(desc)}</div>
             <div style="font-size: 9.5px; color: var(--text-secondary); margin-top: auto; padding-top: 4px; border-top: 1px dashed #E2E8F0;">
+              <strong>PCR:</strong> ${escapeHtml(t.pcr_reference)}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      grid.querySelectorAll(".epd-template-card").forEach(card => {
+        card.addEventListener("click", () => {
+          state.selectedEpdTemplateId = card.getAttribute("data-epd-tpl");
+          renderWizardEpdTemplates();
+          syncSelectedEpdTemplateFields();
+        });
+      });
+
+      syncSelectedEpdTemplateFields();
+    };
+
+    const syncSelectedEpdTemplateFields = () => {
+      const tpl = (state.epdTemplates || []).find(t => t.template_id === state.selectedEpdTemplateId);
+      if (!tpl) return;
+      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+      const nameEl = document.getElementById("wizEpdCustomName");
+      const keyLbl = document.getElementById("wizEpdKeyParamLabel");
+      const keyInp = document.getElementById("wizEpdKeyParamVal");
+      if (nameEl) nameEl.placeholder = isEn ? tpl.name_en : tpl.name_es;
+      if (tpl.key_override) {
+        if (keyLbl) keyLbl.textContent = isEn ? tpl.key_override.label_en : tpl.key_override.label_es;
+        if (keyInp) {
+          keyInp.value = tpl.key_override.default;
+          keyInp.min = tpl.key_override.min;
+          keyInp.max = tpl.key_override.max;
+        }
+      }
+    };
+
+    const ensureEpdTemplatesLoaded = async () => {
+      if (state.epdTemplates && state.epdTemplates.length > 0) {
+        renderWizardEpdTemplates();
+        return;
+      }
+      try {
+        const res = await api.listEpdTemplates("cement_concrete");
+        state.epdTemplates = res.templates || [];
+        state.epdIndustries = res.industries || [];
+        state.epdModulesTaxonomy = res.modules || [];
+        renderWizardEpdTemplates();
+      } catch (err) {
+        console.warn("No se pudieron cargar plantillas EPD:", err);
+      }
+    };
+
+    const setWizardMode = (mode) => {
+      state.epdWizardMode = mode === "epd" ? "epd" : "blank";
+      if (btnModeBlank) btnModeBlank.classList.toggle("active", state.epdWizardMode === "blank");
+      if (btnModeEpd) btnModeEpd.classList.toggle("active", state.epdWizardMode === "epd");
+      if (formBlank) formBlank.style.display = state.epdWizardMode === "blank" ? "block" : "none";
+      if (panelEpd) panelEpd.style.display = state.epdWizardMode === "epd" ? "block" : "none";
+      if (footerHint) {
+        footerHint.textContent = state.epdWizardMode === "epd"
+          ? "● Se generaran nodos A1-D conectados, balance de masa y reporte EPD editable."
+          : "● Se creara en modo borrador y se abrira el lienzo de modelado.";
+      }
+      if (state.epdWizardMode === "epd") {
+        ensureEpdTemplatesLoaded();
+      }
+    };
+
+    if (btnModeBlank) btnModeBlank.addEventListener("click", () => setWizardMode("blank"));
+    if (btnModeEpd) btnModeEpd.addEventListener("click", () => setWizardMode("epd"));
+
+    const open = () => {
+      if (modal) {
+        modal.style.display = "flex";
+        modal.classList.add("active");
+        if (state.epdWizardMode === "epd") {
+          ensureEpdTemplatesLoaded();
+        }
+      }
+    };
+    const close = () => {
+      if (modal) {
+        modal.style.display = "none";
+        modal.classList.remove("active");
+      }
+    };
+
+    // Exponer refresco para cambio de idioma
+    window._refreshWizardEpdTemplates = renderWizardEpdTemplates;
+
+    if (btnOpen1) btnOpen1.addEventListener("click", open);
+    if (btnOpen2) btnOpen2.addEventListener("click", open);
+    if (btnClose) btnClose.addEventListener("click", close);
+    if (btnCancel) btnCancel.addEventListener("click", close);
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) close();
+      });
+    }
+    const inputName = document.getElementById("wizSystemName");
+    const inputCode = document.getElementById("wizSystemCode");
+
+    const generateSkuFromName = (name) => {
+      if (!name || !name.trim()) return "";
+      const clean = name
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9\s]/g, "")
+        .trim();
+      const words = clean.split(/\s+/).filter(Boolean);
+      const prefix = words.slice(0, 3).map(w => w.slice(0, 3).toUpperCase()).join("-");
+      const hash = Math.floor(100 + Math.random() * 900);
+      return `SKU-${prefix || "SYS"}-${hash}`;
+    };
+
+    if (inputName && inputCode) {
+      inputName.addEventListener("input", () => {
+        const val = inputName.value.trim();
+        if (val) {
+          inputCode.value = generateSkuFromName(val);
+        } else {
+          inputCode.value = "";
+        }
+      });
+    }
+
+    if (btnSubmit) {
+      let isSubmittingWizard = false;
+      btnSubmit.addEventListener("click", async () => {
+        if (isSubmittingWizard) return;
+
+        // MODO PLANTILLA EPD PRELIMINAR (CEMENTO & CONCRETO)
+        if (state.epdWizardMode === "epd") {
+          const tplId = state.selectedEpdTemplateId || "epd_concrete_rmx_4000";
+          const tpl = (state.epdTemplates || []).find(t => t.template_id === tplId);
+          const customName = (document.getElementById("wizEpdCustomName")?.value || "").trim() || (tpl ? tpl.name_es : "Modelo EPD");
+          const plantLoc = (document.getElementById("wizEpdPlantLocation")?.value || "").trim();
+          const keyParamVal = parseFloat(document.getElementById("wizEpdKeyParamVal")?.value || "");
+          const defaultStd = document.getElementById("wizEpdDefaultStd")?.value || "EN15804_A2";
+          const epdProjVal = document.getElementById("wizEpdProject")?.value;
+          const epdProjId = epdProjVal ? parseInt(epdProjVal, 10) : null;
+
+          isSubmittingWizard = true;
+          btnSubmit.disabled = true;
+          const prevText = btnSubmit.textContent;
+          btnSubmit.textContent = "Instanciando modelo EPD...";
+
+          try {
+            const payload = {
+              template_id: tplId,
+              name: customName,
+              plant_location: plantLoc,
+              default_standard: defaultStd,
+              project_id: epdProjId
+            };
+            if (!isNaN(keyParamVal) && tpl && tpl.key_override) {
+              payload[tpl.key_override.param_name] = keyParamVal;
+            }
+            const res = await api.instantiateEpdTemplate(payload);
+            close();
+            showNotification(res.message || `Modelo EPD "${customName}" creado exitosamente.`);
+            await loadDashboard();
+            if (res.system_id) {
+              await openSystem(res.system_id);
+            }
+          } catch (err) {
+            alert("Error al instanciar plantilla EPD: " + err.message);
+          } finally {
+            isSubmittingWizard = false;
+            btnSubmit.disabled = false;
+            btnSubmit.textContent = prevText;
+          }
+          return;
+        }
+
+        const name = document.getElementById("wizSystemName")?.value || "";
+        let code = document.getElementById("wizSystemCode")?.value || "";
+        const category = document.getElementById("wizSystemCategory")?.value || "";
+        const geography = document.getElementById("wizSystemGeo")?.value || "";
+        const amount = parseFloat(document.getElementById("wizSystemAmount")?.value || "1.0");
+        const unit = document.getElementById("wizSystemUnit")?.value || "u";
+
+        if (!name.trim()) {
+          alert("Por favor escribe el nombre del sistema producto.");
+          return;
+        }
+
+        if (!code) {
+          code = generateSkuFromName(name);
+        }
+
         isSubmittingWizard = true;
         btnSubmit.disabled = true;
         const prevText = btnSubmit.textContent;
@@ -10709,6 +11079,197 @@
     };
     showNotification(`Plan ${planNames[plan] || plan} activado exitosamente.`);
     showView("dashboard");
+  }
+
+  // =========================================================================
+  // GESTIÓN DE CONFIGURACIÓN DE DESARROLLADOR, CLAVES DE API Y SERVIDOR MCP
+  // =========================================================================
+  async function openDeveloperSettingsModal() {
+    const modal = document.getElementById("modalDeveloperSettings");
+    if (!modal) return;
+    modal.style.display = "flex";
+    modal.classList.add("active");
+    switchDevTab("keys");
+    const alertBox = document.getElementById("alertNewRawKeyContainer");
+    if (alertBox) alertBox.style.display = "none";
+    const nameInput = document.getElementById("inputNewApiKeyName");
+    if (nameInput) nameInput.value = "";
+    await loadUserApiKeys();
+  }
+
+  function closeDeveloperSettingsModal() {
+    const modal = document.getElementById("modalDeveloperSettings");
+    if (!modal) return;
+    modal.style.display = "none";
+    modal.classList.remove("active");
+  }
+
+  function switchDevTab(tabName) {
+    const btnKeys = document.getElementById("btnDevTabKeys");
+    const btnMcp = document.getElementById("btnDevTabMcp");
+    const btnScripts = document.getElementById("btnDevTabScripts");
+    const contentKeys = document.getElementById("devTabContentKeys");
+    const contentMcp = document.getElementById("devTabContentMcp");
+    const contentScripts = document.getElementById("devTabContentScripts");
+
+    if (btnKeys) btnKeys.classList.toggle("active", tabName === "keys");
+    if (btnMcp) btnMcp.classList.toggle("active", tabName === "mcp");
+    if (btnScripts) btnScripts.classList.toggle("active", tabName === "scripts");
+
+    if (contentKeys) contentKeys.style.display = tabName === "keys" ? "block" : "none";
+    if (contentMcp) contentMcp.style.display = tabName === "mcp" ? "block" : "none";
+    if (contentScripts) contentScripts.style.display = tabName === "scripts" ? "block" : "none";
+  }
+
+  async function loadUserApiKeys() {
+    const tbody = document.getElementById("tableUserApiKeysBody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--text-muted);">Cargando claves de API...</td></tr>`;
+
+    try {
+      const token = state.token || (state.activeUser && state.activeUser.token);
+      const res = await fetch("/api/account/api-keys", {
+        headers: token ? { "Authorization": `Bearer ${token}` } : {}
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== "success") {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--accent-rose);">Error cargando claves: ${data.message || "No autorizado"}</td></tr>`;
+        return;
+      }
+
+      const keys = data.keys || [];
+      if (keys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="padding: 18px; text-align: center; color: var(--text-muted);">No tienes claves de API activas. Genera una arriba para conectar tu IA o correr scripts.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = keys.map(k => `
+        <tr style="border-bottom: 1px solid var(--border-color); ${!k.is_active ? 'opacity: 0.5;' : ''}">
+          <td style="padding: 8px 12px; font-weight: 600;">${escapeHtml(k.name || "API Key")}</td>
+          <td style="padding: 8px 12px; font-family: monospace; font-size: 11px;"><code>${escapeHtml(k.key_prefix || "")}</code></td>
+          <td style="padding: 8px 12px; color: var(--text-muted);">${(k.created_at || "").substring(0, 10)}</td>
+          <td style="padding: 8px 12px; color: var(--text-muted);">${k.last_used_at ? k.last_used_at.substring(0, 16).replace("T", " ") : "Nunca"}</td>
+          <td style="padding: 8px 12px; text-align: right;">
+            ${k.is_active ? `
+              <button type="button" class="btn btn-secondary btn-sm" style="font-size: 10px; height: 24px; padding: 0 8px; color: var(--accent-rose); border-color: rgba(244,63,94,0.3);" onclick="window.EconodeApp.revokeUserApiKey('${k.id}')">Revocar</button>
+            ` : `<span style="font-size: 10px; color: var(--text-muted); font-style: italic;">Revocada</span>`}
+          </td>
+        </tr>
+      `).join("");
+    } catch (err) {
+      tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--accent-rose);">Error de red: ${err.message}</td></tr>`;
+    }
+  }
+
+  async function generateUserApiKey() {
+    const nameInput = document.getElementById("inputNewApiKeyName");
+    const name = nameInput ? nameInput.value.trim() : "";
+    if (!name) {
+      alert("Por favor ingresa un nombre para identificar la clave.");
+      return;
+    }
+
+    const btn = document.getElementById("btnGenerateApiKey");
+    if (btn) btn.disabled = true;
+
+    try {
+      const token = state.token || (state.activeUser && state.activeUser.token);
+      const res = await fetch("/api/account/api-keys", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ name: name, scopes: ["all"] })
+      });
+      const data = await res.json();
+      if (!res.ok || data.status !== "success") {
+        alert(data.message || "Error generando la clave.");
+        return;
+      }
+
+      const alertBox = document.getElementById("alertNewRawKeyContainer");
+      const textKey = document.getElementById("textNewRawKey");
+      if (alertBox && textKey) {
+        textKey.textContent = data.raw_token;
+        alertBox.style.display = "block";
+      }
+
+      if (nameInput) nameInput.value = "";
+      await loadUserApiKeys();
+    } catch (err) {
+      alert("Error de red: " + err.message);
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function revokeUserApiKey(keyId) {
+    if (!confirm("¿Estás seguro de que deseas revocar esta clave? Cualquier agente de IA o script que la utilice perderá acceso inmediatamente.")) {
+      return;
+    }
+
+    try {
+      const token = state.token || (state.activeUser && state.activeUser.token);
+      const res = await fetch("/api/account/api-keys/revoke", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ key_id: keyId })
+      });
+      const data = await res.json();
+      if (res.ok && data.status === "success") {
+        await loadUserApiKeys();
+      } else {
+        alert(data.message || "No se pudo revocar la clave.");
+      }
+    } catch (err) {
+      alert("Error de red: " + err.message);
+    }
+  }
+
+  function copyDevSnippet(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = el.textContent || el.innerText;
+    navigator.clipboard.writeText(text).then(() => {
+      alert("Configuración copiada al portapapeles.");
+    }).catch(() => {
+      prompt("Copia el texto manualmente:", text);
+    });
+  }
+
+  function setupDeveloperSettingsModal() {
+    const modal = document.getElementById("modalDeveloperSettings");
+    const btnNavDev = document.getElementById("btnNavDeveloperSettings");
+    const btnClose = document.getElementById("btnCloseDevModal");
+    const btnDone = document.getElementById("btnDoneDevModal");
+    const btnGenerate = document.getElementById("btnGenerateApiKey");
+    const btnCopyRaw = document.getElementById("btnCopyRawKey");
+
+    if (btnNavDev) btnNavDev.addEventListener("click", openDeveloperSettingsModal);
+    if (btnClose) btnClose.addEventListener("click", closeDeveloperSettingsModal);
+    if (btnDone) btnDone.addEventListener("click", closeDeveloperSettingsModal);
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeDeveloperSettingsModal();
+      });
+    }
+
+    if (btnGenerate) btnGenerate.addEventListener("click", generateUserApiKey);
+    if (btnCopyRaw) {
+      btnCopyRaw.addEventListener("click", () => copyDevSnippet("textNewRawKey"));
+    }
+
+    const devTabBtns = document.querySelectorAll("#devSegmentedTabs .epd-seg-btn");
+    devTabBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        const tab = btn.getAttribute("data-dev-tab");
+        if (tab) switchDevTab(tab);
+      });
+    });
   }
 
   // Comentar sobre un nodo específico
@@ -11734,7 +12295,10 @@
     setupCreateCustomFlowModal();
     setupSelectProviderModal();
     setupSubscriptionModal();
+    setupDeveloperSettingsModal();
     setupReportHighlighting();
+    setupGhgModuleListeners();
+    setupGhgReportListeners();
 
     const inputPalSearch = document.getElementById("inputPaletteSearch");
     if (inputPalSearch) {
@@ -13459,6 +14023,7 @@
     const countryInput = document.getElementById("selectNewGhgCountry");
     const consolInput = document.getElementById("selectNewGhgConsolidation");
     const descInput = document.getElementById("inputNewGhgDesc");
+    const btnSubmit = document.getElementById("btnSubmitNewGhgInventory");
 
     const orgName = (orgInput ? orgInput.value.trim() : "") || "Empresa Corporativa";
     const year = parseInt(yearInput ? yearInput.value : "2024", 10) || 2024;
@@ -13466,6 +14031,11 @@
     const country = countryInput ? countryInput.value : "MX";
     const consolidation = consolInput ? consolInput.value : "operational_control";
     const desc = descInput ? descInput.value.trim() : "";
+
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.textContent = "Creando...";
+    }
 
     const user = state.activeUser || {};
     try {
@@ -13491,7 +14061,7 @@
       }
 
       await loadDashboardGhgInventories();
-      if (typeof loadGhgInventoryModule === "function") {
+      if (typeof loadGhgInventoryModule === "function" && state.currentView === "ghg") {
         await loadGhgInventoryModule();
       }
       if (state.currentView === "report" && typeof loadGhgReport === "function") {
@@ -13500,6 +14070,11 @@
     } catch (err) {
       console.error("Error al crear inventario:", err);
       alert("Error al crear inventario: " + err.message);
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = "Crear Inventario";
+      }
     }
   }
 
@@ -14370,6 +14945,13 @@
     openGhgReportForInventory: (id) => openGhgReportForInventory(id),
     openGhgModuleForInventory: (id) => openGhgModuleForInventory(id),
     deleteGhgInventoryFromDashboard: (id, name) => deleteGhgInventoryFromDashboard(id, name),
+    openDeveloperSettingsModal: () => openDeveloperSettingsModal(),
+    closeDeveloperSettingsModal: () => closeDeveloperSettingsModal(),
+    switchDevTab: (t) => switchDevTab(t),
+    loadUserApiKeys: () => loadUserApiKeys(),
+    generateUserApiKey: () => generateUserApiKey(),
+    revokeUserApiKey: (id) => revokeUserApiKey(id),
+    copyDevSnippet: (id) => copyDevSnippet(id),
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardGhgInventories();
