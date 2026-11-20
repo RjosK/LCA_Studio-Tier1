@@ -889,6 +889,7 @@
       renderDashboardTable();
       renderDashboardKpis();
       loadDocsCount();
+      await loadDashboardGhgInventories();
     } catch (err) {
       console.error("Error al cargar dashboard:", err);
     }
@@ -1255,6 +1256,157 @@
     }
 
     tbody.innerHTML = rowsHtml;
+  }
+
+  /* ========================================================================= */
+  /* DASHBOARD CORPORATE GHG INVENTORIES SECTION                               */
+  /* ========================================================================= */
+  async function loadDashboardGhgInventories() {
+    const tbody = document.getElementById("tableDashGhgInventoriesBody");
+    if (!tbody) return;
+
+    try {
+      const res = await api.listGhgInventories();
+      const list = res.inventories || res.items || [];
+      state.ghgInventories = list;
+      renderDashboardGhgInventories(list);
+    } catch (err) {
+      console.warn("No se pudieron cargar inventarios corporativos en el dashboard:", err);
+    }
+  }
+
+  function renderDashboardGhgInventories(list = null) {
+    const tbody = document.getElementById("tableDashGhgInventoriesBody");
+    if (!tbody) return;
+
+    const inventories = list || state.ghgInventories || [];
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+
+    if (inventories.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted); font-size: 11.5px;">
+            <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">
+              ${isEn ? "No corporate GHG inventories registered" : "Sin inventarios corporativos GEI registrados"}
+            </div>
+            <div style="margin-bottom: 12px;">
+              ${isEn ? "Create your corporate inventory to track Scopes 1, 2, and 3 under the GHG Protocol." : "Crea tu inventario corporativo para cuantificar Alcances 1, 2 y 3 bajo el GHG Protocol."}
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openNewGhgInventoryModal()">
+              + ${isEn ? "New Corporate Inventory" : "Nuevo Inventario Corporativo"}
+            </button>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = inventories.map(inv => {
+      const consolLabel = inv.consolidation_approach === "operational_control"
+        ? (isEn ? "Operational Control" : "Control Operacional")
+        : (inv.consolidation_approach === "financial_control" ? (isEn ? "Financial Control" : "Control Financiero") : (isEn ? "Equity Share" : "Participación Accionaria"));
+      
+      const s1 = inv.summary?.scope_1?.total_tco2e || 0;
+      const s2 = inv.summary?.scope_2?.location_based_tco2e || 0;
+      const s3 = inv.summary?.scope_3?.total_tco2e || 0;
+      const totalLoc = inv.summary?.totals?.total_location_based_tco2e !== undefined
+        ? inv.summary.totals.total_location_based_tco2e
+        : (inv.summary?.totals?.location_based_tco2e || (s1 + s2 + s3));
+      const totalMkt = inv.summary?.totals?.total_market_based_tco2e !== undefined
+        ? inv.summary.totals.total_market_based_tco2e
+        : (inv.summary?.totals?.market_based_tco2e || totalLoc);
+
+      return `
+        <tr>
+          <td>
+            <strong style="color: var(--text-primary); cursor: pointer; font-size: 12.5px;" onclick="window.EconodeApp.openGhgReportForInventory(${inv.id})">
+              ${escapeHtml(inv.organization_name)}
+            </strong>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">
+              ${escapeHtml(inv.country_code || "MX")} · ${escapeHtml(inv.description || "GHG Protocol Corporate Standard")}
+            </div>
+          </td>
+          <td>
+            <span class="mono" style="font-weight: 700; font-size: 11.5px; color: #0F172A;">${inv.reporting_year}</span>
+            <span style="font-size: 10px; color: var(--text-muted); margin-left: 2px;">(Base: ${inv.base_year || inv.reporting_year})</span>
+          </td>
+          <td>
+            <span class="badge-pill badge-emerald" style="font-size: 9.5px;">${consolLabel}</span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+              <span class="badge-scope1" title="Alcance 1">A1: ${s1.toFixed(1)} t</span>
+              <span class="badge-scope2" title="Alcance 2 (Red)">A2: ${s2.toFixed(1)} t</span>
+              <span class="badge-scope3" title="Alcance 3 (Cadena)">A3: ${s3.toFixed(1)} t</span>
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; flex-direction: column;">
+              <span class="mono" style="font-weight: 700; color: #059669; font-size: 12px;">
+                ${totalLoc.toFixed(2)} <span style="font-size: 9.5px; font-weight: normal; color: var(--text-muted);">tCO2e (Red)</span>
+              </span>
+              <span class="mono" style="font-size: 10px; color: var(--text-muted);">
+                ${totalMkt.toFixed(2)} tCO2e (Mercado)
+              </span>
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openGhgReportForInventory(${inv.id})" title="${isEn ? "Open Executive Dynamic GHG Report" : "Abrir Reporte Dinamico GEI Ejecutivo"}" style="padding: 2px 8px; font-size: 11px;">
+                ${isEn ? "Report" : "Reporte"}
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openGhgModuleForInventory(${inv.id})" title="${isEn ? "Manage scopes, activities and emission factors" : "Gestionar alcances, actividades y factores"}" style="padding: 2px 8px; font-size: 11px;">
+                ${isEn ? "Manage" : "Gestionar"}
+              </button>
+              <button class="btn btn-ghost btn-sm" onclick="window.EconodeApp.deleteGhgInventoryFromDashboard(${inv.id}, '${escapeHtml(inv.organization_name)}')" title="${isEn ? "Delete inventory" : "Eliminar inventario"}" style="padding: 2px 6px; color: #DC2626; font-size: 11px;">
+                ✕
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  async function openGhgReportForInventory(invId) {
+    if (typeof navigateToView === "function") {
+      navigateToView("report");
+    }
+    if (typeof switchReportMode === "function") {
+      switchReportMode("ghg", false);
+    }
+    if (typeof loadGhgReport === "function") {
+      await loadGhgReport(invId);
+    }
+  }
+
+  async function openGhgModuleForInventory(invId) {
+    if (typeof navigateToView === "function") {
+      navigateToView("ghg");
+    }
+    if (typeof loadActiveGhgInventory === "function") {
+      await loadActiveGhgInventory(invId);
+    }
+  }
+
+  async function deleteGhgInventoryFromDashboard(invId, orgName) {
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+    const msg = isEn
+      ? `Are you sure you want to delete corporate GHG inventory "${orgName}"? All registered activity entries will be removed.`
+      : `¿Confirmas eliminar el inventario corporativo GEI "${orgName}"? Se eliminaran todas sus actividades de Alcance 1, 2 y 3.`;
+    if (!confirm(msg)) return;
+
+    try {
+      await api.deleteGhgInventory(invId);
+      showNotification(isEn ? `Inventory "${orgName}" deleted.` : `Inventario "${orgName}" eliminado exitosamente.`);
+      await loadDashboardGhgInventories();
+      if (typeof loadGhgInventoryModule === "function") {
+        await loadGhgInventoryModule();
+      }
+    } catch (err) {
+      console.error("Error al eliminar inventario desde dashboard:", err);
+      alert(isEn ? "Failed to delete inventory: " + err.message : "Error al eliminar inventario: " + err.message);
+    }
   }
 
   // Caché en memoria para transiciones de lienzo ultra-rápidas (0ms de latencia)
@@ -13435,9 +13587,23 @@
     const modal = document.getElementById("modalNewGhgInventory");
     if (!modal) return;
     const orgInput = document.getElementById("inputNewGhgOrg");
-    if (orgInput && state.activeUser) {
-      orgInput.value = state.activeUser.organization || "BioPack Industrial S.A. de C.V.";
+    const yearInput = document.getElementById("inputNewGhgYear");
+    const baseYearInput = document.getElementById("inputNewGhgBaseYear");
+    const descInput = document.getElementById("inputNewGhgDesc");
+
+    if (orgInput) {
+      const defaultOrg = (state.activeUser && state.activeUser.organization && !state.activeUser.organization.includes("BioPack"))
+        ? state.activeUser.organization
+        : "";
+      orgInput.value = defaultOrg;
+      orgInput.placeholder = "Nombre de tu empresa u organización corporativa...";
+      setTimeout(() => orgInput.focus(), 60);
     }
+    const currentYear = new Date().getFullYear();
+    if (yearInput) yearInput.value = currentYear;
+    if (baseYearInput) baseYearInput.value = currentYear - 1;
+    if (descInput) descInput.value = "";
+
     modal.style.display = "flex";
     modal.classList.add("active");
   }
@@ -13445,12 +13611,14 @@
   async function submitNewGhgInventory() {
     const orgInput = document.getElementById("inputNewGhgOrg");
     const yearInput = document.getElementById("inputNewGhgYear");
+    const baseYearInput = document.getElementById("inputNewGhgBaseYear");
     const countryInput = document.getElementById("selectNewGhgCountry");
     const consolInput = document.getElementById("selectNewGhgConsolidation");
     const descInput = document.getElementById("inputNewGhgDesc");
 
     const orgName = (orgInput ? orgInput.value.trim() : "") || "Empresa Corporativa";
     const year = parseInt(yearInput ? yearInput.value : "2024", 10) || 2024;
+    const baseYear = baseYearInput && baseYearInput.value ? parseInt(baseYearInput.value, 10) : (year - 1);
     const country = countryInput ? countryInput.value : "MX";
     const consolidation = consolInput ? consolInput.value : "operational_control";
     const desc = descInput ? descInput.value.trim() : "";
@@ -13460,7 +13628,8 @@
       const res = await api.createGhgInventory({
         organization_name: orgName,
         reporting_year: year,
-        country: country,
+        base_year: baseYear,
+        country_code: country,
         consolidation_approach: consolidation,
         description: desc,
         created_by_user_id: user.id || 1,
@@ -13469,9 +13638,20 @@
 
       closeModal("modalNewGhgInventory");
       showNotification(`Inventario GEI "${orgName} (${year})" creado exitosamente.`);
-      await loadGhgInventoryModule();
-      if (res.inventory && res.inventory.id) {
-        await loadActiveGhgInventory(res.inventory.id);
+
+      const newInv = res.inventory;
+      if (newInv && newInv.id) {
+        state.activeGhgInventory = newInv;
+        state.activeGhgReportInventory = newInv;
+        localStorage.setItem("econode_active_ghg_inv", String(newInv.id));
+      }
+
+      await loadDashboardGhgInventories();
+      if (typeof loadGhgInventoryModule === "function") {
+        await loadGhgInventoryModule();
+      }
+      if (state.currentView === "report" && typeof loadGhgReport === "function") {
+        await loadGhgReport(newInv?.id);
       }
     } catch (err) {
       console.error("Error al crear inventario:", err);
@@ -14332,8 +14512,14 @@
     loadGhgReport: (invId) => loadGhgReport(invId),
     renderGhgReportView: (inv) => renderGhgReportView(inv),
     downloadGhgReportJson: () => downloadGhgReportJson(),
+    loadDashboardGhgInventories: () => loadDashboardGhgInventories(),
+    renderDashboardGhgInventories: (list) => renderDashboardGhgInventories(list),
+    openGhgReportForInventory: (id) => openGhgReportForInventory(id),
+    openGhgModuleForInventory: (id) => openGhgModuleForInventory(id),
+    deleteGhgInventoryFromDashboard: (id, name) => deleteGhgInventoryFromDashboard(id, name),
     onLanguageChange: (lang) => {
       renderDashboardTable();
+      renderDashboardGhgInventories();
       renderDashboardKpis();
       renderChecklistTable();
       renderCommentsThread();

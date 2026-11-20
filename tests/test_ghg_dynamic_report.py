@@ -38,6 +38,9 @@ class TestGhgDynamicReport(unittest.TestCase):
         self.assertIn('data-report-mode="ghg"', self.html_content)
         self.assertIn('id="ghgReportContainer"', self.html_content)
         self.assertIn('id="selectGhgReportInventory"', self.html_content)
+        self.assertIn('id="btnReportNewGhgInventory"', self.html_content)
+        self.assertIn('id="btnDashNewGhgInv"', self.html_content)
+        self.assertIn('id="tableDashGhgInventoriesBody"', self.html_content)
         self.assertIn('id="btnGhgScope2Location"', self.html_content)
         self.assertIn('id="btnGhgScope2Market"', self.html_content)
         self.assertIn('id="btnExportGhgReportJson"', self.html_content)
@@ -99,12 +102,17 @@ class TestGhgDynamicReport(unittest.TestCase):
         self.assertIn("loadGhgReport", self.js_app_content)
         self.assertIn("renderGhgReportView", self.js_app_content)
         self.assertIn("downloadGhgReportJson", self.js_app_content)
+        self.assertIn("loadDashboardGhgInventories", self.js_app_content)
+        self.assertIn("renderDashboardGhgInventories", self.js_app_content)
         self.assertIn("reportViewMode === \"ghg\"", self.js_app_content)
 
         # Exportado en window.EconodeApp
         self.assertIn("loadGhgReport: (invId) => loadGhgReport(invId)", self.js_app_content)
         self.assertIn("renderGhgReportView: (inv) => renderGhgReportView(inv)", self.js_app_content)
         self.assertIn("downloadGhgReportJson: () => downloadGhgReportJson()", self.js_app_content)
+        self.assertIn("loadDashboardGhgInventories: () => loadDashboardGhgInventories()", self.js_app_content)
+        self.assertIn("renderDashboardGhgInventories: (list) => renderDashboardGhgInventories(list)", self.js_app_content)
+        self.assertIn("openGhgReportForInventory: (id) => openGhgReportForInventory(id)", self.js_app_content)
 
     def test_css_badges_and_print_styles(self):
         """Verifica que los estilos Apple HIG y badges de Scope/Tier esten en styles.css."""
