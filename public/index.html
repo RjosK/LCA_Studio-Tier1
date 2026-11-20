@@ -1022,6 +1022,9 @@
             <span data-i18n="dash.btn_import_simapro">+ Importar SimaPro</span>
           </button>
           <input type="file" id="inputDashSimaProFile" accept=".csv,.CSV" style="display: none;">
+          <button class="btn btn-secondary" id="btnDashNewGhgInv" onclick="window.EconodeApp.openNewGhgInventoryModal()" style="white-space: nowrap; height: 32px; font-size: 11.5px; padding: 0 12px; display: inline-flex; align-items: center; gap: 4px; border-color: rgba(37, 99, 235, 0.4); color: #2563EB;" title="Crear un nuevo inventario corporativo GHG Protocol">
+            <span data-i18n="dash.btn_new_ghg_inv">+ Nuevo Inventario GEI</span>
+          </button>
           <button class="btn btn-primary" id="btnDashNewSystem" style="white-space: nowrap; height: 32px; font-size: 11.5px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px;">
             <span data-i18n="dash.new_btn">+ Nuevo Sistema Producto</span>
           </button>
@@ -1042,6 +1045,37 @@
         </thead>
         <tbody id="tableSystemsBody">
           <!-- Renderizado dinámico desde app.js -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- SECCIÓN: INVENTARIOS CORPORATIVOS GHG PROTOCOL -->
+    <div class="table-card" style="margin-top: 24px;">
+      <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div>
+          <h2 style="font-family: 'Instrument Serif', Georgia, serif; font-size: 20px; font-weight: 400; color: #18232C; margin: 0 0 2px 0;" data-i18n="dash.ghg_card_title">Inventarios Corporativos GHG Protocol</h2>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin: 0;" data-i18n="dash.ghg_card_subtitle">Contabilidad de emisiones organizacionales: Alcance 1 (Directas), Alcance 2 (Energía) y Alcance 3 (Cadena de Valor)</p>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button class="btn btn-primary" id="btnDashNewGhgInventory" onclick="window.EconodeApp.openNewGhgInventoryModal()" style="white-space: nowrap; height: 32px; font-size: 11.5px; padding: 0 14px; display: inline-flex; align-items: center; gap: 4px;">
+            <span data-i18n="dash.btn_new_ghg_inv">+ Nuevo Inventario Corporativo</span>
+          </button>
+        </div>
+      </div>
+
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-i18n="dash.col_ghg_org">Organización / Razón Social</th>
+            <th data-i18n="dash.col_ghg_period">Año de Reporte</th>
+            <th data-i18n="dash.col_ghg_consol">Enfoque de Consolidación</th>
+            <th data-i18n="dash.col_ghg_scopes">Alcances Contabilizados</th>
+            <th data-i18n="dash.col_ghg_total">Emisiones Totales (tCO2e)</th>
+            <th data-i18n="dash.col_ghg_actions">Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="tableDashGhgInventoriesBody">
+          <!-- Renderizado dinámicamente desde app.js -->
         </tbody>
       </table>
     </div>
@@ -1125,6 +1159,9 @@
             </button>
             <button type="button" class="canvas-export-item" id="btnExportLciCsv">
               <span data-i18n="canvas.export_lci_csv">LCI Consolidado</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
+            </button>
+            <button type="button" class="canvas-export-item" id="btnExportDocx">
+              <span data-i18n="canvas.export_docx">Reporte Word (.docx)</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">DOCX</span>
             </button>
           </div>
         </div>
@@ -1550,6 +1587,9 @@
 
             <!-- ACCIONES DEL DOCUMENTO -->
             <div class="report-web-actions" style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;" role="toolbar" aria-label="Exportación del reporte">
+              <button class="btn btn-secondary btn-sm" id="btnExportReportDocx" title="Descargar documento Word (.docx) editable con tablas y formato oficial" data-i18n="report.export_docx" style="font-weight: 600;">
+                Word Editable (.docx) ↓
+              </button>
               <button class="btn btn-primary btn-sm" id="btnExportReportPdf" title="Descargar documento PDF oficial con membrete y sellos" data-i18n="report.export_pdf">
                 PDF Oficial ↓
               </button>
@@ -1981,6 +2021,7 @@
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;" data-i18n="ghg_rep.inventory_label">Inventario Corporativo:</span>
               <select id="selectGhgReportInventory" class="form-input" style="height: 28px; font-size: 11px; padding: 2px 8px; font-weight: 600; min-width: 220px;"></select>
+              <button type="button" class="btn btn-secondary btn-sm" id="btnReportNewGhgInventory" onclick="window.EconodeApp.openNewGhgInventoryModal()" style="height: 28px; font-size: 11px; padding: 0 10px; font-weight: 600; white-space: nowrap;" title="Crear un nuevo inventario corporativo" data-i18n="dash.btn_new_ghg_inv">+ Nuevo Inventario</button>
               <div class="epd-segmented-control epd-seg-compact" id="ghgScope2Segmented" role="tablist" style="margin-left: 6px;">
                 <button type="button" class="epd-seg-btn active" id="btnGhgScope2Location" data-ghg-scope2="location">Location-Based</button>
                 <button type="button" class="epd-seg-btn" id="btnGhgScope2Market" data-ghg-scope2="market">Market-Based</button>
@@ -2636,10 +2677,14 @@
           <label style="font-size: 11.5px; font-weight: 600;">Razón Social / Organización:</label>
           <input type="text" id="inputNewGhgOrg" class="form-input" placeholder="Ej. BioPack Solutions S.A. de C.V." style="width: 100%; font-size: 12px;">
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px;">
           <div class="form-group">
             <label style="font-size: 11.5px; font-weight: 600;">Año de Reporte:</label>
             <input type="number" id="inputNewGhgYear" class="form-input" value="2024" min="2010" max="2035" style="width: 100%; font-size: 12px;">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 11.5px; font-weight: 600;">Año Base:</label>
+            <input type="number" id="inputNewGhgBaseYear" class="form-input" value="2023" min="2000" max="2035" style="width: 100%; font-size: 12px;">
           </div>
           <div class="form-group">
             <label style="font-size: 11.5px; font-weight: 600;">País Principal:</label>

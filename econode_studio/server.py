@@ -89,7 +89,8 @@ from application import (
     export_simapro_csv,
     export_lci_consolidated_csv,
     export_expediente_nom070_zip,
-    export_system_pdf_bytes
+    export_system_pdf_bytes,
+    export_system_docx_bytes
 )
 try:
     from application.ghg_service import (
@@ -787,8 +788,15 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                             "Content-Length": str(len(pdf_bytes))
                         })
                         self.wfile.write(pdf_bytes)
+                    elif fmt in ("docx", "word", "report_docx"):
+                        docx_bytes = export_system_docx_bytes(conn, sys_id)
+                        self._set_headers(200, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", {
+                            "Content-Disposition": f'attachment; filename="Reporte_ACV_NOM070_Sistema_{sys_id}.docx"',
+                            "Content-Length": str(len(docx_bytes))
+                        })
+                        self.wfile.write(docx_bytes)
                     else:
-                        self._send_error_json(f"Formato no reconocido: {fmt}. Opciones: openlca, ilcd, simapro, csv, expediente, pdf", 400)
+                        self._send_error_json(f"Formato no reconocido: {fmt}. Opciones: openlca, ilcd, simapro, csv, expediente, pdf, docx", 400)
                     return
 
                 else:

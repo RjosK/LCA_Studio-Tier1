@@ -68,6 +68,14 @@ def export_pdf_use_case(conn: Optional[sqlite3.Connection] = None, system_id: in
     return _exp_adapter.export_system_pdf_bytes(conn, system_id)
 
 
+def export_docx_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1) -> bytes:
+    """Genera el documento Word (.docx) editable formal del Sistema Producto (conforme a ISO 14044 / NOM-070-SE-2024)."""
+    if conn is None:
+        with get_active_db_connection() as c:
+            return _exp_adapter.export_system_docx_bytes(c, system_id)
+    return _exp_adapter.export_system_docx_bytes(conn, system_id)
+
+
 # Alias de conveniencia y compatibilidad
 export_openlca_jsonld_zip = export_openlca_use_case
 export_ilcd_xml_zip = export_ilcd_use_case
@@ -76,4 +84,6 @@ export_lci_consolidated_csv = export_csv_use_case
 export_expediente_nom070_zip = export_complete_expediente_use_case
 export_nom070_dossier_use_case = export_complete_expediente_use_case
 export_system_pdf_bytes = export_pdf_use_case
+export_system_docx_bytes = export_docx_use_case
+
 

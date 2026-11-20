@@ -7,8 +7,10 @@ correct PDF generation, and strict zero-emoji enforcement.
 import unittest
 import os
 import re
+import io
+import docx
 from econode_studio.infrastructure.database_adapter import get_active_db_connection, list_product_systems
-from econode_studio.infrastructure.exporters_adapter import export_system_pdf_bytes
+from econode_studio.infrastructure.exporters_adapter import export_system_pdf_bytes, export_system_docx_bytes
 
 class TestIsoAcvReport(unittest.TestCase):
     def setUp(self):
@@ -45,7 +47,7 @@ class TestIsoAcvReport(unittest.TestCase):
         self.assertNotIn('sec-7-appendix', html)
         self.assertNotIn('7. Non-Confidential', html)
 
-        # Check dynamic tables and badges
+        # Check dynamic tables, buttons and badges
         self.assertIn('id="reportProcessesTable"', html)
         self.assertIn('id="reportLciTable"', html)
         self.assertIn('id="reportLciaResultsTable"', html)
@@ -53,6 +55,8 @@ class TestIsoAcvReport(unittest.TestCase):
         self.assertIn('id="reportCompletenessBadge"', html)
         self.assertIn('id="reportConsistencyBadge"', html)
         self.assertIn('id="reportSignOffCard"', html)
+        self.assertIn('id="btnExportReportDocx"', html)
+        self.assertIn('id="btnExportDocx"', html)
 
     def test_i18n_bilingual_coverage(self):
         """Verify that i18n dictionary contains bilingual keys for chapters 1 through 6."""
@@ -72,7 +76,9 @@ class TestIsoAcvReport(unittest.TestCase):
             "report.ch3_title",
             "report.ch4_title",
             "report.ch5_title",
-            "report.ch6_title"
+            "report.ch6_title",
+            "report.export_docx",
+            "canvas.export_docx"
         ]
 
         for k in required_keys:
@@ -89,6 +95,29 @@ class TestIsoAcvReport(unittest.TestCase):
             self.assertIsInstance(pdf_bytes, bytes)
             self.assertGreater(len(pdf_bytes), 2000)
             self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+
+    def test_export_system_docx_bytes_generates_valid_editable_word_file(self):
+        """Verify that export_system_docx_bytes produces a valid editable Word (.docx) document with tables."""
+        with get_active_db_connection() as conn:
+            systems = list_product_systems(conn)
+            sys_id = systems[0]["id"] if systems else 21
+            docx_bytes = export_system_docx_bytes(conn, sys_id)
+            self.assertIsInstance(docx_bytes, bytes)
+            self.assertGreater(len(docx_bytes), 5000)
+            self.assertTrue(docx_bytes.startswith(b"PK\x03\x04"))
+
+            doc = docx.Document(io.BytesIO(docx_bytes))
+            self.assertGreaterEqual(len(doc.paragraphs), 20)
+            self.assertGreaterEqual(len(doc.tables), 5)
+
+            # Check that chapter headings exist in editable Word paragraphs
+            headings = [p.text for p in doc.paragraphs if p.text.startswith(("1.", "2.", "3.", "4.", "5.", "6."))]
+            self.assertTrue(any("1. Introducción" in h for h in headings))
+            self.assertTrue(any("2. Definición de Objetivo y Alcance" in h for h in headings))
+            self.assertTrue(any("3. Análisis de Inventario" in h for h in headings))
+            self.assertTrue(any("4. Resultados de Evaluación de Impacto" in h for h in headings))
+            self.assertTrue(any("5. Interpretación del Ciclo de Vida" in h for h in headings))
+            self.assertTrue(any("6. Conclusiones y Recomendaciones" in h for h in headings))
 
     def test_zero_emojis_in_report_files(self):
         """Enforce strict zero emoji rule across all modified report files."""
