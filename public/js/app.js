@@ -11641,6 +11641,56 @@
     });
   }
 
+  async function triggerExportDownload(endpoint, defaultFilename) {
+    try {
+      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+      showNotification(isEn ? "Generating and downloading document..." : "Generando y descargando documento...");
+      const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+      const headers = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const separator = endpoint.includes("?") ? "&" : "?";
+      const fullUrl = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
+
+      const res = await fetch(fullUrl, { headers });
+      if (!res.ok) {
+        let errMsg = `HTTP ${res.status}`;
+        try {
+          const errData = await res.json();
+          if (errData && errData.error) errMsg = errData.error;
+        } catch (_) {}
+        throw new Error(errMsg);
+      }
+
+      const blob = await res.blob();
+      let filename = defaultFilename;
+      const contentDisposition = res.headers.get("Content-Disposition");
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+        if (match && match[1]) {
+          filename = match[1].replace(/['"]/g, "").trim();
+        }
+      }
+
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+      showNotification(isEn ? "Document downloaded successfully." : "Documento descargado con exito.");
+    } catch (err) {
+      console.warn("Descarga por blob fallo, usando redireccion directa:", err);
+      const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+      const separator = endpoint.includes("?") ? "&" : "?";
+      const directUrl = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
+      window.location.href = directUrl;
+    }
+  }
+
   async function initApp() {
     setupFoldToolbarHome();
     // 1. Configurar Auth en segundo plano sin bloquear listeners de UI
@@ -12138,56 +12188,6 @@
     const btnExpCanvasDocx = document.getElementById("btnExportDocx");
 
     const getSysId = () => state.activeSystem ? state.activeSystem.id : 21;
-
-    async function triggerExportDownload(endpoint, defaultFilename) {
-      try {
-        const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
-        showNotification(isEn ? "Generating and downloading document..." : "Generando y descargando documento...");
-        const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
-        const headers = {};
-        if (token) headers["Authorization"] = `Bearer ${token}`;
-
-        const separator = endpoint.includes("?") ? "&" : "?";
-        const fullUrl = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
-
-        const res = await fetch(fullUrl, { headers });
-        if (!res.ok) {
-          let errMsg = `HTTP ${res.status}`;
-          try {
-            const errData = await res.json();
-            if (errData && errData.error) errMsg = errData.error;
-          } catch (_) {}
-          throw new Error(errMsg);
-        }
-
-        const blob = await res.blob();
-        let filename = defaultFilename;
-        const contentDisposition = res.headers.get("Content-Disposition");
-        if (contentDisposition) {
-          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
-          if (match && match[1]) {
-            filename = match[1].replace(/['"]/g, "").trim();
-          }
-        }
-
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.style.display = "none";
-        a.href = blobUrl;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
-        showNotification(isEn ? "Document downloaded successfully." : "Documento descargado con exito.");
-      } catch (err) {
-        console.warn("Descarga por blob fallo, usando redireccion directa:", err);
-        const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
-        const separator = endpoint.includes("?") ? "&" : "?";
-        const directUrl = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
-        window.location.href = directUrl;
-      }
-    }
 
     // Dropdown Global de Exportación en el Lienzo
     const btnExportDropdown = document.getElementById("btnCanvasExportDropdown");

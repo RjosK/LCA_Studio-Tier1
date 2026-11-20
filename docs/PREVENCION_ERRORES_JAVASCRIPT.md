@@ -49,13 +49,14 @@ Si ocurre un error en la fase 1, la fase 2 **nunca se ejecuta**. En consecuencia
 
 Para cualquier cambio futuro en `public/js/app.js` o en cualquier archivo JavaScript del proyecto:
 
-### Regla 1: Verificación de Sintaxis Obligatoria
-Antes de hacer commit, SIEMPRE se debe ejecutar:
+### Regla 1: Verificación de Sintaxis y Alcance de Identificadores (Scope)
+Antes de hacer commit, SIEMPRE se debe ejecutar tanto la verificación de sintaxis como la prueba de evaluación de alcance:
 ```powershell
 node --check public/js/app.js
 node --check public/js/i18n.js
+python -m unittest tests.test_iso_acv_report.TestIsoAcvReport.test_javascript_syntax_integrity
 ```
-Si el comando arroja cualquier código de salida distinto de 0 o cualquier advertencia de sintaxis, **está estrictamente prohibido hacer commit o push**.
+`node --check` solo verifica errores gramaticales (AST). Si un identificador se exporta a nivel de módulo (`window.EconodeApp = { funcionNoDefinida }`) pero fue declarado dentro de otra función, arroja un `ReferenceError` en tiempo de carga que mata la ejecución completa. La prueba automatizada ejecuta `app.js` en un entorno DOM simulado para garantizar que `window.EconodeApp` se inicialice sin errores de referencia.
 
 ### Regla 2: Inspección de Volumen de Diff
 Antes de hacer commit, verificar la magnitud del cambio:

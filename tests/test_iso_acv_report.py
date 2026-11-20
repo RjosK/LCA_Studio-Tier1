@@ -169,12 +169,32 @@ class TestIsoAcvReport(unittest.TestCase):
             proc.wait()
 
     def test_javascript_syntax_integrity(self):
-        """Run node --check on all public JS files to strictly prevent SyntaxErrors from ever landing."""
+        """Run node --check on all public JS files and verify runtime evaluation of app.js in a mock DOM."""
         import subprocess
         for script_name in ["app.js", "i18n.js"]:
             script_path = os.path.join(self.base_dir, "public", "js", script_name)
             res = subprocess.run(["node", "--check", script_path], capture_output=True, text=True)
             self.assertEqual(res.returncode, 0, f"JavaScript SyntaxError detected in {script_name}:\n{res.stderr}")
+
+        # Test runtime initialization and scope integrity in Node mock environment
+        eval_script = """
+        const fs = require('fs');
+        const vm = require('vm');
+        function makeEl(id='') { return { id, style:{}, classList:{add:()=>{},remove:()=>{},toggle:()=>{}}, setAttribute:()=>{}, getAttribute:()=>'', removeAttribute:()=>{}, appendChild:()=>{}, removeChild:()=>{}, addEventListener:()=>{}, querySelector:()=>null, querySelectorAll:()=>[], value:'', textContent:'', innerHTML:'' }; }
+        const dom = { getElementById: makeEl, querySelectorAll: ()=>[], querySelector: ()=>null, addEventListener: ()=>{}, createElement: makeEl, body: makeEl('body'), documentElement: { lang: 'es' }, readyState: 'complete' };
+        const win = { document: dom, location: { hash: '', search: '', pathname: '/', href: '' }, localStorage: { getItem: ()=>null, setItem: ()=>{}, removeItem: ()=>{} }, sessionStorage: { getItem: ()=>null, setItem: ()=>{}, removeItem: ()=>{} }, navigator: { clipboard: { writeText: ()=>Promise.resolve() } }, fetch: ()=>Promise.resolve({ ok: true, json: ()=>Promise.resolve({}) }), addEventListener: ()=>{}, I18n: { t: (k, d)=>d||k, getCurrentLanguage: ()=>'es', setLanguage: ()=>{} }, scrollTo: ()=>{} };
+        win.window = win;
+        const ctx = vm.createContext({ window: win, document: dom, localStorage: win.localStorage, sessionStorage: win.sessionStorage, navigator: win.navigator, fetch: win.fetch, console: console, setTimeout, clearTimeout, setInterval, clearInterval, URL: { createObjectURL: ()=>'', revokeObjectURL: ()=>{} } });
+        const code = fs.readFileSync(process.argv[1], 'utf8');
+        vm.runInContext(code, ctx);
+        if (!ctx.window.EconodeApp || typeof ctx.window.EconodeApp !== 'object') {
+            console.error('window.EconodeApp is not defined or not an object');
+            process.exit(1);
+        }
+        """
+        app_js_path = os.path.join(self.base_dir, "public", "js", "app.js")
+        run_res = subprocess.run(["node", "-e", eval_script, app_js_path], capture_output=True, text=True)
+        self.assertEqual(run_res.returncode, 0, f"Runtime error evaluating public/js/app.js:\n{run_res.stderr}")
 
     def test_zero_emojis_in_report_files(self):
         """Enforce strict zero emoji rule across all modified report files."""
