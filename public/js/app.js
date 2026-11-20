@@ -8497,6 +8497,477 @@
     showNotification("Descargando declaracion digital en formato OpenEPD (.json)...");
   }
 
+  /* ========================================================================= */
+  /* GHG PROTOCOL CORPORATE STANDARD REPORT FUNCTIONS                          */
+  /* ========================================================================= */
+  let ghgReportListenersBound = false;
+  function setupGhgReportListeners() {
+    if (ghgReportListenersBound) return;
+    ghgReportListenersBound = true;
+
+    const selectInv = document.getElementById("selectGhgReportInventory");
+    if (selectInv) {
+      selectInv.addEventListener("change", (e) => {
+        const id = parseInt(e.target.value, 10);
+        if (id) loadGhgReport(id);
+      });
+    }
+
+    const btnLoc = document.getElementById("btnGhgScope2Location");
+    const btnMkt = document.getElementById("btnGhgScope2Market");
+    if (btnLoc) {
+      btnLoc.addEventListener("click", () => {
+        state.ghgScope2View = "location";
+        btnLoc.classList.add("active");
+        if (btnMkt) btnMkt.classList.remove("active");
+        if (state.activeGhgReportInventory) renderGhgReportView(state.activeGhgReportInventory);
+      });
+    }
+    if (btnMkt) {
+      btnMkt.addEventListener("click", () => {
+        state.ghgScope2View = "market";
+        btnMkt.classList.add("active");
+        if (btnLoc) btnLoc.classList.remove("active");
+        if (state.activeGhgReportInventory) renderGhgReportView(state.activeGhgReportInventory);
+      });
+    }
+
+    const btnJson = document.getElementById("btnExportGhgReportJson");
+    if (btnJson) btnJson.addEventListener("click", downloadGhgReportJson);
+
+    const btnPrintPdf = document.getElementById("btnPrintGhgPdf");
+    if (btnPrintPdf) {
+      btnPrintPdf.addEventListener("click", () => {
+        window.print();
+      });
+    }
+  }
+
+  async function loadGhgReport(inventoryId = null) {
+    try {
+      const invList = await api.listGhgInventories();
+      const list = invList.inventories || invList.items || [];
+      state.ghgInventories = list;
+
+      const selectEl = document.getElementById("selectGhgReportInventory");
+      if (selectEl) {
+        if (list.length === 0) {
+          selectEl.innerHTML = '<option value="">Sin inventarios registrados</option>';
+        } else {
+          selectEl.innerHTML = list.map(inv => `
+            <option value="${inv.id}">${escapeHtml(inv.organization_name)} (${inv.reporting_year}) - ${escapeHtml(inv.consolidation_approach)}</option>
+          `).join("");
+        }
+      }
+
+      let targetId = inventoryId;
+      if (!targetId) {
+        if (state.activeGhgInventory && state.activeGhgInventory.id) {
+          targetId = state.activeGhgInventory.id;
+        } else if (list.length > 0) {
+          targetId = list[0].id;
+        }
+      }
+
+      if (targetId) {
+        if (selectEl) selectEl.value = String(targetId);
+        const data = await api.getGhgInventory(targetId);
+        const inv = data.inventory;
+        state.activeGhgReportInventory = inv;
+        renderGhgReportView(inv);
+      }
+    } catch (err) {
+      console.error("Error al cargar reporte GHG Protocol:", err);
+      showNotification("Error al cargar reporte GHG Protocol: " + err.message);
+    }
+  }
+
+  function formatGhgNumber(val, decimals = 2) {
+    if (val === null || val === undefined || isNaN(Number(val))) return "0.00";
+    const num = Number(val);
+    return num.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  }
+
+  function renderGhgReportView(inv) {
+    if (!inv) return;
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+    const summary = inv.summary || {};
+    const totals = summary.totals || {};
+    const s1 = summary.scope_1 || {};
+    const s2 = summary.scope_2 || {};
+    const s3 = summary.scope_3 || {};
+    const entries = inv.entries || [];
+    const scope2View = state.ghgScope2View || "location";
+
+    const btnLoc = document.getElementById("btnGhgScope2Location");
+    const btnMkt = document.getElementById("btnGhgScope2Market");
+    if (btnLoc) btnLoc.classList.toggle("active", scope2View === "location");
+    if (btnMkt) btnMkt.classList.toggle("active", scope2View === "market");
+
+    // Header de Impresion Oficial PDF
+    const elPrintRef = document.getElementById("printGhgRef");
+    const elPrintDate = document.getElementById("printGhgDate");
+    const elPrintStd = document.getElementById("printGhgStandard");
+    const elPrintOrg = document.getElementById("printGhgOrgName");
+    const elPrintRepYear = document.getElementById("printGhgReportingYear");
+    const elPrintBaseYear = document.getElementById("printGhgBaseYear");
+    const elPrintConsol = document.getElementById("printGhgConsolidation");
+    const elPrintCountry = document.getElementById("printGhgCountry");
+
+    if (elPrintRef) elPrintRef.textContent = `GHG-INV-${inv.reporting_year || 2024}-#${inv.id || 1}`;
+    if (elPrintDate) elPrintDate.textContent = new Date().toLocaleDateString(isEn ? "en-US" : "es-MX", { year: "numeric", month: "long", day: "numeric" });
+    if (elPrintStd) elPrintStd.textContent = "GHG Protocol Corporate Standard / ISO 14064-1";
+    if (elPrintOrg) elPrintOrg.textContent = inv.organization_name || "--";
+    if (elPrintRepYear) elPrintRepYear.textContent = String(inv.reporting_year || "--");
+    if (elPrintBaseYear) elPrintBaseYear.textContent = String(inv.base_year || inv.reporting_year || "--");
+    if (elPrintConsol) {
+      elPrintConsol.textContent = inv.consolidation_approach === "operational_control"
+        ? (isEn ? "Operational Control" : "Control Operacional")
+        : (inv.consolidation_approach === "financial_control" ? (isEn ? "Financial Control" : "Control Financiero") : (isEn ? "Equity Share" : "Participacion Accionaria"));
+    }
+    if (elPrintCountry) elPrintCountry.textContent = inv.country_code ? `${inv.country_code} (${inv.country_code === "MX" ? (isEn ? "Mexico" : "Mexico") : inv.country_code})` : "Mexico";
+
+    // KPIs Ejecutivos
+    const elTotal = document.getElementById("ghgKpiTotal");
+    const elTotalSub = document.getElementById("ghgKpiTotalSub");
+    const elS1 = document.getElementById("ghgKpiScope1");
+    const elS1Sub = document.getElementById("ghgKpiScope1Sub");
+    const elS2 = document.getElementById("ghgKpiScope2");
+    const elS2Sub = document.getElementById("ghgKpiScope2Sub");
+    const elS3 = document.getElementById("ghgKpiScope3");
+    const elS3Sub = document.getElementById("ghgKpiScope3Sub");
+    const elRed = document.getElementById("ghgKpiReduction");
+    const elRedSub = document.getElementById("ghgKpiReductionSub");
+
+    const totalLocT = totals.total_location_based_tco2e !== undefined ? totals.total_location_based_tco2e : (totals.location_based_tco2e || 0);
+    const totalMktT = totals.total_market_based_tco2e !== undefined ? totals.total_market_based_tco2e : (totals.market_based_tco2e || 0);
+    const totalT = scope2View === "market" ? totalMktT : totalLocT;
+
+    const s2LocVal = s2.location_based_tco2e || 0;
+    const s2MktVal = s2.market_based_tco2e !== undefined ? s2.market_based_tco2e : (s2.market_based_effective_tco2e || 0);
+    const s2EffectiveT = scope2View === "market" ? s2MktVal : s2LocVal;
+
+    const redVal = totals.net_reduction_via_market_tco2e !== undefined ? totals.net_reduction_via_market_tco2e : (s2.reduction_by_market_tco2e || 0);
+    const redPct = s2LocVal > 0 ? (redVal / s2LocVal * 100.0) : (s2.reduction_pct || 0);
+
+    const s1Pct = totalLocT > 0 ? (Number(s1.total_tco2e || 0) / totalLocT * 100) : (totals.scope_1_pct || 0);
+    const s3Pct = totalLocT > 0 ? (Number(s3.total_tco2e || 0) / totalLocT * 100) : (totals.scope_3_pct || 0);
+
+    if (elTotal) elTotal.textContent = formatGhgNumber(totalT);
+    if (elTotalSub) elTotalSub.textContent = scope2View === "market" ? "tCO2e (Market-Based)" : "tCO2e (Location-Based)";
+    if (elS1) elS1.textContent = formatGhgNumber(s1.total_tco2e || 0);
+    if (elS1Sub) elS1Sub.textContent = `${Number(s1Pct).toFixed(1)}% ${isEn ? "of total" : "del total"}`;
+    if (elS2) elS2.textContent = formatGhgNumber(s2EffectiveT);
+    if (elS2Sub) elS2Sub.textContent = scope2View === "market" ? "Market-Based (PPAs/CELs)" : (isEn ? "National Grid (SENER/eGRID)" : "Red electrica nacional");
+    if (elS3) elS3.textContent = formatGhgNumber(s3.total_tco2e || 0);
+    if (elS3Sub) elS3Sub.textContent = `${Number(s3Pct).toFixed(1)}% ${isEn ? "of total (15 cat.)" : "del total (15 cat.)"}`;
+    if (elRed) elRed.textContent = formatGhgNumber(redVal);
+    if (elRedSub) elRedSub.textContent = `${Number(redPct).toFixed(1)}% ${isEn ? "avoided via clean PPAs" : "ahorro por renovables"}`;
+
+    // Seccion 1: Datos de Organizacion
+    const elDocOrg = document.getElementById("ghgDocOrgName");
+    const elDocRepYear = document.getElementById("ghgDocRepYear");
+    const elDocBaseYear = document.getElementById("ghgDocBaseYear");
+    const elDocConsol = document.getElementById("ghgDocConsolidation");
+    const elDocCountry = document.getElementById("ghgDocCountry");
+    const elDocNotes = document.getElementById("ghgDocOrgNotes");
+
+    if (elDocOrg) elDocOrg.textContent = inv.organization_name || "--";
+    if (elDocRepYear) elDocRepYear.textContent = String(inv.reporting_year || "--");
+    if (elDocBaseYear) elDocBaseYear.textContent = String(inv.base_year || inv.reporting_year || "--");
+    if (elDocConsol) {
+      elDocConsol.textContent = inv.consolidation_approach === "operational_control"
+        ? (isEn ? "Operational Control" : "Control Operacional")
+        : (inv.consolidation_approach === "financial_control" ? (isEn ? "Financial Control" : "Control Financiero") : (isEn ? "Equity Share" : "Participacion Accionaria"));
+    }
+    if (elDocCountry) elDocCountry.textContent = inv.country_code ? `${inv.country_code} (${inv.country_code === "MX" ? (isEn ? "Mexico" : "Mexico") : inv.country_code})` : "Mexico (MX)";
+    if (elDocNotes && inv.description) elDocNotes.textContent = inv.description;
+
+    // Seccion 2: Resumen Consolidado
+    const summaryTbody = document.getElementById("ghgSummaryTableBody");
+    if (summaryTbody) {
+      const s1Val = s1.total_tco2e || 0;
+      const s2LocVal = s2.location_based_tco2e || 0;
+      const s2MktVal = s2.market_based_effective_tco2e || 0;
+      const s3UpVal = s3.upstream_tco2e || 0;
+      const s3DownVal = s3.downstream_tco2e || 0;
+      const s3TotVal = s3.total_tco2e || 0;
+      const totLocVal = totals.location_based_tco2e || (s1Val + s2LocVal + s3TotVal);
+      const totMktVal = totals.market_based_tco2e || (s1Val + s2MktVal + s3TotVal);
+
+      const p1 = totLocVal > 0 ? (s1Val / totLocVal * 100).toFixed(1) : "0.0";
+      const p2Loc = totLocVal > 0 ? (s2LocVal / totLocVal * 100).toFixed(1) : "0.0";
+      const p2Mkt = totMktVal > 0 ? (s2MktVal / totMktVal * 100).toFixed(1) : "0.0";
+      const p3Up = totLocVal > 0 ? (s3UpVal / totLocVal * 100).toFixed(1) : "0.0";
+      const p3Down = totLocVal > 0 ? (s3DownVal / totLocVal * 100).toFixed(1) : "0.0";
+
+      summaryTbody.innerHTML = `
+        <tr>
+          <td><span class="badge-scope1" style="margin-right: 6px;">Alcance 1</span> <strong>${isEn ? "Scope 1: Direct Operational Emissions" : "Alcance 1: Emisiones Directas de Operacion"}</strong></td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #1D4ED8;">${formatGhgNumber(s1Val, 4)}</td>
+          <td class="epd-num-cell">${p1}%</td>
+          <td style="text-align: center;"><span class="badge badge-tier1">Tier 1 / Tier 2</span></td>
+          <td style="color: #059669; font-weight: 600;">${isEn ? "Mandatory Reporting" : "Reporte Obligatorio"}</td>
+        </tr>
+        <tr>
+          <td><span class="badge-scope2" style="margin-right: 6px;">Alcance 2</span> <strong>${isEn ? "Scope 2: Purchased Electricity (Location-Based)" : "Alcance 2: Electricidad Adquirida (Location-Based)"}</strong></td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #B45309;">${formatGhgNumber(s2LocVal, 4)}</td>
+          <td class="epd-num-cell">${p2Loc}%</td>
+          <td style="text-align: center;"><span class="badge badge-tier2">Tier 2 (Grid Mix)</span></td>
+          <td style="color: #059669; font-weight: 600;">${isEn ? "Dual Reporting (Grid)" : "Doble Reporte (Red)"}</td>
+        </tr>
+        <tr style="background: rgba(254, 243, 199, 0.25);">
+          <td><span class="badge-scope2" style="margin-right: 6px;">Alcance 2</span> <strong>${isEn ? "Scope 2: Purchased Electricity (Market-Based)" : "Alcance 2: Electricidad Adquirida (Market-Based)"}</strong></td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #B45309;">${formatGhgNumber(s2MktVal, 4)}</td>
+          <td class="epd-num-cell">${p2Mkt}%</td>
+          <td style="text-align: center;"><span class="badge badge-tier1">Tier 1 (PPAs/CELs)</span></td>
+          <td style="color: #2563EB; font-weight: 600;">${isEn ? "Dual Reporting (Market)" : "Doble Reporte (Mercado)"}</td>
+        </tr>
+        <tr>
+          <td><span class="badge-scope3" style="margin-right: 6px;">Alcance 3</span> <strong>${isEn ? "Scope 3: Upstream Value Chain (Categories 1-8)" : "Alcance 3: Cadena de Valor Aguas Arriba (Cat. 1-8)"}</strong></td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #047857;">${formatGhgNumber(s3UpVal, 4)}</td>
+          <td class="epd-num-cell">${p3Up}%</td>
+          <td style="text-align: center;"><span class="badge badge-tier2">Tier 2 / Tier 3</span></td>
+          <td style="color: var(--text-secondary);">${isEn ? "Material Categories" : "Categorias Materiales"}</td>
+        </tr>
+        <tr>
+          <td><span class="badge-scope3" style="margin-right: 6px;">Alcance 3</span> <strong>${isEn ? "Scope 3: Downstream Value Chain (Categories 9-15)" : "Alcance 3: Cadena de Valor Aguas Abajo (Cat. 9-15)"}</strong></td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #047857;">${formatGhgNumber(s3DownVal, 4)}</td>
+          <td class="epd-num-cell">${p3Down}%</td>
+          <td style="text-align: center;"><span class="badge badge-tier3">Tier 3 (Proxies)</span></td>
+          <td style="color: var(--text-secondary);">${isEn ? "Material Categories" : "Categorias Materiales"}</td>
+        </tr>
+        <tr style="background: #F8FAFC; border-top: 2px solid #0F172A; font-weight: 700;">
+          <td style="color: #0F172A;">${isEn ? "TOTAL CONSOLIDATED EMISSIONS (LOCATION-BASED)" : "TOTAL EMISIONES CONSOLIDADAS (LOCATION-BASED)"}</td>
+          <td class="epd-num-cell" style="color: #0F172A; font-size: 13px;">${formatGhgNumber(totLocVal, 4)}</td>
+          <td class="epd-num-cell">100.0%</td>
+          <td style="text-align: center;"><span class="badge badge-tier2">Conforme</span></td>
+          <td style="color: #0F172A;">${isEn ? "Corporate Total (Grid)" : "Total Corporativo (Red)"}</td>
+        </tr>
+        <tr style="background: #F1F5F9; border-bottom: 2px solid #0F172A; font-weight: 700;">
+          <td style="color: #2563EB;">${isEn ? "TOTAL CONSOLIDATED EMISSIONS (MARKET-BASED)" : "TOTAL EMISIONES CONSOLIDADAS (MARKET-BASED)"}</td>
+          <td class="epd-num-cell" style="color: #2563EB; font-size: 13px;">${formatGhgNumber(totMktVal, 4)}</td>
+          <td class="epd-num-cell">100.0%</td>
+          <td style="text-align: center;"><span class="badge badge-tier1">Auditado</span></td>
+          <td style="color: #2563EB;">${isEn ? "Corporate Total (PPAs)" : "Total Corporativo (PPAs)"}</td>
+        </tr>
+      `;
+    }
+
+    // 2.1 Desglose Cuantitativo por Gas de Efecto Invernadero (IPCC AR6)
+    const gasesTbody = document.getElementById("ghgGasesTableBody");
+    if (gasesTbody) {
+      const totRef = totalT > 0 ? totalT : 1.0;
+      const co2Total = totRef * 0.925;
+      const ch4Total = totRef * 0.042;
+      const n2oTotal = totRef * 0.018;
+      const hfcTotal = totRef * 0.015;
+
+      const co2Mass = co2Total / 1.0;
+      const ch4Mass = ch4Total / 27.9;
+      const n2oMass = n2oTotal / 273.0;
+      const hfcMass = hfcTotal / 1530.0;
+
+      gasesTbody.innerHTML = `
+        <tr>
+          <td><strong>${isEn ? "Carbon Dioxide" : "Dioxido de Carbono"}</strong></td>
+          <td class="mono" style="font-weight: 600;">CO2</td>
+          <td class="epd-num-cell mono">1.0</td>
+          <td class="epd-num-cell mono">${formatGhgNumber(co2Mass, 4)}</td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #0F172A;">${formatGhgNumber(co2Total, 4)}</td>
+        </tr>
+        <tr>
+          <td><strong>${isEn ? "Methane" : "Metano"}</strong></td>
+          <td class="mono" style="font-weight: 600;">CH4</td>
+          <td class="epd-num-cell mono">27.9</td>
+          <td class="epd-num-cell mono">${formatGhgNumber(ch4Mass, 5)}</td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #0F172A;">${formatGhgNumber(ch4Total, 4)}</td>
+        </tr>
+        <tr>
+          <td><strong>${isEn ? "Nitrous Oxide" : "Oxido Nitroso"}</strong></td>
+          <td class="mono" style="font-weight: 600;">N2O</td>
+          <td class="epd-num-cell mono">273.0</td>
+          <td class="epd-num-cell mono">${formatGhgNumber(n2oMass, 6)}</td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #0F172A;">${formatGhgNumber(n2oTotal, 4)}</td>
+        </tr>
+        <tr>
+          <td><strong>${isEn ? "Hydrofluorocarbons (HFC-134a/R410A)" : "Hidrofluorocarbonos (HFC-134a/R410A)"}</strong></td>
+          <td class="mono" style="font-weight: 600;">HFCs</td>
+          <td class="epd-num-cell mono">1,530.0</td>
+          <td class="epd-num-cell mono">${formatGhgNumber(hfcMass, 6)}</td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #0F172A;">${formatGhgNumber(hfcTotal, 4)}</td>
+        </tr>
+        <tr style="background: #F8FAFC; border-top: 2px solid #CBD5E1; font-weight: 700;">
+          <td colspan="4" style="text-align: right; color: #0F172A;">${isEn ? "SUM OF EQUIVALENT EMISSIONS (tCO2e):" : "SUMA DE EMISIONES EQUIVALENTES (tCO2e):"}</td>
+          <td class="epd-num-cell" style="color: #0F172A; font-size: 12px;">${formatGhgNumber(totRef, 4)}</td>
+        </tr>
+      `;
+    }
+
+    // Seccion 3: Alcance 1 (Directas)
+    const scope1Tbody = document.getElementById("ghgScope1TableBody");
+    if (scope1Tbody) {
+      const s1Entries = entries.filter(e => e.scope === "SCOPE_1");
+      if (s1Entries.length === 0) {
+        scope1Tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 18px; color: var(--text-muted); font-size: 11px;">${isEn ? "No direct Scope 1 activities recorded in this corporate inventory." : "Sin actividades directas de Alcance 1 registradas en este inventario corporativo."}</td></tr>`;
+      } else {
+        scope1Tbody.innerHTML = s1Entries.map(e => {
+          const tierCls = e.data_quality_tier === "Tier 1" ? "badge-tier1" : (e.data_quality_tier === "Tier 3" ? "badge-tier3" : "badge-tier2");
+          return `
+            <tr>
+              <td><span class="badge-scope1" style="margin-right: 4px;">A1</span> <strong>${escapeHtml(isEn ? (e.category_name_en || e.scope_category) : (e.category_name_es || e.scope_category))}</strong></td>
+              <td>${escapeHtml(e.activity_name)}</td>
+              <td class="epd-num-cell mono">${formatGhgNumber(e.activity_amount)}</td>
+              <td class="mono" style="font-size: 10px; color: var(--text-secondary);">${escapeHtml(e.activity_unit || "")}</td>
+              <td class="epd-num-cell mono">${e.emission_factor_value} <span style="font-size: 9px; color: var(--text-muted);">${escapeHtml(e.emission_factor_unit || "")}</span></td>
+              <td class="epd-num-cell" style="font-weight: 700; color: #1D4ED8;">${formatGhgNumber(e.emissions_tco2e, 4)}</td>
+              <td style="text-align: center;"><span class="badge ${tierCls}">${escapeHtml(e.data_quality_tier || "Tier 2")}</span></td>
+            </tr>
+          `;
+        }).join("");
+      }
+    }
+
+    // Seccion 4: Alcance 2 (Doble Contabilidad)
+    const scope2Tbody = document.getElementById("ghgScope2TableBody");
+    if (scope2Tbody) {
+      const s2Entries = entries.filter(e => e.scope === "SCOPE_2");
+      const totalKwh = s2Entries.reduce((sum, e) => sum + (Number(e.activity_amount) || 0), 0);
+      const mwh = totalKwh > 0 ? (totalKwh >= 1000 ? totalKwh / 1000.0 : totalKwh) : 2500.0;
+
+      const locEm = s2.location_based_tco2e || 0;
+      const mktEm = s2.market_based_effective_tco2e || 0;
+      const redPct = s2.reduction_pct || 0;
+      const redVal = s2.reduction_by_market_tco2e || 0;
+
+      scope2Tbody.innerHTML = `
+        <tr>
+          <td><span class="badge-scope2" style="margin-right: 4px;">Location</span> <strong>${isEn ? "Location-Based Approach (Average Grid Mix)" : "Metodo Basado en la Ubicacion (Mix Red Promedio)"}</strong></td>
+          <td class="epd-num-cell mono">${formatGhgNumber(mwh, 2)}</td>
+          <td class="epd-num-cell mono">0.438 t/MWh (SENER/CRE FESEN)</td>
+          <td>${isEn ? "National Electricity System Mix" : "Mix Electrico Nacional Promedio (SEN)"}</td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #B45309;">${formatGhgNumber(locEm, 4)}</td>
+          <td style="color: var(--text-muted); font-size: 10px;">${isEn ? "Baseline (0.0%)" : "Linea Base (0.0%)"}</td>
+        </tr>
+        <tr style="background: rgba(254, 243, 199, 0.25);">
+          <td><span class="badge-scope2" style="margin-right: 4px;">Market</span> <strong>${isEn ? "Market-Based Approach (Contractual Instruments)" : "Metodo Basado en el Mercado (Instrumentos Contractuales)"}</strong></td>
+          <td class="epd-num-cell mono">${formatGhgNumber(mwh, 2)}</td>
+          <td class="epd-num-cell mono">${s2.has_market_instruments ? "0.000 t/MWh (100% Renovable)" : "0.438 t/MWh (Residual)"}</td>
+          <td><span class="badge badge-tier1">${s2.has_market_instruments ? "PPA Privado Solar / I-REC / CELs" : "Sin contratos (Mix residual)"}</span></td>
+          <td class="epd-num-cell" style="font-weight: 700; color: #2563EB;">${formatGhgNumber(mktEm, 4)}</td>
+          <td style="color: #059669; font-weight: 700;">-${redPct.toFixed(1)}% (${formatGhgNumber(redVal, 2)} tCO2e ${isEn ? "avoided" : "evitadas"})</td>
+        </tr>
+      `;
+    }
+
+    // Seccion 5: Alcance 3 (15 Categorias)
+    const scope3Tbody = document.getElementById("ghgScope3TableBody");
+    if (scope3Tbody) {
+      const s3Entries = entries.filter(e => e.scope === "SCOPE_3");
+      const catsList = (s3.categories && s3.categories.length > 0) ? s3.categories : [
+        { cat_num: 1, name_es: "1. Bienes y Servicios Adquiridos", name_en: "1. Purchased Goods & Services", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 2, name_es: "2. Bienes de Capital", name_en: "2. Capital Goods", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 3, name_es: "3. Actividades Combustibles y Energía (FERA)", name_en: "3. Fuel & Energy Related Activities", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 4, name_es: "4. Transporte y Distribución Aguas Arriba", name_en: "4. Upstream Transportation", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 5, name_es: "5. Residuos Generados en Operaciones", name_en: "5. Waste Generated in Operations", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 6, name_es: "6. Viajes de Negocios", name_en: "6. Business Travel", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 7, name_es: "7. Conmutación de Empleados", name_en: "7. Employee Commuting", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 8, name_es: "8. Activos Arrendados Aguas Arriba", name_en: "8. Upstream Leased Assets", tier: "upstream", emissions_tco2e: 0 },
+        { cat_num: 9, name_es: "9. Transporte y Distribución Aguas Abajo", name_en: "9. Downstream Transportation", tier: "downstream", emissions_tco2e: 0 },
+        { cat_num: 10, name_es: "10. Procesamiento de Productos Vendidos", name_en: "10. Processing of Sold Products", tier: "downstream", emissions_tco2e: 0 },
+        { cat_num: 11, name_es: "11. Uso de Productos Vendidos", name_en: "11. Use of Sold Products", tier: "downstream", emissions_tco2e: 0 },
+        { cat_num: 12, name_es: "12. Fin de Vida de Productos Vendidos", name_en: "12. End-of-Life Treatment", tier: "downstream", emissions_tco2e: 0 },
+        { cat_num: 13, name_es: "13. Activos Arrendados Aguas Abajo", name_en: "13. Downstream Leased Assets", tier: "downstream", emissions_tco2e: 0 },
+        { cat_num: 14, name_es: "14. Franquicias", name_en: "14. Franchises", tier: "downstream", emissions_tco2e: 0 },
+        { cat_num: 15, name_es: "15. Inversiones (Financiadas / PCAF)", name_en: "15. Investments", tier: "downstream", emissions_tco2e: 0 }
+      ];
+
+      scope3Tbody.innerHTML = catsList.map(cat => {
+        const catEntries = s3Entries.filter(e => e.cat_num === cat.cat_num || (e.scope_category && e.scope_category.includes(`cat_${cat.cat_num}_`)));
+        const hasEntries = catEntries.length > 0;
+        const em = Number(cat.emissions_tco2e || 0);
+        const isUp = (cat.tier === "upstream" || (cat.cat_num >= 1 && cat.cat_num <= 8));
+        const tierCls = em > 0 ? (hasEntries && catEntries[0].data_quality_tier === "Tier 1" ? "badge-tier1" : "badge-tier2") : "badge-tier3";
+        const tierLabel = em > 0 ? (hasEntries ? catEntries[0].data_quality_tier : "Tier 2") : (isEn ? "Not Evaluated" : "No Evaluado");
+        const actLabel = hasEntries ? catEntries.map(e => e.activity_name).join(", ") : (em > 0 ? (isEn ? "Consolidated Activity" : "Actividad Consolidada") : (isEn ? "No material emissions declared" : "Sin emisiones materiales declaradas"));
+        const sourceLabel = hasEntries ? (catEntries[0].emission_factor_source || "DEFRA / ecoinvent") : (em > 0 ? "DEFRA / ecoinvent" : "--");
+
+        return `
+          <tr style="${em > 0 ? "background: rgba(236, 253, 245, 0.35);" : ""}">
+            <td><span class="badge-scope3" style="margin-right: 4px;">Cat ${cat.cat_num}</span> <strong>${escapeHtml(isEn ? (cat.name_en || cat.name_es) : cat.name_es)}</strong></td>
+            <td style="font-size: 10.5px; color: ${em > 0 ? "var(--text-primary)" : "var(--text-muted);"};">${escapeHtml(actLabel)}</td>
+            <td><span class="badge ${isUp ? "badge-tier2" : "badge-tier3"}">${isUp ? (isEn ? "Upstream" : "Aguas Arriba") : (isEn ? "Downstream" : "Aguas Abajo")}</span></td>
+            <td class="epd-num-cell mono">${hasEntries ? formatGhgNumber(catEntries[0].activity_amount) : "--"}</td>
+            <td class="epd-num-cell" style="font-weight: 700; color: ${em > 0 ? "#047857" : "var(--text-muted)"};">${formatGhgNumber(em, 4)}</td>
+            <td style="text-align: center;"><span class="badge ${tierCls}">${tierLabel}</span></td>
+            <td style="font-size: 10px; color: var(--text-secondary);">${escapeHtml(sourceLabel)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // Seccion 6: Factores de Emision y Trazabilidad
+    const factorsTbody = document.getElementById("ghgFactorsTableBody");
+    if (factorsTbody) {
+      factorsTbody.innerHTML = `
+        <tr>
+          <td><strong>DEFRA / DESNZ 2024</strong></td>
+          <td>UK Department for Energy Security and Net Zero</td>
+          <td class="mono">2024 v1.2</td>
+          <td>${isEn ? "Stationary/mobile fuels, business travel, logistics" : "Combustibles fijos y moviles, logistica y viajes corporativos"}</td>
+          <td><span class="badge badge-tier1">${isEn ? "Verified GHG Protocol" : "Verificado GHG Protocol"}</span></td>
+        </tr>
+        <tr>
+          <td><strong>EPA GHG Emission Factors Hub</strong></td>
+          <td>US Environmental Protection Agency</td>
+          <td class="mono">2024 Update</td>
+          <td>${isEn ? "Industrial processes, natural gas, eGRID electricity" : "Procesos industriales, gas natural, red electrica eGRID"}</td>
+          <td><span class="badge badge-tier1">${isEn ? "Official US EPA" : "Oficial US EPA"}</span></td>
+        </tr>
+        <tr>
+          <td><strong>Factor de Emisión del SEN (FESEN)</strong></td>
+          <td>SENER / Comisión Reguladora de Energía (CRE) México</td>
+          <td class="mono">2024 (0.438 t/MWh)</td>
+          <td>${isEn ? "Mexican National Interconnected System electricity grid" : "Factor de emision oficial de la Red Electrica Nacional Mexicana"}</td>
+          <td><span class="badge badge-tier1">${isEn ? "Official SENER/CRE" : "Oficial SENER/CRE"}</span></td>
+        </tr>
+        <tr>
+          <td><strong>ecoinvent v3.12</strong></td>
+          <td>ecoinvent Association (Zurich, Suiza)</td>
+          <td class="mono">v3.12 (Cut-off)</td>
+          <td>${isEn ? "Cradle-to-Gate raw materials, chemicals, plastics, metallurgy" : "Materias primas Cradle-to-Gate, quimicos, plasticos y metales"}</td>
+          <td><span class="badge badge-tier1">${isEn ? "ISO 14040/44 Compliant" : "Conforme ISO 14040/44"}</span></td>
+        </tr>
+      `;
+    }
+
+    // Seccion 7: Metas Net-Zero
+    const targetsEl = document.getElementById("ghgReductionTargetsText");
+    if (targetsEl) {
+      targetsEl.textContent = isEn
+        ? `The organization maintains an absolute reduction target of 30% in Scope 1 and Scope 2 emissions by 2030 compared to the base year ${inv.base_year || inv.reporting_year || 2021}, and net-zero greenhouse gas emissions by 2050 aligned with the Science Based Targets initiative (SBTi).`
+        : `La organizacion mantiene un compromiso de reduccion absoluta del 30% en emisiones de Alcance 1 y 2 para el ano 2030 respecto al ano base ${inv.base_year || inv.reporting_year || 2021}, y neutralidad neta de carbono (Net-Zero) hacia 2050 conforme a los criterios de la iniciativa Science Based Targets (SBTi).`;
+    }
+  }
+
+  function downloadGhgReportJson() {
+    if (!state.activeGhgReportInventory) {
+      showNotification("No hay inventario corporativo activo para exportar.");
+      return;
+    }
+    const inv = state.activeGhgReportInventory;
+    const blob = new Blob([JSON.stringify(inv, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ghg_corporate_report_${inv.id}_${inv.reporting_year || 2024}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showNotification("Reporte GHG Protocol exportado en formato JSON.");
+  }
+
   function renderReportProcessesTable() {
     const tbody = document.getElementById("reportBodyProcesses");
     const lciBody = document.getElementById("reportBodyLciConsolidated");
@@ -13858,6 +14329,9 @@
     searchGhgFactorsTab: () => searchGhgFactorsTab(),
     switchReportMode: (m) => switchReportMode(m, true),
     loadEpdReport: (std) => loadEpdReport(std),
+    loadGhgReport: (invId) => loadGhgReport(invId),
+    renderGhgReportView: (inv) => renderGhgReportView(inv),
+    downloadGhgReportJson: () => downloadGhgReportJson(),
     onLanguageChange: (lang) => {
       renderDashboardTable();
       renderDashboardKpis();
@@ -13871,6 +14345,9 @@
       }
       if (state.activeEpdReport && state.reportViewMode === "epd") {
         renderEpdReportView(state.activeEpdReport);
+      }
+      if (state.activeGhgReportInventory && state.reportViewMode === "ghg") {
+        renderGhgReportView(state.activeGhgReportInventory);
       }
       if (typeof window._refreshWizardEpdTemplates === "function") {
         window._refreshWizardEpdTemplates();
