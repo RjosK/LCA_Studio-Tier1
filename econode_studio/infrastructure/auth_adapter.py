@@ -100,7 +100,7 @@ def invalidate_users_cache():
 def ensure_auth_tables() -> None:
     """Garantiza la creación independiente y resiliente de tablas e índices para SQLite y Supabase PostgreSQL."""
     global _auth_tables_ensured
-    if _auth_tables_ensured or getattr(settings, "IS_POSTGRES", False):
+    if _auth_tables_ensured:
         return
     _auth_tables_ensured = True
     # 1. Tabla de invitaciones (aislada para que nunca sea abortada por errores en otras tablas)

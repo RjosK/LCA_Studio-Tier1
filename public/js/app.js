@@ -11179,7 +11179,14 @@
       const res = await fetch("/api/account/api-keys", {
         headers: token ? { "Authorization": `Bearer ${token}` } : {}
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        throw new Error(rawText.substring(0, 100) || `Error HTTP ${res.status}`);
+      }
+
       if (!res.ok || data.status !== "success") {
         tbody.innerHTML = `<tr><td colspan="5" style="padding: 16px; text-align: center; color: var(--accent-rose);">Error cargando claves: ${data.message || "No autorizado"}</td></tr>`;
         return;
@@ -11230,7 +11237,14 @@
         },
         body: JSON.stringify({ name: name, scopes: ["all"] })
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      let data = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch (e) {
+        throw new Error(rawText.substring(0, 100) || `Error HTTP ${res.status}`);
+      }
+
       if (!res.ok || data.status !== "success") {
         alert(data.message || "Error generando la clave.");
         return;
@@ -11246,7 +11260,7 @@
       if (nameInput) nameInput.value = "";
       await loadUserApiKeys();
     } catch (err) {
-      alert("Error de red: " + err.message);
+      alert("Error: " + err.message);
     } finally {
       if (btn) btn.disabled = false;
     }

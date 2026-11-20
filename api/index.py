@@ -107,3 +107,14 @@ class handler(EconodeRequestHandler):
             super().do_HEAD()
         except Exception as e:
             self._send_serverless_error(e)
+
+    def do_DELETE(self):
+        try:
+            self._resolve_real_path()
+            if hasattr(super(), "do_DELETE"):
+                super().do_DELETE()
+            else:
+                self.send_response(405)
+                self.end_headers()
+        except Exception as e:
+            self._send_serverless_error(e)
