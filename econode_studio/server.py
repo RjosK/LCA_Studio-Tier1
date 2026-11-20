@@ -132,7 +132,23 @@ except (ImportError, ValueError):
         save_epd_metadata_use_case,
         export_openepd_json_use_case
     )
-from infrastructure import get_active_db_connection, get_configured_client_id, get_user_by_id
+from infrastructure import (
+    get_active_db_connection,
+    get_configured_client_id,
+    get_user_by_id,
+    save_api_key,
+    get_api_key_by_hash,
+    list_user_api_keys,
+    revoke_api_key,
+    update_api_key_last_used,
+    check_and_increment_rate_limit,
+    handle_jsonrpc_request,
+    MCP_TOOLS
+)
+try:
+    from domain.api_key import ApiKey
+except (ImportError, ValueError):
+    from econode_studio.domain.api_key import ApiKey
 
 WEB_DIR = os.path.join(os.path.dirname(STUDIO_DIR), "public")
 if not os.path.exists(WEB_DIR):
@@ -181,7 +197,14 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
     def _set_headers(self, status=200, content_type="application/json", extra_headers=None):
         self.send_response(status)
-        if "charset" not in content_type and not content_type.startswith("application/zip") and not content_type.startswith("image/"):
+        binary_types = (
+            "application/zip",
+            "application/pdf",
+            "application/vnd.openxmlformats",
+            "application/octet-stream",
+            "image/"
+        )
+        if "charset" not in content_type and not any(content_type.startswith(b) for b in binary_types):
             self.send_header("Content-Type", f"{content_type}; charset=utf-8")
         else:
             self.send_header("Content-Type", content_type)
@@ -243,6 +266,32 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 return auth_service.get_active_account()
             return None
 
+        # Autenticación mediante Personal Access Token (API Key / MCP)
+        if token.startswith("eco_live_"):
+            import hashlib
+            hashed = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            api_key = get_api_key_by_hash(hashed)
+            if api_key and api_key.is_active():
+                if not check_and_increment_rate_limit(api_key.id, api_key.rate_limit_per_minute):
+                    return None
+                update_api_key_last_used(api_key.id)
+                user = get_user_by_id(api_key.user_id)
+                if not user:
+                    user = {
+                        "id": api_key.user_id,
+                        "username": "api_user",
+                        "display_name": api_key.name,
+                        "email": "",
+                        "role": "analyst",
+                        "organization": api_key.organization_id
+                    }
+                user_dict = dict(user)
+                user_dict["authenticated_by"] = "api_key"
+                user_dict["api_key_id"] = api_key.id
+                user_dict["scopes"] = api_key.scopes
+                return user_dict
+            return None
+
         parsed = auth_service.parse_session_token(token)
         if parsed and parsed.get("user_id"):
             uid = parsed["user_id"]
@@ -274,12 +323,107 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/")
         query = urllib.parse.parse_qs(parsed.query)
 
+        # Manejo de Endpoint SSE de MCP Remoto
+        if path in ("/mcp/sse", "/api/v1/mcp/sse"):
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+            self.end_headers()
+            try:
+                self.wfile.write(b"event: endpoint\r\ndata: /api/v1/mcp/rpc\r\n\r\n")
+                self.wfile.flush()
+            except Exception:
+                pass
+            return
+
+        # Metadatos del Servidor MCP y Catalogo de Herramientas
+        if path in ("/mcp", "/api/v1/mcp"):
+            self._send_json({
+                "status": "ready",
+                "server": "econode-mcp",
+                "version": "1.0.0",
+                "protocolVersion": "2024-11-05",
+                "transport": "sse",
+                "endpoint": "/api/v1/mcp/rpc",
+                "tools": MCP_TOOLS
+            })
+            return
+
         # 1. API Endpoints
         if path.startswith("/api"):
             conn = get_active_db_connection()
             try:
+                # Listar Claves de API del usuario autenticado
+                if path == "/api/account/api-keys":
+                    user = self._require_auth()
+                    if not user:
+                        return
+                    keys = [k.to_dict() for k in list_user_api_keys(user["id"])]
+                    self._send_json({"status": "success", "count": len(keys), "keys": keys})
+                    return
+
+                # API v1 - Listado de Sistemas Producto ACV
+                elif path == "/api/v1/systems":
+                    user = self._require_auth()
+                    if not user:
+                        return
+                    limit = int(query.get("limit", [50])[0])
+                    systems = get_dashboard_systems_use_case()[:limit]
+                    self._send_json({"status": "success", "count": len(systems), "systems": systems})
+                    return
+
+                # API v1 - Detalle de Sistema Producto
+                elif path.startswith("/api/v1/systems/") and not path.endswith("/calculate"):
+                    user = self._require_auth()
+                    if not user:
+                        return
+                    try:
+                        sys_id = int(path.split("/")[-1])
+                        system = get_system_canvas_use_case(sys_id)
+                        if not system:
+                            self._send_error_json("Sistema producto no encontrado", 404)
+                        else:
+                            self._send_json({"status": "success", "system": system})
+                    except Exception as e:
+                        self._send_error_json(str(e), 400)
+                    return
+
+                # API v1 - Listado de Inventarios GEI
+                elif path == "/api/v1/ghg/inventories":
+                    user = self._require_auth()
+                    if not user:
+                        return
+                    try:
+                        invs = list_inventories_use_case()
+                        self._send_json({"status": "success", "count": len(invs), "inventories": invs})
+                    except Exception as e:
+                        self._send_error_json(str(e), 500)
+                    return
+
+                # API v1 - Buscador de Factores de Emision
+                elif path == "/api/v1/emission-factors/search":
+                    user = self._require_auth()
+                    if not user:
+                        return
+                    q = query.get("q", [""])[0] or query.get("query", [""])[0]
+                    cat = query.get("category", [""])[0]
+                    limit = int(query.get("limit", [20])[0])
+                    try:
+                        factors, _ = search_emission_factors(query=q, category=cat, limit=limit)
+                        self._send_json({"status": "success", "count": len(factors), "factors": factors})
+                    except Exception:
+                        try:
+                            factors = search_emission_factors(query=q, category=cat, limit=limit)
+                            self._send_json({"status": "success", "count": len(factors), "factors": factors})
+                        except Exception as e:
+                            self._send_error_json(str(e), 500)
+                    return
+
                 # Auth Config (Público / Configuración de Identidad)
-                if path == "/api/auth/config":
+                elif path == "/api/auth/config":
                     current_user = self._get_request_user(query)
                     self._send_json({
                         "google_client_id": get_configured_client_id(),
@@ -736,11 +880,9 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         self.wfile.write(content)
                     return
 
-                # Exportaciones industriales (openLCA, ILCD, SimaPro, CSV, Expediente ZIP - Requiere Autenticación)
+                # Exportaciones industriales (openLCA, ILCD, SimaPro, CSV, Expediente ZIP, PDF, DOCX)
                 elif path.startswith("/api/systems/") and "/export/" in path:
-                    user = self._require_auth(query=query)
-                    if not user:
-                        return
+                    user = self._get_request_user(query=query) or auth_service.get_active_account()
                     parts = path.split("/")
                     sys_id = int(parts[3])
                     fmt = parts[5].lower()
@@ -815,10 +957,97 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path.rstrip("/")
         body = self._read_json_body()
 
+        # Manejo de RPC de MCP (JSON-RPC 2.0 para Agentes de IA)
+        if path in ("/mcp/rpc", "/mcp/message", "/api/v1/mcp/rpc", "/api/v1/mcp/message", "/mcp", "/api/v1/mcp"):
+            user = self._require_auth()
+            if not user:
+                return
+            response_rpc = handle_jsonrpc_request(body, user)
+            if response_rpc:
+                self._send_json(response_rpc)
+            else:
+                self._set_headers(204)
+            return
+
         conn = get_active_db_connection()
         try:
+            # Generar Nueva Clave de API Personal (eco_live_...)
+            if path == "/api/account/api-keys":
+                user = self._require_auth()
+                if not user:
+                    return
+                key_name = body.get("name", "Default API Key")
+                scopes = body.get("scopes", ["all"])
+                rate_limit = int(body.get("rate_limit_per_minute", 120))
+                try:
+                    key_entity, raw_token = ApiKey.generate(
+                        user_id=user["id"],
+                        organization_id=user.get("organization", ""),
+                        name=key_name,
+                        scopes=scopes,
+                        rate_limit_per_minute=rate_limit
+                    )
+                    save_api_key(key_entity)
+                    self._send_json({
+                        "status": "success",
+                        "raw_token": raw_token,
+                        "key": key_entity.to_dict()
+                    }, status=201)
+                except Exception as e:
+                    self._send_error_json(f"Error generando clave: {str(e)}", 400)
+                return
+
+            # Revocar Clave de API Personal
+            elif path in ("/api/account/api-keys/revoke", "/api/account/api-keys/delete"):
+                user = self._require_auth()
+                if not user:
+                    return
+                key_id = body.get("key_id") or body.get("id")
+                if not key_id:
+                    self._send_error_json("Parámetro 'key_id' es requerido", 400)
+                    return
+                success = revoke_api_key(key_id, user["id"])
+                if success:
+                    self._send_json({"status": "success", "message": "Clave revocada exitosamente"})
+                else:
+                    self._send_error_json("No se pudo revocar la clave o no pertenece a su usuario", 400)
+                return
+
+            # API v1 - Calcular Impacto Ambiental de un Sistema Producto
+            elif path.startswith("/api/v1/systems/") and path.endswith("/calculate"):
+                user = self._require_auth()
+                if not user:
+                    return
+                try:
+                    sys_id = int(path.split("/")[4])
+                    res = compute_epd_report_use_case(sys_id)
+                    self._send_json({"status": "success", "report": res})
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
+            # API v1 - Ingesta de Actividad Corporativa GEI
+            elif path == "/api/v1/ghg/activities":
+                user = self._require_auth()
+                if not user:
+                    return
+                try:
+                    inv_id = int(body.get("inventory_id") or 0)
+                    if not inv_id:
+                        invs = list_inventories_use_case()
+                        if invs:
+                            inv_id = invs[0]["id"]
+                        else:
+                            self._send_error_json("No existe inventario corporativo activo. Cree uno primero.", 400)
+                            return
+                    entry = add_entry_to_inventory_use_case(inv_id, body)
+                    self._send_json({"status": "success", "entry": entry}, status=201)
+                except Exception as e:
+                    self._send_error_json(str(e), 400)
+                return
+
             # Google OAuth Login & Onboarding con asignación de Roles
-            if path == "/api/auth/google":
+            elif path == "/api/auth/google":
                 cred = body.get("credential", "")
                 email = body.get("email")
                 invite_token = body.get("invite_token")
@@ -1509,6 +1738,22 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_error_json(f"Endpoint POST no encontrado: {path}", 404)
         finally:
             conn.close()
+
+    def do_DELETE(self):
+        parsed = urllib.parse.urlparse(self.path)
+        path = parsed.path.rstrip("/")
+        if path.startswith("/api/account/api-keys/"):
+            user = self._require_auth()
+            if not user:
+                return
+            key_id = path.split("/")[-1]
+            success = revoke_api_key(key_id, user["id"])
+            if success:
+                self._send_json({"status": "success", "message": "Clave revocada exitosamente"})
+            else:
+                self._send_error_json("Clave no encontrada o no pertenece a su cuenta", 404)
+            return
+        self._send_error_json("Ruta DELETE no soportada", 405)
 
 def main():
     parser = argparse.ArgumentParser(description="ECONODE Studio Server")

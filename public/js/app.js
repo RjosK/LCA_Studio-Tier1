@@ -1409,6 +1409,154 @@
     }
   }
 
+  /* ========================================================================= */
+  /* DASHBOARD CORPORATE GHG INVENTORIES SECTION                               */
+  /* ========================================================================= */
+  async function loadDashboardGhgInventories() {
+    const tbody = document.getElementById("tableDashGhgInventoriesBody");
+    if (!tbody) return;
+
+    try {
+      const res = await api.listGhgInventories();
+      const list = res.inventories || res.items || [];
+      state.ghgInventories = list;
+      renderDashboardGhgInventories(list);
+    } catch (err) {
+      console.warn("No se pudieron cargar inventarios corporativos en el dashboard:", err);
+    }
+  }
+
+  function renderDashboardGhgInventories(list = null) {
+    const tbody = document.getElementById("tableDashGhgInventoriesBody");
+    if (!tbody) return;
+
+    const inventories = list || state.ghgInventories || [];
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+
+    if (inventories.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align: center; padding: 28px; color: var(--text-muted); font-size: 11.5px;">
+            <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 4px;">
+              ${isEn ? "No corporate GHG inventories registered" : "Sin inventarios corporativos GEI registrados"}
+            </div>
+            <div style="margin-bottom: 12px;">
+              ${isEn ? "Create your corporate inventory to track Scopes 1, 2, and 3 under the GHG Protocol." : "Crea tu inventario corporativo para cuantificar Alcances 1, 2 y 3 bajo el GHG Protocol."}
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="window.EconodeApp.openNewGhgInventoryModal()">
+              + ${isEn ? "New Corporate Inventory" : "Nuevo Inventario Corporativo"}
+            </button>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = inventories.map(inv => {
+      const consolLabel = inv.consolidation_approach === "operational_control"
+        ? (isEn ? "Operational Control" : "Control Operacional")
+        : (inv.consolidation_approach === "financial_control" ? (isEn ? "Financial Control" : "Control Financiero") : (isEn ? "Equity Share" : "Participación Accionaria"));
+      
+      const s1 = inv.summary?.scope_1?.total_tco2e || 0;
+      const s2 = inv.summary?.scope_2?.location_based_tco2e || 0;
+      const s3 = inv.summary?.scope_3?.total_tco2e || 0;
+      const totalLoc = inv.summary?.totals?.total_location_based_tco2e !== undefined
+        ? inv.summary.totals.total_location_based_tco2e
+        : (inv.summary?.totals?.location_based_tco2e || (s1 + s2 + s3));
+      const totalMkt = inv.summary?.totals?.total_market_based_tco2e !== undefined
+        ? inv.summary.totals.total_market_based_tco2e
+        : (inv.summary?.totals?.market_based_tco2e || totalLoc);
+
+      return `
+        <tr>
+          <td>
+            <strong style="color: var(--text-primary); cursor: pointer; font-size: 12.5px;" onclick="window.EconodeApp.openGhgReportForInventory(${inv.id})">
+              ${escapeHtml(inv.organization_name)}
+            </strong>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 1px;">
+              ${escapeHtml(inv.country_code || "MX")} · ${escapeHtml(inv.description || "GHG Protocol Corporate Standard")}
+            </div>
+          </td>
+          <td>
+            <span class="mono" style="font-weight: 700; font-size: 11.5px; color: #0F172A;">${inv.reporting_year}</span>
+            <span style="font-size: 10px; color: var(--text-muted); margin-left: 2px;">(Base: ${inv.base_year || inv.reporting_year})</span>
+          </td>
+          <td>
+            <span class="badge-pill badge-emerald" style="font-size: 9.5px;">${consolLabel}</span>
+          </td>
+          <td>
+            <div style="display: flex; gap: 4px; align-items: center; flex-wrap: wrap;">
+              <span class="badge-scope1" title="Alcance 1">A1: ${s1.toFixed(1)} t</span>
+              <span class="badge-scope2" title="Alcance 2 (Red)">A2: ${s2.toFixed(1)} t</span>
+              <span class="badge-scope3" title="Alcance 3 (Cadena)">A3: ${s3.toFixed(1)} t</span>
+            </div>
+          </td>
+          <td>
+            <div class="mono" style="font-size: 12px; font-weight: 700; color: #0F172A;">
+              ${totalLoc.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              <span style="font-size: 9.5px; font-weight: 400; color: var(--text-muted);">tCO2e</span>
+            </div>
+            <div style="font-size: 9.5px; color: #2563EB;">
+              Mkt: ${totalMkt.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} tCO2e
+            </div>
+          </td>
+          <td>
+            <div style="display: flex; gap: 5px; align-items: center; flex-wrap: nowrap;">
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openGhgReportForInventory(${inv.id})" title="${isEn ? "Open in Dynamic Report" : "Ver en Reporte Dinámico"}">
+                ${isEn ? "Report" : "Ver Reporte"}
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.openGhgModuleForInventory(${inv.id})" title="${isEn ? "Manage Sources & Activities" : "Gestionar Fuentes y Actividades"}">
+                ${isEn ? "Activities" : "Fuentes"}
+              </button>
+              <button class="btn btn-sm" style="color: #EF4444; background: transparent; padding: 2px 6px; font-size: 10.5px;" onclick="window.EconodeApp.deleteGhgInventoryFromDashboard(${inv.id}, '${escapeHtml(inv.organization_name)}')" title="${isEn ? "Delete inventory" : "Eliminar inventario"}">
+                &times;
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function openGhgReportForInventory(invId) {
+    state.activeGhgReportInventoryId = invId;
+    localStorage.setItem("econode_active_ghg_inv", String(invId));
+    showView("report");
+    switchReportMode("ghg", true);
+    loadGhgReport(invId);
+  }
+
+  function openGhgModuleForInventory(invId) {
+    localStorage.setItem("econode_active_ghg_inv", String(invId));
+    showView("ghg");
+    loadActiveGhgInventory(invId);
+  }
+
+  async function deleteGhgInventoryFromDashboard(invId, orgName) {
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+    const msg = isEn
+      ? `Are you sure you want to delete corporate inventory "${orgName}" (#${invId})? All its Scope 1, 2, and 3 activities will be permanently deleted.`
+      : `¿Confirmas que deseas eliminar el inventario corporativo "${orgName}" (#${invId})? Se eliminarán todas sus fuentes de Alcance 1, 2 y 3.`;
+
+    if (!confirm(msg)) return;
+
+    try {
+      await api.deleteGhgInventory(invId);
+      showNotification(isEn ? "Corporate inventory deleted successfully." : "Inventario corporativo eliminado exitosamente.");
+      await loadDashboardGhgInventories();
+      if (typeof loadGhgInventoryModule === "function") {
+        await loadGhgInventoryModule();
+      }
+      if (state.activeGhgReportInventory && state.activeGhgReportInventory.id === invId) {
+        state.activeGhgReportInventory = null;
+        await loadGhgReport();
+      }
+    } catch (err) {
+      console.error("Error al eliminar inventario:", err);
+      alert((isEn ? "Error deleting inventory: " : "Error al eliminar inventario: ") + err.message);
+    }
+  }
+
   // Caché en memoria para transiciones de lienzo ultra-rápidas (0ms de latencia)
   const systemCanvasCache = new Map();
 
@@ -10034,377 +10182,7 @@
         isUploadingDoc = false;
         if (btnSubmitDoc) {
           btnSubmitDoc.disabled = false;
-          btnSubmitDoc.innerHTML = window.I18n ? window.I18n.t("vault.upload_btn", "Subir a Bóveda ➔") : "Subir a Bóveda ➔";
-        }
-      }
-    };
-
-    if (btnSubmitDoc) {
-      btnSubmitDoc.addEventListener("click", (e) => {
-        e.preventDefault();
-        executeUpload();
-      });
-    }
-
-    if (formUpload) {
-      formUpload.addEventListener("submit", (e) => {
-        e.preventDefault();
-        executeUpload();
-      });
-    }
-  }
-
-  // =========================================================================
-  // 11. MODALES: CONEXIÓN DE NODOS, WIZARD, IMPORT CENTER & AJUSTES
-  // =========================================================================
-
-  // Modal Conectar Nodos
-  function setupConnectNodesModal() {
-    const modal = document.getElementById("modalConnectNodes");
-    const btnClose = document.getElementById("btnCloseConnectModal");
-    const form = document.getElementById("formConnectNodes");
-
-    const close = () => {
-      if (modal) {
-        modal.style.display = "none";
-        modal.classList.remove("active");
-      }
-      cancelConnection();
-    };
-
-    if (btnClose) btnClose.addEventListener("click", close);
-    if (modal) {
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) close();
-      });
-    }
-
-    if (form) {
-      form.addEventListener("submit", (e) => {
-        e.preventDefault();
-
-        let source = state.connectingFromNode;
-        let target = state.connectingToNode;
-
-        const selectSrc = document.getElementById("selectConnectSourceNode");
-        const selectTgt = document.getElementById("selectConnectTargetNode");
-        if ((!source || !target) && selectSrc && selectTgt) {
-          const sId = selectSrc.value;
-          const tId = selectTgt.value;
-          const procs = getAllSystemProcesses();
-          source = procs.find(n => String(n.id) === String(sId) || String(n.process_id) === String(sId));
-          target = procs.find(n => String(n.id) === String(tId) || String(n.process_id) === String(tId));
-        }
-
-        if (!source || !target) {
-          close();
-          return;
-        }
-
-        if (source.id === target.id || String(source.process_id) === String(target.process_id)) {
-          alert("No se puede conectar un proceso consigo mismo.");
-          return;
-        }
-
-        const flowName = (document.getElementById("inputConnectFlowName")?.value || source.reference_flow?.name || "Connected Flow").trim();
-        const amount = parseFloat(document.getElementById("inputConnectAmount")?.value || "1.0");
-        const unit = (document.getElementById("inputConnectUnit")?.value || "kg").trim();
-
-        if (!state.canvasEdges) state.canvasEdges = [];
-        const existingIdx = state.canvasEdges.findIndex(ed => 
-          (String(ed.from) === String(source.id) || String(ed.source_process_id) === String(source.process_id)) &&
-          (String(ed.to) === String(target.id) || String(ed.target_process_id) === String(target.process_id)) &&
-          areFlowsMatching(ed.flow, flowName)
-        );
-
-        if (existingIdx >= 0) {
-          state.canvasEdges[existingIdx].flow = flowName;
-          state.canvasEdges[existingIdx].amount = amount;
-          state.canvasEdges[existingIdx].unit = unit;
-        } else {
-          const newEdge = {
-            id: `edge_${Date.now()}`,
-            from: source.id,
-            to: target.id,
-            source_process_id: source.process_id || source.id,
-            target_process_id: target.process_id || target.id,
-            flow: flowName,
-            amount: amount,
-            unit: unit
-          };
-          state.canvasEdges.push(newEdge);
-        }
-
-        // Registrar o actualizar en entradas del destino
-        if (!target.inputs) target.inputs = [];
-        const matchingInp = target.inputs.find(i => areFlowsMatching(i.name, flowName));
-        if (matchingInp) {
-          matchingInp.origin = source.name;
-          matchingInp.amount = amount;
-          matchingInp.unit = unit;
-        } else {
-          target.inputs.push({
-            name: flowName,
-            amount: amount,
-            unit: unit,
-            is_unit: true,
-            origin: source.name
-          });
-        }
-        if (state.selectedNode && state.selectedNode.id === target.id) {
-          inspectNode(target);
-        }
-
-        syncSystemProcesses();
-        scheduleAutoSaveCanvas();
-        renderCanvasEdges();
-        renderPaletteProcesses();
-        if (state.canvasViewMode === "table") {
-          renderCanvasTableView();
-        } else {
-          renderCanvasStage();
-        }
-        close();
-        showNotification(`Connection created: "${source.name}" ➔ "${target.name}" (${amount} ${unit}).`);
-      });
-    }
-  }
-
-  // Wizard Nuevo Sistema
-  function setupWizardModal() {
-    const modal = document.getElementById("modalWizard");
-    const btnOpen1 = document.getElementById("btnOpenWizardModal");
-    const btnOpen2 = document.getElementById("btnDashNewSystem");
-    const btnClose = document.getElementById("btnCloseWizardModal");
-    const btnCancel = document.getElementById("btnCancelWizard");
-    const btnSubmit = document.getElementById("btnSubmitWizard");
-    const btnModeBlank = document.getElementById("btnWizModeBlank");
-    const btnModeEpd = document.getElementById("btnWizModeEpd");
-    const formBlank = document.getElementById("formWizard");
-    const panelEpd = document.getElementById("wizardEpdTemplatePanel");
-    const footerHint = document.getElementById("wizFooterHint");
-
-    const renderWizardEpdTemplates = () => {
-      const grid = document.getElementById("wizEpdTemplatesGrid");
-      if (!grid) return;
-      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
-      const list = state.epdTemplates || [];
-
-      if (list.length === 0) {
-        grid.innerHTML = `<div style="grid-column: 1 / -1; text-align: center; padding: 18px; color: var(--text-muted); font-size: 11px;">Cargando plantillas EPD de Cemento y Concreto...</div>`;
-        return;
-      }
-
-      if (!list.some(t => t.template_id === state.selectedEpdTemplateId)) {
-        state.selectedEpdTemplateId = list[0].template_id;
-      }
-
-      grid.innerHTML = list.map(t => {
-        const isSel = t.template_id === state.selectedEpdTemplateId;
-        const title = isEn ? t.name_en : t.name_es;
-        const desc = isEn ? t.short_desc_en : t.short_desc_es;
-        const subBadge = t.sub_sector === "cement"
-          ? (isEn ? "Cement" : "Cemento")
-          : (isEn ? "Concrete" : "Concreto");
-        return `
-          <div class="epd-template-card ${isSel ? "selected" : ""}" data-epd-tpl="${t.template_id}">
-            <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
-              <span class="badge-pill ${t.sub_sector === "cement" ? "badge-slate" : "badge-blue"}" style="font-size: 9px;">${subBadge}</span>
-              <span class="mono" style="font-size: 9.5px; font-weight: 700; color: var(--accent-emerald);">${escapeHtml(t.declared_unit_amount + " " + t.declared_unit_symbol)} · ${escapeHtml(t.declared_modules.join(","))}</span>
-            </div>
-            <div style="font-size: 11.5px; font-weight: 700; color: #0F172A; line-height: 1.3;">${escapeHtml(title)}</div>
-            <div style="font-size: 10px; color: var(--text-muted); line-height: 1.4;">${escapeHtml(desc)}</div>
             <div style="font-size: 9.5px; color: var(--text-secondary); margin-top: auto; padding-top: 4px; border-top: 1px dashed #E2E8F0;">
-              <strong>PCR:</strong> ${escapeHtml(t.pcr_reference)}
-            </div>
-          </div>
-        `;
-      }).join("");
-
-      grid.querySelectorAll(".epd-template-card").forEach(card => {
-        card.addEventListener("click", () => {
-          state.selectedEpdTemplateId = card.getAttribute("data-epd-tpl");
-          renderWizardEpdTemplates();
-          syncSelectedEpdTemplateFields();
-        });
-      });
-
-      syncSelectedEpdTemplateFields();
-    };
-
-    const syncSelectedEpdTemplateFields = () => {
-      const tpl = (state.epdTemplates || []).find(t => t.template_id === state.selectedEpdTemplateId);
-      if (!tpl) return;
-      const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
-      const nameEl = document.getElementById("wizEpdCustomName");
-      const keyLbl = document.getElementById("wizEpdKeyParamLabel");
-      const keyInp = document.getElementById("wizEpdKeyParamVal");
-      if (nameEl) nameEl.placeholder = isEn ? tpl.name_en : tpl.name_es;
-      if (tpl.key_override) {
-        if (keyLbl) keyLbl.textContent = isEn ? tpl.key_override.label_en : tpl.key_override.label_es;
-        if (keyInp) {
-          keyInp.value = tpl.key_override.default;
-          keyInp.min = tpl.key_override.min;
-          keyInp.max = tpl.key_override.max;
-        }
-      }
-    };
-
-    const ensureEpdTemplatesLoaded = async () => {
-      if (state.epdTemplates && state.epdTemplates.length > 0) {
-        renderWizardEpdTemplates();
-        return;
-      }
-      try {
-        const res = await api.listEpdTemplates("cement_concrete");
-        state.epdTemplates = res.templates || [];
-        state.epdIndustries = res.industries || [];
-        state.epdModulesTaxonomy = res.modules || [];
-        renderWizardEpdTemplates();
-      } catch (err) {
-        console.warn("No se pudieron cargar plantillas EPD:", err);
-      }
-    };
-
-    const setWizardMode = (mode) => {
-      state.epdWizardMode = mode === "epd" ? "epd" : "blank";
-      if (btnModeBlank) btnModeBlank.classList.toggle("active", state.epdWizardMode === "blank");
-      if (btnModeEpd) btnModeEpd.classList.toggle("active", state.epdWizardMode === "epd");
-      if (formBlank) formBlank.style.display = state.epdWizardMode === "blank" ? "block" : "none";
-      if (panelEpd) panelEpd.style.display = state.epdWizardMode === "epd" ? "block" : "none";
-      if (footerHint) {
-        footerHint.textContent = state.epdWizardMode === "epd"
-          ? "● Se generaran nodos A1-D conectados, balance de masa y reporte EPD editable."
-          : "● Se creara en modo borrador y se abrira el lienzo de modelado.";
-      }
-      if (state.epdWizardMode === "epd") {
-        ensureEpdTemplatesLoaded();
-      }
-    };
-
-    if (btnModeBlank) btnModeBlank.addEventListener("click", () => setWizardMode("blank"));
-    if (btnModeEpd) btnModeEpd.addEventListener("click", () => setWizardMode("epd"));
-
-    const open = () => {
-      if (modal) {
-        modal.style.display = "flex";
-        modal.classList.add("active");
-        if (state.epdWizardMode === "epd") {
-          ensureEpdTemplatesLoaded();
-        }
-      }
-    };
-    const close = () => {
-      if (modal) {
-        modal.style.display = "none";
-        modal.classList.remove("active");
-      }
-    };
-
-    // Exponer refresco para cambio de idioma
-    window._refreshWizardEpdTemplates = renderWizardEpdTemplates;
-
-    if (btnOpen1) btnOpen1.addEventListener("click", open);
-    if (btnOpen2) btnOpen2.addEventListener("click", open);
-    if (btnClose) btnClose.addEventListener("click", close);
-    if (btnCancel) btnCancel.addEventListener("click", close);
-    if (modal) {
-      modal.addEventListener("click", (e) => {
-        if (e.target === modal) close();
-      });
-    }
-    const inputName = document.getElementById("wizSystemName");
-    const inputCode = document.getElementById("wizSystemCode");
-
-    const generateSkuFromName = (name) => {
-      if (!name || !name.trim()) return "";
-      const clean = name
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9\s]/g, "")
-        .trim();
-      const words = clean.split(/\s+/).filter(Boolean);
-      const prefix = words.slice(0, 3).map(w => w.slice(0, 3).toUpperCase()).join("-");
-      const hash = Math.floor(100 + Math.random() * 900);
-      return `SKU-${prefix || "SYS"}-${hash}`;
-    };
-
-    if (inputName && inputCode) {
-      inputName.addEventListener("input", () => {
-        const val = inputName.value.trim();
-        if (val) {
-          inputCode.value = generateSkuFromName(val);
-        } else {
-          inputCode.value = "";
-        }
-      });
-    }
-
-    if (btnSubmit) {
-      let isSubmittingWizard = false;
-      btnSubmit.addEventListener("click", async () => {
-        if (isSubmittingWizard) return;
-
-        // MODO PLANTILLA EPD PRELIMINAR (CEMENTO & CONCRETO)
-        if (state.epdWizardMode === "epd") {
-          const tplId = state.selectedEpdTemplateId || "epd_concrete_rmx_4000";
-          const tpl = (state.epdTemplates || []).find(t => t.template_id === tplId);
-          const customName = (document.getElementById("wizEpdCustomName")?.value || "").trim() || (tpl ? tpl.name_es : "Modelo EPD");
-          const plantLoc = (document.getElementById("wizEpdPlantLocation")?.value || "").trim();
-          const keyParamVal = parseFloat(document.getElementById("wizEpdKeyParamVal")?.value || "");
-          const defaultStd = document.getElementById("wizEpdDefaultStd")?.value || "EN15804_A2";
-          const epdProjVal = document.getElementById("wizEpdProject")?.value;
-          const epdProjId = epdProjVal ? parseInt(epdProjVal, 10) : null;
-
-          isSubmittingWizard = true;
-          btnSubmit.disabled = true;
-          const prevText = btnSubmit.textContent;
-          btnSubmit.textContent = "Instanciando modelo EPD...";
-
-          try {
-            const payload = {
-              template_id: tplId,
-              name: customName,
-              plant_location: plantLoc,
-              default_standard: defaultStd,
-              project_id: epdProjId
-            };
-            if (!isNaN(keyParamVal) && tpl && tpl.key_override) {
-              payload[tpl.key_override.param_name] = keyParamVal;
-            }
-            const res = await api.instantiateEpdTemplate(payload);
-            close();
-            showNotification(res.message || `Modelo EPD "${customName}" creado exitosamente.`);
-            await loadDashboard();
-            if (res.system_id) {
-              await openSystem(res.system_id);
-            }
-          } catch (err) {
-            alert("Error al instanciar plantilla EPD: " + err.message);
-          } finally {
-            isSubmittingWizard = false;
-            btnSubmit.disabled = false;
-            btnSubmit.textContent = prevText;
-          }
-          return;
-        }
-
-        const name = document.getElementById("wizSystemName")?.value || "";
-        let code = document.getElementById("wizSystemCode")?.value || "";
-        const category = document.getElementById("wizSystemCategory")?.value || "";
-        const geography = document.getElementById("wizSystemGeo")?.value || "";
-        const amount = parseFloat(document.getElementById("wizSystemAmount")?.value || "1.0");
-        const unit = document.getElementById("wizSystemUnit")?.value || "u";
-
-        if (!name.trim()) {
-          alert("Por favor escribe el nombre del sistema producto.");
-          return;
-        }
-
-        if (!code) {
-          code = generateSkuFromName(name);
-        }
-
         isSubmittingWizard = true;
         btnSubmit.disabled = true;
         const prevText = btnSubmit.textContent;
@@ -11747,8 +11525,60 @@
     const btnExpSimaPro = document.getElementById("btnExportSimaPro");
     const btnExpLciCsv = document.getElementById("btnExportLciCsv");
     const btnExpPdf = document.getElementById("btnExportReportPdf");
+    const btnExpReportDocx = document.getElementById("btnExportReportDocx");
+    const btnExpCanvasDocx = document.getElementById("btnExportDocx");
 
     const getSysId = () => state.activeSystem ? state.activeSystem.id : 21;
+
+    async function triggerExportDownload(endpoint, defaultFilename) {
+      try {
+        const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
+        showNotification(isEn ? "Generating and downloading document..." : "Generando y descargando documento...");
+        const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+        const headers = {};
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+
+        const separator = endpoint.includes("?") ? "&" : "?";
+        const fullUrl = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
+
+        const res = await fetch(fullUrl, { headers });
+        if (!res.ok) {
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const errData = await res.json();
+            if (errData && errData.error) errMsg = errData.error;
+          } catch (_) {}
+          throw new Error(errMsg);
+        }
+
+        const blob = await res.blob();
+        let filename = defaultFilename;
+        const contentDisposition = res.headers.get("Content-Disposition");
+        if (contentDisposition) {
+          const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+          if (match && match[1]) {
+            filename = match[1].replace(/['"]/g, "").trim();
+          }
+        }
+
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        showNotification(isEn ? "Document downloaded successfully." : "Documento descargado con exito.");
+      } catch (err) {
+        console.warn("Descarga por blob fallo, usando redireccion directa:", err);
+        const token = localStorage.getItem("econode_token") || sessionStorage.getItem("econode_token");
+        const separator = endpoint.includes("?") ? "&" : "?";
+        const directUrl = token ? `${endpoint}${separator}token=${encodeURIComponent(token)}` : endpoint;
+        window.location.href = directUrl;
+      }
+    }
 
     // Dropdown Global de Exportación en el Lienzo
     const btnExportDropdown = document.getElementById("btnCanvasExportDropdown");
@@ -11810,7 +11640,21 @@
     }
     if (btnExpPdf) {
       btnExpPdf.addEventListener("click", () => {
-        window.location.href = `/api/systems/${getSysId()}/export/pdf${getAuthTokenQuery()}`;
+        const sysId = getSysId();
+        triggerExportDownload(`/api/systems/${sysId}/export/pdf`, `Reporte_ACV_NOM070_Sistema_${sysId}.pdf`);
+      });
+    }
+    if (btnExpReportDocx) {
+      btnExpReportDocx.addEventListener("click", () => {
+        const sysId = getSysId();
+        triggerExportDownload(`/api/systems/${sysId}/export/docx`, `Reporte_ACV_NOM070_Sistema_${sysId}.docx`);
+      });
+    }
+    if (btnExpCanvasDocx) {
+      btnExpCanvasDocx.addEventListener("click", () => {
+        if (exportMenu) exportMenu.classList.remove("show");
+        const sysId = getSysId();
+        triggerExportDownload(`/api/systems/${sysId}/export/docx`, `Reporte_ACV_NOM070_Sistema_${sysId}.docx`);
       });
     }
 
@@ -14099,6 +13943,15 @@
     deleteParameter,
     editParameterById,
     exportParametersCsv,
+    triggerExportDownload,
+    exportDocx: (sysId) => {
+      const id = sysId || (state.activeSystem ? state.activeSystem.id : 21);
+      triggerExportDownload(`/api/systems/${id}/export/docx`, `Reporte_ACV_NOM070_Sistema_${id}.docx`);
+    },
+    exportPdf: (sysId) => {
+      const id = sysId || (state.activeSystem ? state.activeSystem.id : 21);
+      triggerExportDownload(`/api/systems/${id}/export/pdf`, `Reporte_ACV_NOM070_Sistema_${id}.pdf`);
+    },
     showView,
     openSystem,
     prefetchSystem,

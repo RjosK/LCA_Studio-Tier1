@@ -119,6 +119,49 @@ class TestIsoAcvReport(unittest.TestCase):
             self.assertTrue(any("5. Interpretación del Ciclo de Vida" in h for h in headings))
             self.assertTrue(any("6. Conclusiones y Recomendaciones" in h for h in headings))
 
+    def test_docx_export_button_wiring_in_app_js(self):
+        """Verify that btnExportReportDocx and btnExportDocx are wired with triggerExportDownload."""
+        with open(self.app_js_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        self.assertIn("btnExpReportDocx", content)
+        self.assertIn("btnExpCanvasDocx", content)
+        self.assertIn("triggerExportDownload", content)
+        self.assertIn("/export/docx", content)
+
+    def test_http_export_docx_and_pdf_endpoints(self):
+        """Verify that GET /api/systems/<id>/export/docx serves valid Word file even without token (fallback)."""
+        import subprocess
+        import time
+        import requests
+        import sys
+
+        port = 8895
+        server_py = os.path.join(self.base_dir, "econode_studio", "server.py")
+        proc = subprocess.Popen(
+            [sys.executable, server_py, "--port", str(port)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        time.sleep(2.0)
+        try:
+            # 1. Unauthenticated docx export
+            r_docx = requests.get(f"http://127.0.0.1:{port}/api/systems/21/export/docx")
+            self.assertEqual(r_docx.status_code, 200, f"Expected 200 but got {r_docx.status_code}: {r_docx.text}")
+            self.assertEqual(r_docx.headers.get("Content-Type"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            self.assertIn("Reporte_ACV_NOM070_Sistema_21.docx", r_docx.headers.get("Content-Disposition", ""))
+            self.assertTrue(r_docx.content.startswith(b"PK\x03\x04"))
+
+            # 2. Unauthenticated pdf export
+            r_pdf = requests.get(f"http://127.0.0.1:{port}/api/systems/21/export/pdf")
+            self.assertEqual(r_pdf.status_code, 200, f"Expected 200 but got {r_pdf.status_code}: {r_pdf.text}")
+            self.assertEqual(r_pdf.headers.get("Content-Type"), "application/pdf")
+            self.assertTrue(r_pdf.content.startswith(b"%PDF"))
+        finally:
+            proc.terminate()
+            proc.wait()
+
     def test_zero_emojis_in_report_files(self):
         """Enforce strict zero emoji rule across all modified report files."""
         # Genuine Unicode Emojis (SMP emoji code points: faces, symbols, emoticons, pictographs)

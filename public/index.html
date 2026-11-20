@@ -82,6 +82,9 @@
 
       <!-- Active User Profile Pill & Logout (in Studio) -->
       <div id="navUserGroup" style="display: none; align-items: center; gap: 8px;">
+        <button class="btn btn-secondary btn-sm" id="btnNavDeveloperSettings" title="Claves de API y Conexión MCP" data-i18n="nav.developer_settings" style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">
+          <span>API / MCP</span>
+        </button>
         <div class="user-pill" id="btnUserMenu" title="Configuración y Perfil">
           <div class="user-avatar" id="navUserAvatar">CM</div>
           <div style="display: flex; flex-direction: column; text-align: left; line-height: 1.1;">
@@ -1160,7 +1163,7 @@
             <button type="button" class="canvas-export-item" id="btnExportLciCsv">
               <span data-i18n="canvas.export_lci_csv">LCI Consolidado</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">CSV</span>
             </button>
-            <button type="button" class="canvas-export-item" id="btnExportDocx">
+            <button type="button" class="canvas-export-item" id="btnExportDocx" onclick="window.EconodeApp && window.EconodeApp.exportDocx()">
               <span data-i18n="canvas.export_docx">Reporte Word (.docx)</span> <span class="mono" style="font-size: 9px; color: var(--text-muted);">DOCX</span>
             </button>
           </div>
@@ -1587,7 +1590,7 @@
 
             <!-- ACCIONES DEL DOCUMENTO -->
             <div class="report-web-actions" style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;" role="toolbar" aria-label="Exportación del reporte">
-              <button class="btn btn-secondary btn-sm" id="btnExportReportDocx" title="Descargar documento Word (.docx) editable con tablas y formato oficial" data-i18n="report.export_docx" style="font-weight: 600;">
+              <button class="btn btn-secondary btn-sm" id="btnExportReportDocx" onclick="window.EconodeApp && window.EconodeApp.exportDocx()" title="Descargar documento Word (.docx) editable con tablas y formato oficial" data-i18n="report.export_docx" style="font-weight: 600;">
                 Word Editable (.docx) ↓
               </button>
               <button class="btn btn-primary btn-sm" id="btnExportReportPdf" title="Descargar documento PDF oficial con membrete y sellos" data-i18n="report.export_pdf">
@@ -2435,13 +2438,13 @@
           </select>
         </div>
 
-        <button class="btn btn-primary btn-sm" id="btnOpenNewGhgInventoryModal">
+        <button class="btn btn-primary btn-sm" id="btnOpenNewGhgInventoryModal" onclick="window.EconodeApp.openNewGhgInventoryModal()">
           + Nuevo Inventario GEI
         </button>
-        <button class="btn btn-secondary btn-sm" id="btnOpenGhgFactorsTab">
+        <button class="btn btn-secondary btn-sm" id="btnOpenGhgFactorsTab" onclick="window.EconodeApp.switchGhgTab('factors')">
           Catálogo Factores GWP
         </button>
-        <button class="btn btn-danger btn-sm" id="btnDeleteCurrentGhgInventory" title="Eliminar inventario activo">
+        <button class="btn btn-danger btn-sm" id="btnDeleteCurrentGhgInventory" onclick="window.EconodeApp.deleteCurrentGhgInventory()" title="Eliminar inventario activo">
           Eliminar
         </button>
       </div>
@@ -2712,7 +2715,7 @@
       </div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-color);">
         <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeModal('modalNewGhgInventory')">Cancelar</button>
-        <button class="btn btn-primary btn-sm" id="btnSubmitNewGhgInventory">Crear Inventario</button>
+        <button class="btn btn-primary btn-sm" id="btnSubmitNewGhgInventory" onclick="window.EconodeApp.submitNewGhgInventory()">Crear Inventario</button>
       </div>
     </div>
   </div>
@@ -2853,7 +2856,7 @@
       </div>
       <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px; border-top: 1px solid var(--border-color);">
         <button class="btn btn-secondary btn-sm" onclick="window.EconodeApp.closeModal('modalAddGhgEntry')">Cancelar</button>
-        <button class="btn btn-primary btn-sm" id="btnSubmitNewGhgEntry">Guardar Registro</button>
+        <button class="btn btn-primary btn-sm" id="btnSubmitNewGhgEntry" onclick="window.EconodeApp.submitNewGhgEntry()">Guardar Registro</button>
       </div>
     </div>
   </div>
@@ -4284,6 +4287,158 @@
       <div class="modal-footer">
         <span style="font-size: 10px; color: var(--text-muted);">● Vinculación estricta de procedencia conforme a ISO 14044 (Cradle-to-Gate).</span>
         <button type="button" class="btn btn-secondary" id="btnCancelSelectProviderModal" data-i18n="provider.cancel">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================= -->
+  <!-- 15.5 MODAL: CONFIGURACIÓN DE DESARROLLADOR, API & MCP         -->
+  <!-- ============================================================= -->
+  <div class="modal-overlay" id="modalDeveloperSettings" role="dialog" aria-modal="true" aria-labelledby="devModalTitle" style="display: none;">
+    <div class="modal-dialog" style="max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="modal-header">
+        <div>
+          <span class="badge-pill badge-emerald" style="margin-bottom: 4px;">● DESARROLLADOR · MODEL CONTEXT PROTOCOL (MCP)</span>
+          <h2 id="devModalTitle" style="font-size: 18px; font-weight: 700;" data-i18n="dev.title">Configuración de Desarrollador, API y MCP</h2>
+          <p style="font-size: 11px; color: var(--text-muted);" data-i18n="dev.subtitle">Gestiona tus Personal Access Tokens y conecta asistentes de IA o scripts externos con ECONODE.</p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btnCloseDevModal" aria-label="Cerrar">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px; overflow-y: auto; flex: 1;">
+        <!-- Pestañas Apple HIG Segmented Control -->
+        <div class="epd-segmented-control" id="devSegmentedTabs" role="tablist" style="margin-bottom: 16px;">
+          <button type="button" class="epd-seg-btn active" id="btnDevTabKeys" data-dev-tab="keys" role="tab" aria-selected="true" data-i18n="dev.tab_keys">Mis Claves de API</button>
+          <button type="button" class="epd-seg-btn" id="btnDevTabMcp" data-dev-tab="mcp" role="tab" aria-selected="false" data-i18n="dev.tab_mcp">Conectar IA (MCP Remoto)</button>
+          <button type="button" class="epd-seg-btn" id="btnDevTabScripts" data-dev-tab="scripts" role="tab" aria-selected="false" data-i18n="dev.tab_scripts">Scripts &amp; Automatización</button>
+        </div>
+
+        <!-- Pestaña 1: Mis Claves de API -->
+        <div id="devTabContentKeys">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 16px;">
+            <h4 style="font-size: 13px; font-weight: 700; margin: 0 0 8px 0;" data-i18n="dev.new_key_title">Generar Nueva Clave de API</h4>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <input type="text" id="inputNewApiKeyName" class="form-input" style="flex: 1; min-width: 260px; height: 32px; font-size: 11.5px;" placeholder="Nombre descriptivo (ej. Claude Desktop, Cursor, Script Python)">
+              <button type="button" class="btn btn-primary btn-sm" id="btnGenerateApiKey" style="height: 32px; font-weight: 600;" data-i18n="dev.btn_create_key">Generar Clave</button>
+            </div>
+            
+            <!-- Banner de Alerta para Clave Recién Generada -->
+            <div id="alertNewRawKeyContainer" style="display: none; margin-top: 12px; padding: 12px; background: rgba(16, 185, 129, 0.08); border: 1px solid var(--accent-emerald); border-radius: var(--radius-sm);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
+                <span style="font-size: 11px; font-weight: 700; color: #065F46;" data-i18n="dev.warning_raw_key">Copia esta clave ahora. Por motivos de seguridad, nunca volverá a mostrarse completa.</span>
+                <button type="button" class="btn btn-secondary btn-sm" id="btnCopyRawKey" style="font-size: 10px; height: 24px; padding: 0 8px;">Copiar Clave</button>
+              </div>
+              <code id="textNewRawKey" style="display: block; font-family: monospace; font-size: 12px; font-weight: 700; color: #047857; word-break: break-all; background: #FFFFFF; padding: 6px 10px; border-radius: 4px; border: 1px solid #A7F3D0;"></code>
+            </div>
+          </div>
+
+          <!-- Tabla de Claves Activas -->
+          <div style="border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden;">
+            <div style="padding: 10px 14px; background: var(--bg-hover); font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">
+              Claves de API Activas
+            </div>
+            <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+              <thead>
+                <tr style="border-bottom: 1px solid var(--border-color); background: var(--bg-surface); color: var(--text-muted); text-align: left;">
+                  <th style="padding: 8px 12px;">Nombre</th>
+                  <th style="padding: 8px 12px;">Prefijo</th>
+                  <th style="padding: 8px 12px;">Creada</th>
+                  <th style="padding: 8px 12px;">Último Uso</th>
+                  <th style="padding: 8px 12px; text-align: right;">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="tableUserApiKeysBody">
+                <tr>
+                  <td colspan="5" style="padding: 16px; text-align: center; color: var(--text-muted);">Cargando claves de API...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pestaña 2: Conectar IA (MCP Remoto) -->
+        <div id="devTabContentMcp" style="display: none;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px; margin-bottom: 14px;">
+            <h4 style="font-size: 13px; font-weight: 700; margin: 0 0 6px 0;">Conexión Nativa MCP (Model Context Protocol)</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 12px 0;">
+              ECONODE expone un servidor MCP remoto compatible con Claude Desktop, Cursor, Antigravity y cualquier cliente MCP. Copia la configuración siguiente en tu archivo de configuración de cliente:
+            </p>
+            
+            <div style="position: relative; margin-bottom: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted);">Para Claude Desktop (claude_desktop_config.json)</span>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.EconodeApp.copyDevSnippet('codeClaudeMcpSnippet')" style="font-size: 10px; height: 22px; padding: 0 8px;">Copiar</button>
+              </div>
+              <pre id="codeClaudeMcpSnippet" style="background: #0F172A; color: #F8FAFC; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 11px; overflow-x: auto; margin: 0; font-family: monospace;">{
+  "mcpServers": {
+    "econode": {
+      "url": "https://api.econode.app/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer TU_CLAVE_ECO_LIVE_AQUI"
+      }
+    }
+  }
+}</pre>
+            </div>
+
+            <div style="position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted);">Para Cursor / Antigravity (.cursor/mcp.json o mcp_config.json)</span>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.EconodeApp.copyDevSnippet('codeCursorMcpSnippet')" style="font-size: 10px; height: 22px; padding: 0 8px;">Copiar</button>
+              </div>
+              <pre id="codeCursorMcpSnippet" style="background: #0F172A; color: #F8FAFC; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 11px; overflow-x: auto; margin: 0; font-family: monospace;">{
+  "mcpServers": {
+    "econode": {
+      "command": "curl",
+      "args": ["-s", "-N", "-H", "Authorization: Bearer TU_CLAVE_ECO_LIVE_AQUI", "https://api.econode.app/mcp/sse"]
+    }
+  }
+}</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pestaña 3: Scripts & Automatización -->
+        <div id="devTabContentScripts" style="display: none;">
+          <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 14px;">
+            <h4 style="font-size: 13px; font-weight: 700; margin: 0 0 6px 0;">Automatización con Python y REST API v1</h4>
+            <p style="font-size: 11px; color: var(--text-muted); margin: 0 0 10px 0;">
+              Ejemplo ejecutable en Python para registrar consumos de Alcance 1 o consultar sistemas producto:
+            </p>
+            <div style="position: relative; margin-bottom: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <span style="font-size: 10.5px; font-weight: 700; color: var(--text-muted);">Python (requests)</span>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="window.EconodeApp.copyDevSnippet('codePythonSnippet')" style="font-size: 10px; height: 22px; padding: 0 8px;">Copiar</button>
+              </div>
+              <pre id="codePythonSnippet" style="background: #0F172A; color: #F8FAFC; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 11px; overflow-x: auto; margin: 0; font-family: monospace;">import requests
+
+API_KEY = "TU_CLAVE_ECO_LIVE_AQUI"
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+BASE_URL = "https://api.econode.app/api/v1"
+
+# 1. Consultar sistemas producto modelados
+sistemas = requests.get(f"{BASE_URL}/systems", headers=HEADERS).json()
+print("Sistemas activos:", len(sistemas.get("systems", [])))
+
+# 2. Registrar actividad en inventario GEI corporativo (Alcance 1)
+payload = {
+    "scope": 1,
+    "scope_category": "combustion_estacionaria",
+    "facility_name": "Planta Norte",
+    "activity_name": "Caldera Principal - Gas Natural",
+    "activity_amount": 3400.0,
+    "activity_unit": "m3",
+    "fuel_type": "gas_natural"
+}
+res = requests.post(f"{BASE_URL}/ghg/activities", headers=HEADERS, json=payload).json()
+print("Actividad registrada:", res.get("status"))</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer" style="padding: 10px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end;">
+        <button type="button" class="btn btn-secondary btn-sm" id="btnDoneDevModal">Cerrar</button>
       </div>
     </div>
   </div>
