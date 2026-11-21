@@ -87,37 +87,62 @@ class TestIsoAcvReport(unittest.TestCase):
             self.assertGreaterEqual(matches, 2, f"Key {k} must exist in both Spanish and English blocks")
 
     def test_export_system_pdf_bytes_generates_all_six_chapters(self):
-        """Verify that export_system_pdf_bytes produces valid PDF bytes containing the 6 chapters."""
+        """Verify that export_system_pdf_bytes produces valid PDF bytes in both ES and EN."""
         with get_active_db_connection() as conn:
             systems = list_product_systems(conn)
             sys_id = systems[0]["id"] if systems else 21
-            pdf_bytes = export_system_pdf_bytes(conn, sys_id)
-            self.assertIsInstance(pdf_bytes, bytes)
-            self.assertGreater(len(pdf_bytes), 2000)
-            self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+            # ES
+            pdf_bytes_es = export_system_pdf_bytes(conn, sys_id, lang="es")
+            self.assertIsInstance(pdf_bytes_es, bytes)
+            self.assertGreater(len(pdf_bytes_es), 2000)
+            self.assertTrue(pdf_bytes_es.startswith(b"%PDF"))
+            # EN
+            pdf_bytes_en = export_system_pdf_bytes(conn, sys_id, lang="en")
+            self.assertIsInstance(pdf_bytes_en, bytes)
+            self.assertGreater(len(pdf_bytes_en), 2000)
+            self.assertTrue(pdf_bytes_en.startswith(b"%PDF"))
 
     def test_export_system_docx_bytes_generates_valid_editable_word_file(self):
-        """Verify that export_system_docx_bytes produces a valid editable Word (.docx) document with tables."""
+        """Verify that export_system_docx_bytes produces valid editable Word (.docx) documents in both ES and EN."""
         with get_active_db_connection() as conn:
             systems = list_product_systems(conn)
             sys_id = systems[0]["id"] if systems else 21
-            docx_bytes = export_system_docx_bytes(conn, sys_id)
-            self.assertIsInstance(docx_bytes, bytes)
-            self.assertGreater(len(docx_bytes), 5000)
-            self.assertTrue(docx_bytes.startswith(b"PK\x03\x04"))
 
-            doc = docx.Document(io.BytesIO(docx_bytes))
-            self.assertGreaterEqual(len(doc.paragraphs), 20)
-            self.assertGreaterEqual(len(doc.tables), 5)
+            # 1. Spanish export (default)
+            docx_bytes_es = export_system_docx_bytes(conn, sys_id, lang="es")
+            self.assertIsInstance(docx_bytes_es, bytes)
+            self.assertGreater(len(docx_bytes_es), 5000)
+            self.assertTrue(docx_bytes_es.startswith(b"PK\x03\x04"))
 
-            # Check that chapter headings exist in editable Word paragraphs
-            headings = [p.text for p in doc.paragraphs if p.text.startswith(("1.", "2.", "3.", "4.", "5.", "6."))]
-            self.assertTrue(any("1. Introducción" in h for h in headings))
-            self.assertTrue(any("2. Definición de Objetivo y Alcance" in h for h in headings))
-            self.assertTrue(any("3. Análisis de Inventario" in h for h in headings))
-            self.assertTrue(any("4. Resultados de Evaluación de Impacto" in h for h in headings))
-            self.assertTrue(any("5. Interpretación del Ciclo de Vida" in h for h in headings))
-            self.assertTrue(any("6. Conclusiones y Recomendaciones" in h for h in headings))
+            doc_es = docx.Document(io.BytesIO(docx_bytes_es))
+            self.assertGreaterEqual(len(doc_es.paragraphs), 20)
+            self.assertGreaterEqual(len(doc_es.tables), 5)
+
+            headings_es = [p.text for p in doc_es.paragraphs if p.text.startswith(("1.", "2.", "3.", "4.", "5.", "6."))]
+            self.assertTrue(any("1. Introducción" in h for h in headings_es))
+            self.assertTrue(any("2. Definición de Objetivo y Alcance" in h for h in headings_es))
+            self.assertTrue(any("3. Análisis de Inventario" in h for h in headings_es))
+            self.assertTrue(any("4. Resultados de Evaluación de Impacto" in h for h in headings_es))
+            self.assertTrue(any("5. Interpretación del Ciclo de Vida" in h for h in headings_es))
+            self.assertTrue(any("6. Conclusiones y Recomendaciones" in h for h in headings_es))
+
+            # 2. English export
+            docx_bytes_en = export_system_docx_bytes(conn, sys_id, lang="en")
+            self.assertIsInstance(docx_bytes_en, bytes)
+            self.assertGreater(len(docx_bytes_en), 5000)
+            self.assertTrue(docx_bytes_en.startswith(b"PK\x03\x04"))
+
+            doc_en = docx.Document(io.BytesIO(docx_bytes_en))
+            self.assertGreaterEqual(len(doc_en.paragraphs), 20)
+            self.assertGreaterEqual(len(doc_en.tables), 5)
+
+            headings_en = [p.text for p in doc_en.paragraphs if p.text.startswith(("1.", "2.", "3.", "4.", "5.", "6."))]
+            self.assertTrue(any("1. Introduction" in h for h in headings_en))
+            self.assertTrue(any("2. Goal & Scope Definition" in h for h in headings_en))
+            self.assertTrue(any("3. Life Cycle Inventory Analysis" in h for h in headings_en))
+            self.assertTrue(any("4. Life Cycle Impact Assessment Results" in h for h in headings_en))
+            self.assertTrue(any("5. Life Cycle Interpretation" in h for h in headings_en))
+            self.assertTrue(any("6. Conclusions and Recommendations" in h for h in headings_en))
 
     def test_docx_export_button_wiring_in_app_js(self):
         """Verify that btnExportReportDocx and btnExportDocx are wired with triggerExportDownload."""
@@ -146,12 +171,18 @@ class TestIsoAcvReport(unittest.TestCase):
         )
         time.sleep(2.0)
         try:
-            # 1. Unauthenticated docx export
+            # 1. Unauthenticated docx export (ES default)
             r_docx = requests.get(f"http://127.0.0.1:{port}/api/systems/21/export/docx")
             self.assertEqual(r_docx.status_code, 200, f"Expected 200 but got {r_docx.status_code}: {r_docx.text}")
             self.assertEqual(r_docx.headers.get("Content-Type"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
             self.assertTrue(any(sub in r_docx.headers.get("Content-Disposition", "") for sub in ("Reporte_ACV_NOM070_Sistema_21.docx", "Reporte_ACV_NOM070_Sistema_21_ES.docx")))
             self.assertTrue(r_docx.content.startswith(b"PK\x03\x04"))
+
+            # 1b. Unauthenticated docx export (EN explicit)
+            r_docx_en = requests.get(f"http://127.0.0.1:{port}/api/systems/21/export/docx?lang=en")
+            self.assertEqual(r_docx_en.status_code, 200)
+            self.assertIn("LCA_Report_ISO14040_System_21_EN.docx", r_docx_en.headers.get("Content-Disposition", ""))
+            self.assertTrue(r_docx_en.content.startswith(b"PK\x03\x04"))
 
             # 2. Unauthenticated pdf export
             r_pdf = requests.get(f"http://127.0.0.1:{port}/api/systems/21/export/pdf")
