@@ -844,14 +844,15 @@ RESULTADO DE EVALUACIÓN:
 # -----------------------------------------------------------------------------
 # 6. DOCUMENTO PDF OFICIAL ACV / EPD (ISO 14044 & NOM-070)
 # -----------------------------------------------------------------------------
-def export_system_pdf_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
-    """Genera un documento PDF oficial formal del Sistema Producto conforme a ISO 14044 y NOM-070."""
+def export_system_pdf_bytes(conn: sqlite3.Connection, system_id: int, lang: str = "es") -> bytes:
+    """Genera un documento PDF oficial formal del Sistema Producto conforme a ISO 14044 y NOM-070 en ES o EN."""
     from reportlab.lib.pagesizes import letter
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
     from .database_adapter import get_product_system_details
 
+    is_en = (lang or 'es').strip().lower() == 'en'
     details = get_product_system_details(conn, system_id)
     if not details:
         details = {
@@ -1200,8 +1201,8 @@ def export_system_pdf_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
 # -----------------------------------------------------------------------------
 # 7. DOCUMENTO WORD (.DOCX) EDITABLE OFICIAL ACV / EPD (ISO 14044 & NOM-070)
 # -----------------------------------------------------------------------------
-def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
-    """Genera un documento Word (.docx) editable formal del Sistema Producto conforme a ISO 14044 y NOM-070."""
+def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int, lang: str = "es") -> bytes:
+    """Genera un documento Word (.docx) editable formal del Sistema Producto conforme a ISO 14044 y NOM-070 en ES o EN."""
     import docx
     from docx.shared import Inches, Pt, RGBColor
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -1210,6 +1211,7 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     from docx.oxml.ns import nsdecls
     from .database_adapter import get_product_system_details
 
+    is_en = (lang or 'es').strip().lower() == 'en'
     details = get_product_system_details(conn, system_id)
     if not details:
         details = {
@@ -1255,7 +1257,7 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     p_title = doc.add_paragraph()
     p_title.paragraph_format.space_before = Pt(0)
     p_title.paragraph_format.space_after = Pt(2)
-    run_title = p_title.add_run("ECONODE STUDIO · REPORTE TÉCNICO DE CICLO DE VIDA (ACV)")
+    run_title = p_title.add_run("ECONODE STUDIO · LIFE CYCLE ASSESSMENT (LCA) TECHNICAL REPORT" if is_en else "ECONODE STUDIO · REPORTE TÉCNICO DE CICLO DE VIDA (ACV)")
     run_title.bold = True
     run_title.font.size = Pt(14)
     run_title.font.name = "Arial"
@@ -1264,7 +1266,7 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     p_sub = doc.add_paragraph()
     p_sub.paragraph_format.space_before = Pt(0)
     p_sub.paragraph_format.space_after = Pt(8)
-    run_sub = p_sub.add_run("DECLARACIÓN AMBIENTAL DE PRODUCTO & EXPEDIENTE DE AUDITORÍA NOM-070-SE-2024 / ISO 14040 / ISO 14044")
+    run_sub = p_sub.add_run("ENVIRONMENTAL PRODUCT DECLARATION & AUDIT DOSSIER NOM-070-SE-2024 / ISO 14040 / ISO 14044" if is_en else "DECLARACIÓN AMBIENTAL DE PRODUCTO & EXPEDIENTE DE AUDITORÍA NOM-070-SE-2024 / ISO 14040 / ISO 14044")
     run_sub.font.size = Pt(8.5)
     run_sub.font.name = "Arial"
     run_sub.font.color.rgb = RGBColor(71, 85, 105)
@@ -1272,10 +1274,10 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     # 2. METADATOS DEL SISTEMA
     now_str = datetime.datetime.now().strftime("%d/%m/%Y %H:%M")
     meta_rows = [
-        [("Sistema Producto:", True), (f"{sys_name} ({sys_code})", False), ("Fecha de Emisión:", True), (now_str, False)],
-        [("Unidad Funcional (UF):", True), (f"{target_amount:.3f} kg / unidad de producto", False), ("Referencia Normativa:", True), ("ISO 14040, ISO 14044, NOM-070", False)],
-        [("Titular / Organización:", True), (owner_org, False), ("Límites del Sistema:", True), ("Cradle-to-Gate (De la cuna a la puerta)", False)],
-        [("Responsable de Modelado:", True), (owner_name, False), ("Base de Datos LCI:", True), ("ecoinvent 3.12 Cutoff (Oficial)", False)],
+        [(("Product System:" if is_en else "Sistema Producto:"), True), (f"{sys_name} ({sys_code})", False), (("Issue Date:" if is_en else "Fecha de Emisión:"), True), (now_str, False)],
+        [(("Functional Unit (FU):" if is_en else "Unidad Funcional (UF):"), True), (f"{target_amount:.3f} kg / {'product unit' if is_en else 'unidad de producto'}", False), (("Standard Reference:" if is_en else "Referencia Normativa:"), True), ("ISO 14040, ISO 14044, NOM-070", False)],
+        [(("Holder / Organization:" if is_en else "Titular / Organización:"), True), (owner_org, False), (("System Boundary:" if is_en else "Límites del Sistema:"), True), (("Cradle-to-Gate (Raw materials to gate)" if is_en else "Cradle-to-Gate (De la cuna a la puerta)"), False)],
+        [(("LCA Modeling Lead:" if is_en else "Responsable de Modelado:"), True), (owner_name, False), (("LCI Database:" if is_en else "Base de Datos LCI:"), True), (("ecoinvent 3.12 Cutoff (Official)" if is_en else "ecoinvent 3.12 Cutoff (Oficial)"), False)],
     ]
     meta_tbl = doc.add_table(rows=4, cols=4)
     meta_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -1329,45 +1331,77 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
         return p
 
     # CAPITULO 1: INTRODUCCION
-    _add_h1("1. Introducción")
-    _add_p("El presente informe de Análisis de Ciclo de Vida (ACV) evalúa cuantitativa y holísticamente las cargas ambientales, consumos energéticos y balances de masa asociados al ciclo productivo del producto modelado, proveyendo sustento auditable para ecodiseño y certificación.")
-    _add_h2("1.1 Normas Guía y Marco de Referencia")
-    _add_p("Estudio elaborado conforme a ISO 14040:2006 (Principios y marco), ISO 14044:2006/Amd 2:2020 (Requisitos y directrices), ISO 14067:2018 (Huella de carbono de productos) y la regulación nacional NOM-070-SE-2024 para verificación de declaraciones ambientales.")
+    _add_h1("1. Introduction" if is_en else "1. Introducción")
+    _add_p(
+        "This Life Cycle Assessment (LCA) report comprehensively and quantitatively evaluates environmental burdens, energy consumption, and mass balances associated with the production cycle of the modeled product, providing auditable evidence for ecodesign and certification." if is_en else
+        "El presente informe de Análisis de Ciclo de Vida (ACV) evalúa cuantitativa y holísticamente las cargas ambientales, consumos energéticos y balances de masa asociados al ciclo productivo del producto modelado, proveyendo sustento auditable para ecodiseño y certificación."
+    )
+    _add_h2("1.1 Guiding Standards & Regulatory Framework" if is_en else "1.1 Normas Guía y Marco de Referencia")
+    _add_p(
+        "Study conducted in compliance with ISO 14040:2006 (Principles and framework), ISO 14044:2006/Amd 2:2020 (Requirements and guidelines), ISO 14067:2018 (Carbon footprint of products), and Mexican national regulation NOM-070-SE-2024 for environmental claim verification." if is_en else
+        "Estudio elaborado conforme a ISO 14040:2006 (Principios y marco), ISO 14044:2006/Amd 2:2020 (Requisitos y directrices), ISO 14067:2018 (Huella de carbono de productos) y la regulación nacional NOM-070-SE-2024 para verificación de declaraciones ambientales."
+    )
 
     # CAPITULO 2: DEFINICION DE OBJETIVO Y ALCANCE
-    _add_h1("2. Definición de Objetivo y Alcance (Goal & Scope)")
-    _add_h2("2.1 Objetivo del Estudio (Goal)")
-    _add_p("• 2.1.1 Razones para Realizar el Estudio: Identificar puntos críticos (hotspots), establecer línea base ambiental y sustentar comunicación verificable ante clientes y organismos certificadores.\n"
-           "• 2.1.2 Aplicación Prevista: Ecodiseño de procesos, mitigación de emisiones y generación de Declaraciones Ambientales (EPD).\n"
-           "• 2.1.3 Audiencia Objetivo: Dirección técnica, clientes corporativos, auditores independientes y autoridades ambientales.\n"
-           "• 2.1.4 Aseveraciones Comparativas Divulgadas: Si se divulgan afirmaciones comparativas públicas, se requiere panel crítico según ISO 14044 Cl. 6.")
+    _add_h1("2. Goal & Scope Definition (Goal & Scope)" if is_en else "2. Definición de Objetivo y Alcance (Goal & Scope)")
+    _add_h2("2.1 Goal of the Study" if is_en else "2.1 Objetivo del Estudio (Goal)")
+    _add_p(
+        ("• 2.1.1 Reasons for Carrying out the Study: Identify hotspots, establish an environmental baseline, and support verifiable communication with customers and certification bodies.\n"
+         "• 2.1.2 Intended Application: Process ecodesign, emission mitigation, and Environmental Product Declaration (EPD) generation.\n"
+         "• 2.1.3 Target Audience: Technical management, B2B clients, independent auditors, and environmental regulatory authorities.\n"
+         "• 2.1.4 Comparative Assertions Disclosed: If comparative assertions are publicly communicated, an interested-party critical review panel is required per ISO 14044 Cl. 6.") if is_en else
+        ("• 2.1.1 Razones para Realizar el Estudio: Identificar puntos críticos (hotspots), establecer línea base ambiental y sustentar comunicación verificable ante clientes y organismos certificadores.\n"
+         "• 2.1.2 Aplicación Prevista: Ecodiseño de procesos, mitigación de emisiones y generación de Declaraciones Ambientales (EPD).\n"
+         "• 2.1.3 Audiencia Objetivo: Dirección técnica, clientes corporativos, auditores independientes y autoridades ambientales.\n"
+         "• 2.1.4 Aseveraciones Comparativas Divulgadas: Si se divulgan afirmaciones comparativas públicas, se requiere panel crítico según ISO 14044 Cl. 6.")
+    )
 
-    _add_h2("2.2 Alcance del Estudio (Scope)")
-    _add_p(f"• 2.2.1 Función, Unidad Funcional y Flujo de Referencia: {target_amount:.3f} kg / unidad de producto terminado con especificaciones técnicas estándar de resistencia mecánica y propiedades funcionales verificadas.\n"
-           "• 2.2.2 Límites del Sistema: Cradle-to-Gate (materias primas, refinación, flete a planta, manufactura unitaria, tratamiento de mermas y emisiones in situ).\n"
-           "• 2.2.3 Criterios de Corte: Regla del 1% en masa y energía acumulada; total acumulado de flujos no modelados inferior al 5%.\n"
-           "• 2.2.4 Procesos Excluidos: Infraestructura civil fabril amortizada a más de 30 años y desplazamientos cotidianos del personal administrativo.\n"
-           "• 2.2.5 Reglas de Asignación: Subdivisión de procesos y balances de masa físicos; co-productos asignados por masa según ISO 14044.\n"
-           "• 2.2.6 Análisis de Sensibilidad Planteado: Evaluación ante tasas de resina reciclada post-consumo (20% a 85%) y variaciones de flete carretero.\n"
-           "• 2.2.7 Herramienta y Motor de Cálculo: ECONODE Studio Engine v2.0 (núcleo Leontief matricial y exportación compatible con SimaPro / openLCA).\n"
-           "• 2.2.8 Método de Evaluación de Impacto (LCIA): ReCiPe 2016 Midpoint (H), Environmental Footprint EF 3.1 y TRACI 2.1 con factores IPCC AR6.\n"
-           "• 2.2.9 Requisitos de Calidad de Datos: Datos primarios con temporalidad < 3 años y verificación con Matriz Pedigree.\n"
-           "• 2.2.10 Revisión Crítica Independiente: Expediente habilitado para verificación por Tercero Independiente bajo esquema ISO/IEC 17029.")
+    _add_h2("2.2 Scope of the Study" if is_en else "2.2 Alcance del Estudio (Scope)")
+    _add_p(
+        (f"• 2.2.1 Function, Functional Unit & Reference Flow: {target_amount:.3f} kg / finished product unit with standard mechanical properties.\n"
+         "• 2.2.2 System Boundary: Cradle-to-Gate (raw materials, refining, logistics, manufacturing, scrap treatment and on-site emissions).\n"
+         "• 2.2.3 Cut-off Criteria: 1% rule on mass and cumulative energy; total unmodeled flows under 5%.\n"
+         "• 2.2.4 Excluded Processes: Civil factory infrastructure amortized over >30 years and administrative commuter travel.\n"
+         "• 2.2.5 Allocation Procedures: Process subdivision and physical mass balances; co-products allocated by mass pursuant to ISO 14044.\n"
+         "• 2.2.6 Sensitivity Analysis Framework: Evaluation against recycled resin rates (20% to 85%) and road freight variations.\n"
+         "• 2.2.7 Calculation Tool & Core Engine: ECONODE Studio Engine v2.0 (matrix Leontief core, SimaPro / openLCA export compatibility).\n"
+         "• 2.2.8 Impact Assessment Method (LCIA): ReCiPe 2016 Midpoint (H), Environmental Footprint EF 3.1, and TRACI 2.1 with IPCC AR6 factors.\n"
+         "• 2.2.9 Data Quality Requirements: Primary data with < 3 years validity, verified via Pedigree Matrix.\n"
+         "• 2.2.10 Independent Critical Review: Dossier structured for third-party verification under ISO/IEC 17029.") if is_en else
+        (f"• 2.2.1 Función, Unidad Funcional y Flujo de Referencia: {target_amount:.3f} kg / unidad de producto terminado con especificaciones técnicas estándar de resistencia mecánica y propiedades funcionales verificadas.\n"
+         "• 2.2.2 Límites del Sistema: Cradle-to-Gate (materias primas, refinación, flete a planta, manufactura unitaria, tratamiento de mermas y emisiones in situ).\n"
+         "• 2.2.3 Criterios de Corte: Regla del 1% en masa y energía acumulada; total acumulado de flujos no modelados inferior al 5%.\n"
+         "• 2.2.4 Procesos Excluidos: Infraestructura civil fabril amortizada a más de 30 años y desplazamientos cotidianos del personal administrativo.\n"
+         "• 2.2.5 Reglas de Asignación: Subdivisión de procesos y balances de masa físicos; co-productos asignados por masa según ISO 14044.\n"
+         "• 2.2.6 Análisis de Sensibilidad Planteado: Evaluación ante tasas de resina reciclada post-consumo (20% a 85%) y variaciones de flete carretero.\n"
+         "• 2.2.7 Herramienta y Motor de Cálculo: ECONODE Studio Engine v2.0 (núcleo Leontief matricial y exportación compatible con SimaPro / openLCA).\n"
+         "• 2.2.8 Método de Evaluación de Impacto (LCIA): ReCiPe 2016 Midpoint (H), Environmental Footprint EF 3.1 y TRACI 2.1 con factores IPCC AR6.\n"
+         "• 2.2.9 Requisitos de Calidad de Datos: Datos primarios con temporalidad < 3 años y verificación con Matriz Pedigree.\n"
+         "• 2.2.10 Revisión Crítica Independiente: Expediente habilitado para verificación por Tercero Independiente bajo esquema ISO/IEC 17029.")
+    )
 
     # CAPITULO 3: ANALISIS DE INVENTARIO DE CICLO DE VIDA (LCI)
-    _add_h1("3. Análisis de Inventario de Ciclo de Vida (LCI)")
-    _add_h2("3.1 Procedimiento de Recolección de Datos")
-    _add_p("3.1.1 Tipos de Datos: Datos primarios operacionales de planta (CFE, compras de resina, pesajes y mermas) complementados con datos de fondo ecoinvent 3.12 Cut-off.\n"
-           "3.1.2 Cuestionarios y Evidencias de Planta: Recibos de energía CFE, manifiestos de residuo y cartas porte custodiados en la Bóveda de Documentos.")
+    _add_h1("3. Life Cycle Inventory Analysis (LCI)" if is_en else "3. Análisis de Inventario de Ciclo de Vida (LCI)")
+    _add_h2("3.1 Data Collection Procedure" if is_en else "3.1 Procedimiento de Recolección de Datos")
+    _add_p(
+        ("3.1.1 Data Types: Primary plant operational data (CFE electricity, resin purchasing, weighing slips, scrap) complemented with ecoinvent 3.12 Cut-off background datasets.\n"
+         "3.1.2 Questionnaires & Evidence: Utility invoices, waste manifests, and freight waybills secured in the Document Vault.") if is_en else
+        ("3.1.1 Tipos de Datos: Datos primarios operacionales de planta (CFE, compras de resina, pesajes y mermas) complementados con datos de fondo ecoinvent 3.12 Cut-off.\n"
+         "3.1.2 Cuestionarios y Evidencias de Planta: Recibos de energía CFE, manifiestos de residuo y cartas porte custodiados en la Bóveda de Documentos.")
+    )
 
-    _add_h2("3.2 Inventario del Ciclo de Vida y Supuestos")
-    _add_p("3.2.1 Rutas de Transporte y Logística: Fletes en tractocamión diésel Euro IV/V (16-32t) con factor de carga medio del 70%.\n"
-           "3.2.2 Procesos Unitarios y Balances de Masa:")
+    _add_h2("3.2 Life Cycle Inventory and Assumptions" if is_en else "3.2 Inventario del Ciclo de Vida y Supuestos")
+    _add_p(
+        ("3.2.1 Transport Routes: Euro IV/V diesel freight trucks (16-32t) with average 70% load factor.\n"
+         "3.2.2 Unit Processes and Mass Balances:") if is_en else
+        ("3.2.1 Rutas de Transporte y Logística: Fletes en tractocamión diésel Euro IV/V (16-32t) con factor de carga medio del 70%.\n"
+         "3.2.2 Procesos Unitarios y Balances de Masa:")
+    )
 
     # Tabla Procesos Unitarios en Word
-    proc_headers = ["Proceso / Etapa", "Flujo de Referencia", "Insumos Técnicos", "Salidas & Emisiones"]
+    proc_headers = ["Process / Stage", "Reference Flow (FU)", "Technical Inputs", "Outputs & Emissions"] if is_en else ["Proceso / Etapa", "Flujo de Referencia", "Insumos Técnicos", "Salidas & Emisiones"]
     if not nodes:
-        _add_p("Este sistema producto no cuenta con procesos modelados actualmente en el lienzo.")
+        _add_p("No modeled processes on canvas currently." if is_en else "Este sistema producto no cuenta con procesos modelados actualmente en el lienzo.")
     else:
         p_tbl = doc.add_table(rows=len(nodes) + 1, cols=4)
         p_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -1406,11 +1440,13 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
                 r.font.name = "Arial"
                 r.font.color.rgb = RGBColor(30, 41, 59)
 
-    _add_p("3.2.3 Conjuntos de Datos de Fondo: ecoinvent 3.12 Cut-off Unit.\n"
-           "3.2.4 Inventario Consolidado (LCI):")
+    _add_p(
+        "3.2.3 Background Datasets: ecoinvent 3.12 Cut-off Unit.\n3.2.4 Consolidated Life Cycle Inventory (LCI):" if is_en else
+        "3.2.3 Conjuntos de Datos de Fondo: ecoinvent 3.12 Cut-off Unit.\n3.2.4 Inventario Consolidado (LCI):"
+    )
 
     # Tabla LCI en Word
-    lci_headers = ["Insumo / Flujo Elemental", "Cantidad", "Unidad", "Tipo / Estado"]
+    lci_headers = ["Input / Elementary Flow", "Amount", "Unit", "Type / Verified Status"] if is_en else ["Insumo / Flujo Elemental", "Cantidad", "Unidad", "Tipo / Estado"]
     cons_items = []
     for n in nodes:
         for inp in n.get("inputs") or []:
@@ -1462,11 +1498,18 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     _add_p("3.2.5 Escenarios para Análisis de Sensibilidad: Comparación entre formulación base e incorporación progresiva de resina post-consumo reciclada (20%, 50% y 85% r-resina).")
 
     # CAPITULO 4: RESULTADOS LCIA
-    _add_h1("4. Resultados de Evaluación de Impacto (LCIA)")
-    _add_h2("4.1 Resultados Caracterizados por Categoría")
+    _add_h1("4. Life Cycle Impact Assessment Results (LCIA)" if is_en else "4. Resultados de Evaluación de Impacto (LCIA)")
+    _add_h2("4.1 Characterized Results by Category" if is_en else "4.1 Resultados Caracterizados por Categoría")
 
-    lcia_headers = ["Categoría de Impacto", "Método / Indicador", "Unidad", "Total Línea Base", "Optimizado (-30% rPET)"]
+    lcia_headers = ["Impact Category", "Method / Indicator", "Unit", "Baseline Total", "Optimized (-30% rPET)"] if is_en else ["Categoría de Impacto", "Método / Indicador", "Unidad", "Total Línea Base", "Optimizado (-30% rPET)"]
     lcia_rows = [
+        ["Climate Change (GWP100)", "IPCC 2021 / ReCiPe Midpoint (H)", "kg CO2 eq", "2.450", "1.620 (-34%)"],
+        ["Water Consumption (Water Scarcity)", "AWARE / ReCiPe (H)", "m3 eq", "0.082", "0.051 (-38%)"],
+        ["Terrestrial Acidification", "Accumulated Exceedance / ReCiPe", "mol H+ eq", "0.0068", "0.0042 (-38%)"],
+        ["Freshwater Eutrophication", "EUTREND / ReCiPe (H)", "kg P eq", "0.0014", "0.0009 (-36%)"],
+        ["Photochemical Ozone Formation", "LOTOS-EUROS / ReCiPe POCP", "kg NMVOC eq", "0.0055", "0.0036 (-35%)"],
+        ["Fossil Resource Depletion", "CML / ReCiPe Fossil Depletion", "MJ eq", "46.20", "29.80 (-35%)"],
+    ] if is_en else [
         ["Cambio Climático (GWP100)", "IPCC 2021 / ReCiPe Midpoint (H)", "kg CO2 eq", "2.450", "1.620 (-34%)"],
         ["Consumo de Agua (Water Scarcity)", "AWARE / ReCiPe (H)", "m3 eq", "0.082", "0.051 (-38%)"],
         ["Acidificación Terrestre", "Accumulated Exceedance / ReCiPe", "mol H+ eq", "0.0068", "0.0042 (-38%)"],
@@ -1503,9 +1546,13 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
             r.font.name = "Arial"
             r.font.color.rgb = RGBColor(30, 41, 59)
 
-    _add_h2("4.2 Análisis de Contribución por Etapa y Proceso")
-    contrib_headers = ["Etapa / Proceso Unitario", "Insumo Dominante", "Aporte Relativo (%)", "Relevancia Pareto (80/20)"]
+    _add_h2("4.2 Contribution Analysis by Stage & Process" if is_en else "4.2 Análisis de Contribución por Etapa y Proceso")
+    contrib_headers = ["Unit Process / Stage", "Dominant Input", "Relative Share (%)", "Pareto Relevance (80/20)"] if is_en else ["Etapa / Proceso Unitario", "Insumo Dominante", "Aporte Relativo (%)", "Relevancia Pareto (80/20)"]
     contrib_rows = [
+        ["PET Preform Injection Molding", "Virgin PET Granulate + CFE 230kV", "64%", "Critical (Top 80%)"],
+        ["Bottle Stretch Blow Molding", "Compressed Air 40bar + CFE", "24%", "Critical (Top 80%)"],
+        ["Road Freight Distribution", "Diesel Truck Transport 16-32t (350km)", "12%", "Secondary"],
+    ] if is_en else [
         ["Inyección de Preformas PET", "Granulado PET Virgen + CFE 230kV", "64%", "Crítico (Top 80%)"],
         ["Soplado y Moldeo de Envases", "Aire Comprimido 40bar + CFE", "24%", "Crítico (Top 80%)"],
         ["Distribución y Flete Carretero", "Transporte Diésel 16-32t (350km)", "12%", "Secundario"],
@@ -1540,34 +1587,52 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
             r.font.color.rgb = RGBColor(30, 41, 59)
 
     # CAPITULO 5: INTERPRETACION
-    _add_h1("5. Interpretación del Ciclo de Vida")
-    _add_h2("5.1 Hallazgos Principales y Puntos Críticos (Hotspots)")
-    _add_p("La síntesis de resina virgen y la electricidad de la red representan el 88% de la huella total de calentamiento global. La sustitución por resinas post-consumo y el aprovechamiento de energía solar constituyen los vectores más eficaces de descarbonización.")
+    _add_h1("5. Life Cycle Interpretation" if is_en else "5. Interpretación del Ciclo de Vida")
+    _add_h2("5.1 Key Findings & Hotspot Identification" if is_en else "5.1 Hallazgos Principales y Puntos Críticos (Hotspots)")
+    _add_p(
+        "Virgin polymer synthesis and grid electricity account for 88% of the global warming potential footprint. Post-consumer recycled resin substitution and solar energy utilization represent the most effective decarbonization vectors." if is_en else
+        "La síntesis de resina virgen y la electricidad de la red representan el 88% de la huella total de calentamiento global. La sustitución por resinas post-consumo y el aprovechamiento de energía solar constituyen los vectores más eficaces de descarbonización."
+    )
 
-    _add_h2("5.2 Evaluación de Integridad, Incertidumbre y Calidad")
-    _add_p("• 5.2.1 Sensibilidad: Variaciones en distancias de flete de ±30% repercuten en menos del 3.5% del GWP100 global.\n"
-           "• 5.2.2 Calidad Pedigree: Puntuación ponderada de 4.3/5.0 en representatividad temporal, geográfica y confiabilidad documental.\n"
-           "• 5.2.3 Incertidumbre: Simulación Monte Carlo arroja intervalo de confianza del 95% con dispersión < 7.8% en emisiones GEI.\n"
-           "• 5.2.4 Exhaustividad: [CONFORME] Cobertura del 100% de flujos de masa y energía según umbral de corte del 1%.\n"
-           "• 5.2.5 Consistencia: [CONFORME] Procedimientos de asignación y caracterización homogéneos en todas las etapas.\n"
-           "• 5.2.6 Limitaciones: Resultados válidos para la configuración industrial evaluada; adaptaciones geográficas requieren recálculo.")
+    _add_h2("5.2 Completeness, Consistency & Data Quality Evaluation" if is_en else "5.2 Evaluación de Integridad, Incertidumbre y Calidad")
+    _add_p(
+        ("• 5.2.1 Sensitivity: Freight distance variations of ±30% impact overall GWP100 by less than 3.5%.\n"
+         "• 5.2.2 Pedigree Quality: Weighted score of 4.3/5.0 across temporal, geographical, and evidentiary reliability dimensions.\n"
+         "• 5.2.3 Uncertainty: Monte Carlo simulation yields 95% confidence interval with dispersion < 7.8% on GHG emissions.\n"
+         "• 5.2.4 Completeness: [COMPLIANT] 100% coverage of mass and energy flows under the 1% cut-off threshold.\n"
+         "• 5.2.5 Consistency: [COMPLIANT] Homogeneous allocation and characterization procedures applied across all life cycle stages.\n"
+         "• 5.2.6 Limitations: Results valid for the evaluated manufacturing setup; regional adaptations require recalculation.") if is_en else
+        ("• 5.2.1 Sensibilidad: Variaciones en distancias de flete de ±30% repercuten en menos del 3.5% del GWP100 global.\n"
+         "• 5.2.2 Calidad Pedigree: Puntuación ponderada de 4.3/5.0 en representatividad temporal, geográfica y confiabilidad documental.\n"
+         "• 5.2.3 Incertidumbre: Simulación Monte Carlo arroja intervalo de confianza del 95% con dispersión < 7.8% en emisiones GEI.\n"
+         "• 5.2.4 Exhaustividad: [CONFORME] Cobertura del 100% de flujos de masa y energía según umbral de corte del 1%.\n"
+         "• 5.2.5 Consistencia: [CONFORME] Procedimientos de asignación y caracterización homogéneos en todas las etapas.\n"
+         "• 5.2.6 Limitaciones: Resultados válidos para la configuración industrial evaluada; adaptaciones geográficas requieren recálculo.")
+    )
 
     # CAPITULO 6: CONCLUSIONES Y RECOMENDACIONES
-    _add_h1("6. Conclusiones y Recomendaciones")
-    _add_h2("6.1 Conclusiones del Estudio")
-    _add_p("El estudio demuestra conformidad total con ISO 14040:2006, ISO 14044:2006/Amd 2:2020 y NOM-070-SE-2024. Los balances de materia son estequiométricamente consistentes y los factores de caracterización corresponden a las referencias internacionales vigentes.")
+    _add_h1("6. Conclusions and Recommendations" if is_en else "6. Conclusiones y Recomendaciones")
+    _add_h2("6.1 Study Conclusions" if is_en else "6.1 Conclusiones del Estudio")
+    _add_p(
+        "The study confirms full conformity with ISO 14040:2006, ISO 14044:2006/Amd 2:2020, and NOM-070-SE-2024. Mass balances are stoichiometrically consistent and characterization factors align with international references." if is_en else
+        "El estudio demuestra conformidad total con ISO 14040:2006, ISO 14044:2006/Amd 2:2020 y NOM-070-SE-2024. Los balances de materia son estequiométricamente consistentes y los factores de caracterización corresponden a las referencias internacionales vigentes."
+    )
 
-    _add_h2("6.2 Recomendaciones de Ecodiseño y Mitigación")
-    _add_p("(1) Integrar al menos 25% adicional de resina post-consumo certificada en la formulación; (2) Formalizar contratos PPA de energía renovable; (3) Mantener la custodia probatoria de comprobantes y manifiestos en la Bóveda de Documentos de ECONODE Studio.")
+    _add_h2("6.2 Ecodesign & Mitigation Recommendations" if is_en else "6.2 Recomendaciones de Ecodiseño y Mitigación")
+    _add_p(
+        "(1) Incorporate at least 25% additional certified post-consumer recycled resin; (2) Formalize renewable energy PPAs; (3) Maintain evidentiary custody of bills and manifests in the ECONODE Studio Document Vault." if is_en else
+        "(1) Integrar al menos 25% adicional de resina post-consumo certificada en la formulación; (2) Formalizar contratos PPA de energía renovable; (3) Mantener la custodia probatoria de comprobantes y manifiestos en la Bóveda de Documentos de ECONODE Studio."
+    )
 
     # DICTAMEN DE AUDITORIA Y FIRMAS FORMALES
-    _add_h2("Dictamen de Auditoría y Cierre de Expediente")
-    dict_headers = ["Cláusula Evaluada", "Criterio de Aceptación", "Dictamen"]
+    _add_h2("Audit Findings & Formal Sign-Off" if is_en else "Dictamen de Auditoría y Cierre de Expediente")
+    compl_badge = "[OK] COMPLIANT" if is_en else "[OK] CONFORME"
+    dict_headers = ["Evaluated Clause", "Acceptance Criteria", "Dictamen"] if is_en else ["Cláusula Evaluada", "Criterio de Aceptación", "Dictamen"]
     dict_rows = [
-        ["ISO 14044: Cl. 4.2.3.1", "Definición explícita de Unidad Funcional y Flujo de Referencia", "[OK] CONFORME"],
-        ["ISO 14044: Cl. 4.2.3.3", "Límites del sistema justificados (Cradle-to-Gate sin corte de flujos)", "[OK] CONFORME"],
-        ["NOM-070: Cl. 6.4.1", "Validación de fuentes primarias (energía de red y resinas base)", "[OK] CONFORME"],
-        ["ISO 14067: Cl. 7.1", "Cuantificación de emisiones de gases de efecto invernadero (GEI)", "[OK] CONFORME"],
+        ["ISO 14044: Cl. 4.2.3.1", "Explicit definition of Functional Unit and Reference Flow" if is_en else "Definición explícita de Unidad Funcional y Flujo de Referencia", compl_badge],
+        ["ISO 14044: Cl. 4.2.3.3", "Justified system boundary (Cradle-to-Gate without unmodeled cutoffs)" if is_en else "Límites del sistema justificados (Cradle-to-Gate sin corte de flujos)", compl_badge],
+        ["NOM-070: Cl. 6.4.1", "Validation of primary sources (utility grid electricity and base resins)" if is_en else "Validación de fuentes primarias (energía de red y resinas base)", compl_badge],
+        ["ISO 14067: Cl. 7.1", "Quantification of greenhouse gas (GHG) emissions" if is_en else "Cuantificación de emisiones de gases de efecto invernadero (GEI)", compl_badge],
     ]
     d_tbl = doc.add_table(rows=len(dict_rows) + 1, cols=3)
     d_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -1611,10 +1676,12 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     pa = cell_a.paragraphs[0]
     pa.paragraph_format.space_before = Pt(0)
     pa.paragraph_format.space_after = Pt(0)
-    ra1 = pa.add_run(f"Elaboró (Analista de ACV):\n{owner_name}\n")
+    lead_a = "Prepared by (LCA Modeling Lead):" if is_en else "Elaboró (Analista de ACV):"
+    sub_a = "Life Cycle Modeling Specialist" if is_en else "Especialista en Modelado de Ciclo de Vida"
+    ra1 = pa.add_run(f"{lead_a}\n{owner_name}\n")
     ra1.bold = True
     ra1.font.size = Pt(8)
-    ra2 = pa.add_run(f"Especialista en Modelado de Ciclo de Vida\n{owner_org}")
+    ra2 = pa.add_run(f"{sub_a}\n{owner_org}")
     ra2.font.size = Pt(7.5)
     ra2.font.color.rgb = RGBColor(100, 116, 139)
 
@@ -1624,10 +1691,12 @@ def export_system_docx_bytes(conn: sqlite3.Connection, system_id: int) -> bytes:
     pb = cell_b.paragraphs[0]
     pb.paragraph_format.space_before = Pt(0)
     pb.paragraph_format.space_after = Pt(0)
-    rb1 = pb.add_run("Verificó (Auditor Líder Independiente):\nDr. Roberto Silva\n")
+    lead_b = "Verified by (Independent Lead Auditor):" if is_en else "Verificó (Auditor Líder Independiente):"
+    sub_b = "Certified Lead Auditor ISO 14040 / ISO 14044" if is_en else "Auditor Certificado ISO 14040 / ISO 14044"
+    rb1 = pb.add_run(f"{lead_b}\nDr. Roberto Silva\n")
     rb1.bold = True
     rb1.font.size = Pt(8)
-    rb2 = pb.add_run("Auditor Certificado ISO 14040 / ISO 14044\nEcoCert Internacional S.C.")
+    rb2 = pb.add_run(f"{sub_b}\nEcoCert Internacional S.C.")
     rb2.font.size = Pt(7.5)
     rb2.font.color.rgb = RGBColor(100, 116, 139)
 

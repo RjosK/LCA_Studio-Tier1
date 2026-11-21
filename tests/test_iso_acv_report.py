@@ -150,7 +150,7 @@ class TestIsoAcvReport(unittest.TestCase):
             r_docx = requests.get(f"http://127.0.0.1:{port}/api/systems/21/export/docx")
             self.assertEqual(r_docx.status_code, 200, f"Expected 200 but got {r_docx.status_code}: {r_docx.text}")
             self.assertEqual(r_docx.headers.get("Content-Type"), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-            self.assertIn("Reporte_ACV_NOM070_Sistema_21.docx", r_docx.headers.get("Content-Disposition", ""))
+            self.assertTrue(any(sub in r_docx.headers.get("Content-Disposition", "") for sub in ("Reporte_ACV_NOM070_Sistema_21.docx", "Reporte_ACV_NOM070_Sistema_21_ES.docx")))
             self.assertTrue(r_docx.content.startswith(b"PK\x03\x04"))
 
             # 2. Unauthenticated pdf export

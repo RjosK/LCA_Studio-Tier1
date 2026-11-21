@@ -55,9 +55,7 @@ class ApiKey:
         key_prefix = full_token[:16]
         hashed_secret = hashlib.sha256(full_token.encode("utf-8")).hexdigest()
         
-        now_iso = datetime.now(timezone.utc).isoformat()
-        if not now_iso.endswith("Z"):
-            now_iso += "Z"
+        now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
             
         key_id = f"key_{secrets.token_hex(12)}"
         assigned_scopes = scopes if scopes else [ApiScopeEnum.ALL.value]

@@ -60,20 +60,20 @@ def export_complete_expediente_use_case(conn: Optional[sqlite3.Connection] = Non
     return _exp_adapter.export_expediente_nom070_zip(conn, system_id)
 
 
-def export_pdf_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1) -> bytes:
+def export_pdf_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1, lang: str = "es") -> bytes:
     """Genera el documento PDF oficial formal del Sistema Producto (conforme a ISO 14044 / NOM-070-SE-2024)."""
     if conn is None:
         with get_active_db_connection() as c:
-            return _exp_adapter.export_system_pdf_bytes(c, system_id)
-    return _exp_adapter.export_system_pdf_bytes(conn, system_id)
+            return _exp_adapter.export_system_pdf_bytes(c, system_id, lang=lang)
+    return _exp_adapter.export_system_pdf_bytes(conn, system_id, lang=lang)
 
 
-def export_docx_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1) -> bytes:
+def export_docx_use_case(conn: Optional[sqlite3.Connection] = None, system_id: int = 1, lang: str = "es") -> bytes:
     """Genera el documento Word (.docx) editable formal del Sistema Producto (conforme a ISO 14044 / NOM-070-SE-2024)."""
     if conn is None:
         with get_active_db_connection() as c:
-            return _exp_adapter.export_system_docx_bytes(c, system_id)
-    return _exp_adapter.export_system_docx_bytes(conn, system_id)
+            return _exp_adapter.export_system_docx_bytes(c, system_id, lang=lang)
+    return _exp_adapter.export_system_docx_bytes(conn, system_id, lang=lang)
 
 
 # Alias de conveniencia y compatibilidad

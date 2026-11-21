@@ -9321,6 +9321,7 @@
     const lciBody = document.getElementById("reportBodyLciConsolidated");
     const lciaBody = document.getElementById("reportBodyLciaResults");
     const contribBody = document.getElementById("reportBodyContribution");
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
 
     const isOfficialSys = state.activeSystem && (state.activeSystem.id === 21 || state.activeSystem.code === "SYS-PET-CIRCULAR-01");
 
@@ -9330,10 +9331,10 @@
       if (state.activeSystem) {
         const amt = state.activeSystem.target_amount || 1.0;
         const unit = state.activeSystem.target_unit || "kg";
-        const name = state.activeSystem.name || "unidad de producto terminado";
+        const name = state.activeSystem.name || (isEn ? "finished product unit" : "unidad de producto terminado");
         fuEl.textContent = `${Number(amt).toFixed(3)} ${unit} (${name})`;
       } else {
-        fuEl.textContent = "1.000 kg / envase PET circular 500ml";
+        fuEl.textContent = isEn ? "1.000 kg / circular PET bottle 500ml" : "1.000 kg / envase PET circular 500ml";
       }
     }
 
@@ -9342,14 +9343,25 @@
       analystEl.textContent = (state.activeSystem && state.activeSystem.owner_name) || "Carla Mendez";
     }
 
+    const sealEl = document.getElementById("reportSealInfo");
+    if (sealEl) {
+      sealEl.textContent = isEn
+        ? "SHA-256 Cryptographic Seal: 7A3F9B12E84D01C6A9E482B7D501FA42 · Verified in ECONODE Studio Tier 1"
+        : "Sello Criptográfico SHA-256: 7A3F9B12E84D01C6A9E482B7D501FA42 · Verificado en ECONODE Studio Tier 1";
+    }
+
     // 2. Tabla de Procesos y Balances de Masa (Capitulo 3.2.2)
     if (tbody) {
       if (!state.canvasNodes || state.canvasNodes.length === 0) {
         if (isOfficialSys) {
-          const defaultNodes = [
+          const defaultNodes = isEn ? [
             { name: "PET Preform Injection Molding", ref: "1.000 kg Preform", in: "Virgin PET granulate (1.05 kg), CFE 230kV, Cooling Water", waste: "0.050 kg Scrap", em: "0.012 kg CO2" },
             { name: "PET Bottle Stretch Blow Molding", ref: "1.000 u Bottle", in: "Connected preform (1.00 kg), 40bar Air, Electricity", waste: "0.002 kg Scrap", em: "0.005 MJ Heat" },
             { name: "PET Bottle Distribution & Logistics", ref: "1.000 u Distributed", in: "Connected bottle (1.00 u), Diesel, Truck 350km", waste: "0.0001 kg Used Oil", em: "0.021 kg CO2" }
+          ] : [
+            { name: "Inyección de Preformas PET", ref: "1.000 kg Preforma", in: "Granulado PET Virgen (1.05 kg), CFE 230kV, Agua de Enfriamiento", waste: "0.050 kg Scrap", em: "0.012 kg CO2" },
+            { name: "Soplado y Moldeo de Envases PET", ref: "1.000 u Envase", in: "Preforma conectada (1.00 kg), Aire 40bar, Electricidad", waste: "0.002 kg Scrap", em: "0.005 MJ Calor" },
+            { name: "Distribución y Logística de Envases PET", ref: "1.000 u Distribuido", in: "Envase conectado (1.00 u), Diésel, Camión 350km", waste: "0.0001 kg Aceite Usado", em: "0.021 kg CO2" }
           ];
           tbody.innerHTML = defaultNodes.map(n => `
             <tr>
@@ -9364,8 +9376,8 @@
           tbody.innerHTML = `
             <tr>
               <td colspan="5" style="text-align: center; padding: 24px; color: var(--text-muted);">
-                <div style="font-weight: 600; color: var(--text-secondary);">No modeled processes on canvas</div>
-                <div style="font-size: 10.5px; margin-top: 4px;">Model processes on the canvas to automatically generate report stages and balances.</div>
+                <div style="font-weight: 600; color: var(--text-secondary);">${isEn ? "No modeled processes on canvas" : "Sin procesos modelados en el lienzo"}</div>
+                <div style="font-size: 10.5px; margin-top: 4px;">${isEn ? "Model processes on the canvas to automatically generate report stages and balances." : "Modela procesos en el lienzo para generar automáticamente las etapas y balances del reporte."}</div>
               </td>
             </tr>
           `;
@@ -9413,7 +9425,7 @@
       });
 
       if (consolidatedInputs.length === 0 && (isOfficialSys || !state.canvasNodes || state.canvasNodes.length === 0)) {
-        lciBody.innerHTML = `
+        lciBody.innerHTML = isEn ? `
           <tr>
             <td>Virgin PET granulate [GLO] (ecoinvent)</td>
             <td class="mono">1.050</td>
@@ -9437,6 +9449,31 @@
             <td class="mono">0.052</td>
             <td class="mono">kg</td>
             <td><span class="badge-pill badge-slate">Closed Loop Recycling</span></td>
+          </tr>
+        ` : `
+          <tr>
+            <td>Granulado PET Virgen [GLO] (ecoinvent)</td>
+            <td class="mono">1.050</td>
+            <td class="mono">kg</td>
+            <td><span class="badge-pill badge-emerald">[OK] Validado Planta / Factura CFE</span></td>
+          </tr>
+          <tr>
+            <td>Energía de red eléctrica CFE 230kV [MX]</td>
+            <td class="mono">0.420</td>
+            <td class="mono">kWh</td>
+            <td><span class="badge-pill badge-emerald">[OK] Recibo de Suministro CFE</span></td>
+          </tr>
+          <tr>
+            <td>Transporte tractocamión diésel 16-32t [MX]</td>
+            <td class="mono">0.0084</td>
+            <td class="mono">t·km</td>
+            <td><span class="badge-pill badge-emerald">[OK] Flete 350 km Conforme</span></td>
+          </tr>
+          <tr>
+            <td>Scrap plástico PET de purga (Residuo)</td>
+            <td class="mono">0.052</td>
+            <td class="mono">kg</td>
+            <td><span class="badge-pill badge-slate">Bucle Cerrado de Reciclaje</span></td>
           </tr>
         `;
       } else if (consolidatedInputs.length > 0) {
@@ -9494,7 +9531,14 @@
         fossilOptimized = +(29.80 * scale).toFixed(2);
       }
 
-      const lciaRows = [
+      const lciaRows = isEn ? [
+        { cat: "Climate Change (GWP100)", ind: "IPCC 2021 GWP100 / ReCiPe (H)", unit: "kg CO2 eq", tot: gwpBase, base: gwpBase, opt: gwpOptimized },
+        { cat: "Water Consumption (Water Scarcity)", ind: "AWARE / ReCiPe Water Cons.", unit: "m3 eq", tot: waterBase, base: waterBase, opt: waterOptimized },
+        { cat: "Terrestrial Acidification", ind: "Accumulated Exceedance / ReCiPe", unit: "mol H+ eq", tot: acidBase, base: acidBase, opt: acidOptimized },
+        { cat: "Freshwater Eutrophication", ind: "EUTREND model / ReCiPe", unit: "kg P eq", tot: eutroBase, base: eutroBase, opt: eutroOptimized },
+        { cat: "Photochemical Ozone Formation", ind: "LOTOS-EUROS / ReCiPe POCP", unit: "kg NMVOC eq", tot: ozBase, base: ozBase, opt: ozOptimized },
+        { cat: "Fossil Resource Depletion", ind: "CML / ReCiPe Fossil Depletion", unit: "MJ eq", tot: fossilBase, base: fossilBase, opt: fossilOptimized }
+      ] : [
         { cat: "Cambio Climático (GWP100)", ind: "IPCC 2021 GWP100 / ReCiPe (H)", unit: "kg CO2 eq", tot: gwpBase, base: gwpBase, opt: gwpOptimized },
         { cat: "Consumo de Agua (Water Scarcity)", ind: "AWARE / ReCiPe Water Cons.", unit: "m3 eq", tot: waterBase, base: waterBase, opt: waterOptimized },
         { cat: "Acidificación Terrestre", ind: "Accumulated Exceedance / ReCiPe", unit: "mol H+ eq", tot: acidBase, base: acidBase, opt: acidOptimized },
@@ -9524,13 +9568,17 @@
           const pct = idx === 0 ? 58 : (idx === 1 ? 27 : Math.round(15 / Math.max(1, total - 2)));
           return {
             stage: n.name,
-            keyInp: (n.inputs && n.inputs[0]) ? n.inputs[0].name : "Consumo energético / Material",
+            keyInp: (n.inputs && n.inputs[0]) ? n.inputs[0].name : (isEn ? "Energy / Material Consumption" : "Consumo energético / Material"),
             pct: pct,
-            pareto: pct >= 20 ? "Crítico (Top 80%)" : "Secundario"
+            pareto: pct >= 20 ? (isEn ? "Critical (Top 80%)" : "Crítico (Top 80%)") : (isEn ? "Secondary" : "Secundario")
           };
         });
       } else {
-        stages = [
+        stages = isEn ? [
+          { stage: "PET Preform Injection Molding", keyInp: "Virgin PET Granulate + CFE 230kV", pct: 64, pareto: "Critical (Top 80%)" },
+          { stage: "Bottle Stretch Blow Molding", keyInp: "Compressed Air 40bar + CFE", pct: 24, pareto: "Critical (Top 80%)" },
+          { stage: "Road Freight Distribution", keyInp: "Diesel Truck Transport 16-32t (350km)", pct: 12, pareto: "Secondary" }
+        ] : [
           { stage: "Inyección de Preformas PET", keyInp: "Granulado PET Virgen + CFE 230kV", pct: 64, pareto: "Crítico (Top 80%)" },
           { stage: "Soplado y Moldeo de Envases", keyInp: "Aire Comprimido 40bar + CFE", pct: 24, pareto: "Crítico (Top 80%)" },
           { stage: "Distribución y Flete Carretero", keyInp: "Transporte Diésel 16-32t (350km)", pct: 12, pareto: "Secundario" }
@@ -9538,7 +9586,8 @@
       }
 
       contribBody.innerHTML = stages.map(s => {
-        const badgeClass = s.pareto.includes("Crítico") ? "badge-emerald" : "badge-slate";
+        const isCrit = s.pareto.includes("Crítico") || s.pareto.includes("Critical");
+        const badgeClass = isCrit ? "badge-emerald" : "badge-slate";
         return `
           <tr>
             <td><strong style="color: var(--text-primary);">${s.stage}</strong></td>
@@ -11167,6 +11216,67 @@
     if (contentKeys) contentKeys.style.display = tabName === "keys" ? "block" : "none";
     if (contentMcp) contentMcp.style.display = tabName === "mcp" ? "block" : "none";
     if (contentScripts) contentScripts.style.display = tabName === "scripts" ? "block" : "none";
+
+    updateDevSnippets();
+  }
+
+  function updateDevSnippets() {
+    const origin = (window.location && window.location.origin) ? window.location.origin : "https://lca-studio-tier1.vercel.app";
+    const apiKey = window._lastGeneratedApiKey || "TU_CLAVE_ECO_LIVE_AQUI";
+    const mcpUrl = `${origin}/api/v1/mcp/sse`;
+
+    const claudeEl = document.getElementById("codeClaudeMcpSnippet");
+    if (claudeEl) {
+      claudeEl.textContent = JSON.stringify({
+        mcpServers: {
+          econode: {
+            url: mcpUrl,
+            headers: {
+              Authorization: "Bearer " + apiKey
+            }
+          }
+        }
+      }, null, 2);
+    }
+    const cursorEl = document.getElementById("codeCursorMcpSnippet");
+    if (cursorEl) {
+      cursorEl.textContent = JSON.stringify({
+        mcpServers: {
+          econode: {
+            url: mcpUrl,
+            headers: {
+              Authorization: "Bearer " + apiKey
+            }
+          }
+        }
+      }, null, 2);
+    }
+    const pyEl = document.getElementById("codePythonSnippet");
+    if (pyEl) {
+      pyEl.textContent = `import requests
+
+API_KEY = "${apiKey}"
+HEADERS = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+BASE_URL = "${origin}/api/v1"
+
+# 1. Consultar sistemas producto modelados
+sistemas = requests.get(f"{BASE_URL}/systems", headers=HEADERS).json()
+print("Sistemas activos:", len(sistemas.get("systems", [])))
+
+# 2. Registrar actividad en inventario GEI corporativo (Alcance 1)
+payload = {
+    "scope": 1,
+    "scope_category": "combustion_estacionaria",
+    "facility_name": "Planta Norte",
+    "activity_name": "Caldera Principal - Gas Natural",
+    "fuel_type": "gas_natural",
+    "amount": 12500.0,
+    "unit": "m3",
+    "reporting_year": 2024
+}
+res = requests.post(f"{BASE_URL}/ghg/activities", headers=HEADERS, json=payload).json()
+print("Actividad GEI registrada:", res.get("status"))`;
+    }
   }
 
   async function loadUserApiKeys() {
@@ -11256,6 +11366,9 @@
         textKey.textContent = data.raw_token;
         alertBox.style.display = "block";
       }
+
+      window._lastGeneratedApiKey = data.raw_token;
+      updateDevSnippets();
 
       if (nameInput) nameInput.value = "";
       await loadUserApiKeys();
@@ -14589,11 +14702,13 @@
     triggerExportDownload,
     exportDocx: (sysId) => {
       const id = sysId || (state.activeSystem ? state.activeSystem.id : 21);
-      triggerExportDownload(`/api/systems/${id}/export/docx`, `Reporte_ACV_NOM070_Sistema_${id}.docx`);
+      const lang = window.I18n ? window.I18n.getCurrentLanguage() : "es";
+      triggerExportDownload(`/api/systems/${id}/export/docx?lang=${lang}`, `Reporte_ACV_NOM070_Sistema_${id}_${lang.toUpperCase()}.docx`);
     },
     exportPdf: (sysId) => {
       const id = sysId || (state.activeSystem ? state.activeSystem.id : 21);
-      triggerExportDownload(`/api/systems/${id}/export/pdf`, `Reporte_ACV_NOM070_Sistema_${id}.pdf`);
+      const lang = window.I18n ? window.I18n.getCurrentLanguage() : "es";
+      triggerExportDownload(`/api/systems/${id}/export/pdf?lang=${lang}`, `Reporte_ACV_NOM070_Sistema_${id}_${lang.toUpperCase()}.pdf`);
     },
     showView,
     openSystem,

@@ -14,6 +14,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/mcp/(.*)", "destination": "/api/index.py?__slug=mcp/$1" },
     { "source": "/api/:match*", "destination": "/api/index.py?__slug=:match*" },
     { "source": "/css/(.*)", "destination": "/css/$1" },
     { "source": "/js/(.*)", "destination": "/js/$1" },

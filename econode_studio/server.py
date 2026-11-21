@@ -324,7 +324,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         query = urllib.parse.parse_qs(parsed.query)
 
         # Manejo de Endpoint SSE de MCP Remoto
-        if path in ("/mcp/sse", "/api/v1/mcp/sse"):
+        if path in ("/mcp/sse", "/api/v1/mcp/sse", "/api/mcp/sse", "/mcp"):
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream; charset=utf-8")
             self.send_header("Cache-Control", "no-cache")
@@ -924,16 +924,20 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                         })
                         self.wfile.write(zip_bytes)
                     elif fmt in ("pdf", "report_pdf"):
-                        pdf_bytes = export_system_pdf_bytes(conn, sys_id)
+                        lang = (query.get("lang") or ["es"])[0].lower()
+                        pdf_bytes = export_system_pdf_bytes(conn, sys_id, lang=lang)
+                        filename = f"LCA_Report_ISO14040_System_{sys_id}_EN.pdf" if lang == "en" else f"Reporte_ACV_NOM070_Sistema_{sys_id}_ES.pdf"
                         self._set_headers(200, "application/pdf", {
-                            "Content-Disposition": f'attachment; filename="Reporte_ACV_NOM070_Sistema_{sys_id}.pdf"',
+                            "Content-Disposition": f'attachment; filename="{filename}"',
                             "Content-Length": str(len(pdf_bytes))
                         })
                         self.wfile.write(pdf_bytes)
                     elif fmt in ("docx", "word", "report_docx"):
-                        docx_bytes = export_system_docx_bytes(conn, sys_id)
+                        lang = (query.get("lang") or ["es"])[0].lower()
+                        docx_bytes = export_system_docx_bytes(conn, sys_id, lang=lang)
+                        filename = f"LCA_Report_ISO14040_System_{sys_id}_EN.docx" if lang == "en" else f"Reporte_ACV_NOM070_Sistema_{sys_id}_ES.docx"
                         self._set_headers(200, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", {
-                            "Content-Disposition": f'attachment; filename="Reporte_ACV_NOM070_Sistema_{sys_id}.docx"',
+                            "Content-Disposition": f'attachment; filename="{filename}"',
                             "Content-Length": str(len(docx_bytes))
                         })
                         self.wfile.write(docx_bytes)
