@@ -199,7 +199,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
 
         elif name == "econode_get_system":
             sys_id = int(arguments.get("system_id", 0))
-            system = get_system_canvas_use_case(sys_id)
+            system = get_system_canvas_use_case(system_id=sys_id)
             if not system:
                 return {
                     "isError": True,
@@ -216,7 +216,8 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
 
         elif name == "econode_calculate_lcia":
             sys_id = int(arguments.get("system_id", 0))
-            report = compute_epd_report_use_case(sys_id)
+            standard = str(arguments.get("standard", "EN15804_A2"))
+            report = compute_epd_report_use_case(system_id=sys_id, standard=standard)
             return {
                 "content": [
                     {
