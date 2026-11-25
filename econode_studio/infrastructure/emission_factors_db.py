@@ -53,13 +53,39 @@ def ensure_ef_tables(conn: Any) -> None:
         return
     try:
         cur = conn.cursor()
-        cur.execute("SELECT 1 FROM tbl_ghg_inventories LIMIT 1;")
-        cur.fetchone()
+        table_exists = False
+        try:
+            cur.execute("SELECT 1 FROM information_schema.tables WHERE table_name = 'tbl_ghg_inventories';")
+            if cur.fetchone():
+                table_exists = True
+        except Exception:
+            try:
+                if hasattr(conn, "rollback"):
+                    conn.rollback()
+            except Exception:
+                pass
+            cur = conn.cursor()
+            cur.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='tbl_ghg_inventories';")
+            if cur.fetchone():
+                table_exists = True
+
+        if table_exists:
+            _EF_TABLES_ENSURED = True
+            return
+
+        _init_emission_factors_schema_on_conn(conn)
+        try:
+            from .seed_emission_factors import seed_emission_factors
+            seed_emission_factors(force_reload=False, conn=conn)
+        except Exception:
+            pass
+        if hasattr(conn, "commit"):
+            conn.commit()
         _EF_TABLES_ENSURED = True
     except Exception:
         try:
-            _init_emission_factors_schema_on_conn(conn)
-            _EF_TABLES_ENSURED = True
+            if hasattr(conn, "rollback"):
+                conn.rollback()
         except Exception:
             pass
 

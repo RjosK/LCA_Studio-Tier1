@@ -192,7 +192,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                             "total_count": len(all_systems),
                             "returned_count": len(systems),
                             "systems": systems
-                        }, ensure_ascii=False, indent=2)
+                        }, ensure_ascii=False, indent=2, default=str)
                     }
                 ]
             }
@@ -209,7 +209,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(system, ensure_ascii=False, indent=2)
+                        "text": json.dumps(system, ensure_ascii=False, indent=2, default=str)
                     }
                 ]
             }
@@ -221,7 +221,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(report, ensure_ascii=False, indent=2)
+                        "text": json.dumps(report, ensure_ascii=False, indent=2, default=str)
                     }
                 ]
             }
@@ -235,7 +235,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(factors, ensure_ascii=False, indent=2)
+                        "text": json.dumps(factors, ensure_ascii=False, indent=2, default=str)
                     }
                 ]
             }
@@ -273,7 +273,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                             "message": f"Actividad '{entry_data['activity_name']}' registrada en Alcance {entry_data['scope']}.",
                             "inventory_id": inv_id,
                             "entry": created_entry
-                        }, ensure_ascii=False, indent=2)
+                        }, ensure_ascii=False, indent=2, default=str)
                     }
                 ]
             }
@@ -284,7 +284,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                 invs = list_inventories_use_case()
                 if not invs:
                     return {
-                        "content": [{"type": "text", "text": json.dumps({"inventories": []})}]
+                        "content": [{"type": "text", "text": json.dumps({"inventories": []}, default=str)}]
                     }
                 inv_id = invs[0]["id"]
 
@@ -293,7 +293,7 @@ def execute_tool(name: str, arguments: Dict[str, Any], user: Dict[str, Any]) -> 
                 "content": [
                     {
                         "type": "text",
-                        "text": json.dumps(summary, ensure_ascii=False, indent=2)
+                        "text": json.dumps(summary, ensure_ascii=False, indent=2, default=str)
                     }
                 ]
             }
