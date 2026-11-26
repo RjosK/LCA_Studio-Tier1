@@ -132,6 +132,10 @@ except (ImportError, ValueError):
         save_epd_metadata_use_case,
         export_openepd_json_use_case
     )
+try:
+    from waste_engine import get_waste_engine
+except (ImportError, ValueError):
+    from econode_studio.waste_engine import get_waste_engine
 from infrastructure import (
     get_active_db_connection,
     get_configured_client_id,
@@ -354,6 +358,33 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         # 1. API Endpoints
         if path.startswith("/api"):
+            # Endpoints de Modelado de Residuos (WasteTools 2026 / Doka) - Tier 1
+            if path == "/api/waste/categories":
+                engine = get_waste_engine()
+                self._send_json({
+                    "status": "success",
+                    "categories": engine.get_categories()
+                })
+                return
+
+            elif path == "/api/waste/materials":
+                engine = get_waste_engine()
+                cat = query.get("category", [None])[0]
+                q = query.get("search", [None])[0]
+                self._send_json({
+                    "status": "success",
+                    "materials": engine.get_materials(category=cat, search=q)
+                })
+                return
+
+            elif path == "/api/waste/technologies":
+                engine = get_waste_engine()
+                self._send_json({
+                    "status": "success",
+                    "technologies": engine.technologies
+                })
+                return
+
             conn = get_active_db_connection()
             try:
                 # Listar Claves de API del usuario autenticado
@@ -971,6 +1002,37 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self._send_json(response_rpc)
             else:
                 self._set_headers(204)
+            return
+
+        # Endpoint de Calculo de Fin de Vida (WasteTools 2026 / Doka) - Tier 1
+        if path == "/api/waste/calculate":
+            try:
+                engine = get_waste_engine()
+                mat_id = body.get("material_id")
+                custom_props = body.get("custom_properties")
+                mass_kg = float(body.get("mass_kg", 1.0))
+                tech = body.get("technology", "mswi")
+                overrides = body.get("tech_overrides")
+                trans_km = float(body.get("transport_km", 20.0))
+                grid_ghg = float(body.get("grid_ghg_factor", 0.420))
+                heat_ghg = float(body.get("heat_ghg_factor", 0.065))
+
+                res = engine.calculate(
+                    material_id=mat_id,
+                    custom_properties=custom_props,
+                    mass_kg=mass_kg,
+                    technology=tech,
+                    tech_overrides=overrides,
+                    transport_km=trans_km,
+                    grid_ghg_factor=grid_ghg,
+                    heat_ghg_factor=heat_ghg
+                )
+                self._send_json({
+                    "status": "success",
+                    "result": res
+                })
+            except Exception as e:
+                self._send_error_json(f"Error en calculo de residuo: {e}", 400)
             return
 
         conn = get_active_db_connection()

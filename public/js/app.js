@@ -354,7 +354,8 @@
     catalog: document.getElementById("viewCatalog"),
     report: document.getElementById("viewReport"),
     audit: document.getElementById("viewAudit"),
-    ghg: document.getElementById("viewGhg")
+    ghg: document.getElementById("viewGhg"),
+    waste: document.getElementById("viewWaste")
   };
 
   function showView(viewName) {
@@ -363,8 +364,12 @@
     }
     if (!views[viewName]) return;
 
+    if (viewName === "waste") {
+      initWasteToolsData();
+    }
+
     // Protección de rutas: si intenta entrar a Studio sin autenticación, enviar a login
-    const isStudioRoute = ["dashboard", "canvas", "catalog", "report", "audit", "ghg"].includes(viewName);
+    const isStudioRoute = ["dashboard", "canvas", "catalog", "report", "audit", "ghg", "waste"].includes(viewName);
     if (isStudioRoute && !state.isAuthenticated) {
       showNotification("Por favor inicia sesión con tu perfil para ingresar al Studio.");
       viewName = "login";
@@ -14684,8 +14689,285 @@ print("Actividad GEI registrada:", res.get("status"))`;
     }
   }
 
+  // =============================================================================
+  // MODULO DE FIN DE VIDA Y TRATAMIENTO DE RESIDUOS (WASTETOOLS 2026 / DOKA)
+  // =============================================================================
+  let wasteMaterialsCache = [];
+  let lastWasteCalculationResult = null;
+
+  const tWaste = (key, fallback) => (window.I18n ? window.I18n.t(key, fallback) : fallback);
+
+  function openWasteToolsModal() {
+    showView("waste");
+  }
+
+  function closeWasteToolsModal() {
+    showView("dashboard");
+  }
+
+  async function initWasteToolsData() {
+    try {
+      const catSelect = document.getElementById("wasteCategorySelect");
+      if (catSelect && catSelect.options.length <= 1) {
+        const resCats = await fetch("/api/waste/categories");
+        const dataCats = await resCats.json();
+        if (dataCats.status === "success" && dataCats.categories) {
+          dataCats.categories.forEach(cat => {
+            const opt = document.createElement("option");
+            opt.value = cat;
+            opt.textContent = cat;
+            catSelect.appendChild(opt);
+          });
+        }
+      }
+      await loadWasteMaterials();
+    } catch (err) {
+      console.error("Error al inicializar WasteTools:", err);
+    }
+  }
+
+  async function loadWasteMaterials(category = "") {
+    try {
+      const matSelect = document.getElementById("wasteMaterialSelect");
+      if (!matSelect) return;
+      matSelect.innerHTML = `<option value="">${tWaste("waste.search_placeholder", "Cargando residuos...")}</option>`;
+
+      const url = category ? `/api/waste/materials?category=${encodeURIComponent(category)}` : "/api/waste/materials";
+      const res = await fetch(url);
+      const data = await res.json();
+      if (data.status === "success" && data.materials) {
+        wasteMaterialsCache = data.materials;
+        matSelect.innerHTML = "";
+        data.materials.forEach((m, idx) => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = `${m.name} (${m.category})`;
+          if (idx === 0) opt.selected = true;
+          matSelect.appendChild(opt);
+        });
+        updateWasteMaterialBadges();
+      }
+    } catch (err) {
+      console.error("Error al cargar materiales de residuos:", err);
+    }
+  }
+
+  function updateWasteMaterialBadges() {
+    const matSelect = document.getElementById("wasteMaterialSelect");
+    if (!matSelect || !matSelect.value) return;
+    const mat = wasteMaterialsCache.find(m => m.id === matSelect.value);
+    if (!mat) return;
+
+    const hu = mat.net_heating_value_mj_kg != null ? Number(mat.net_heating_value_mj_kg).toFixed(1) : "--";
+    const h2o = mat.water_content != null ? (Number(mat.water_content) * 100).toFixed(1) : "--";
+    const c = mat.carbon_content != null ? (Number(mat.carbon_content) * 100).toFixed(1) : "--";
+    const bio = mat.biogenic_carbon_share != null ? (Number(mat.biogenic_carbon_share) * 100).toFixed(0) : "--";
+    const degrad = mat.degradability_100a != null ? Number(mat.degradability_100a).toFixed(2) : "--";
+
+    const bHu = document.getElementById("badgeWasteHu");
+    const bH2O = document.getElementById("badgeWasteH2O");
+    const bC = document.getElementById("badgeWasteC");
+    const bBio = document.getElementById("badgeWasteBio");
+    const bDegrad = document.getElementById("badgeWasteDegrad");
+
+    if (bHu) bHu.textContent = `PCI (Hu): ${hu} MJ/kg`;
+    if (bH2O) bH2O.textContent = `Humedad: ${h2o}%`;
+    if (bC) bC.textContent = `Carbono (C): ${c}%`;
+    if (bBio) bBio.textContent = `Biogenico: ${bio}%`;
+    if (bDegrad) bDegrad.textContent = `Degradabilidad 100a: ${degrad}`;
+  }
+
+  async function executeWasteCalculation() {
+    try {
+      const isPredefined = document.getElementById("btnWasteModePredefined")?.classList.contains("active");
+      const tech = document.getElementById("wasteTechSelect")?.value || "mswi";
+      const mass = parseFloat(document.getElementById("inputWasteMass")?.value || "100") || 100;
+      const transportKm = parseFloat(document.getElementById("inputWasteTransport")?.value || "20") || 20;
+
+      let payload = {
+        technology: tech,
+        mass_kg: mass,
+        transport_km: transportKm
+      };
+
+      if (isPredefined) {
+        const matId = document.getElementById("wasteMaterialSelect")?.value;
+        if (!matId) {
+          showNotification(tWaste("waste.select_material_req", "Selecciona un material de residuo"));
+          return;
+        }
+        payload.material_id = matId;
+      } else {
+        payload.custom_properties = {
+          Hu: parseFloat(document.getElementById("inputCustomHu")?.value || "15"),
+          C: parseFloat(document.getElementById("inputCustomC")?.value || "0.45"),
+          biogenic_c_share: parseFloat(document.getElementById("inputCustomBio")?.value || "0.3"),
+          H2O: parseFloat(document.getElementById("inputCustomH2O")?.value || "0.2"),
+          ash: parseFloat(document.getElementById("inputCustomAsh")?.value || "0.05"),
+          N: parseFloat(document.getElementById("inputCustomN")?.value || "0.01"),
+          S: parseFloat(document.getElementById("inputCustomS")?.value || "0.002"),
+          Cl: parseFloat(document.getElementById("inputCustomCl")?.value || "0.005")
+        };
+      }
+
+      const btn = document.getElementById("btnCalculateWaste");
+      if (btn) btn.disabled = true;
+
+      const res = await fetch("/api/waste/calculate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (btn) btn.disabled = false;
+
+      if (data.status !== "success") {
+        showNotification(data.message || "Error al calcular el tratamiento de residuo");
+        return;
+      }
+
+      lastWasteCalculationResult = data;
+      renderWasteResults(data);
+    } catch (err) {
+      console.error("Error al calcular residuo:", err);
+      showNotification("Error de conexion al procesar el residuo: " + err.message);
+      const btn = document.getElementById("btnCalculateWaste");
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function renderWasteResults(res) {
+    const epd = res.epd_modules_gwp || {};
+    const avoided = res.avoided_burdens || {};
+    const solids = res.solid_residues || {};
+
+    const container = document.getElementById("wasteResultsContainer");
+    if (container) container.style.display = "block";
+
+    const elNet = document.getElementById("resWasteNetGWP");
+    const elC4 = document.getElementById("resWasteC4GWP");
+    const elC4Sub = document.getElementById("resWasteC4Sub");
+    const elModD = document.getElementById("resWasteModDGWP");
+    const elC2C3 = document.getElementById("resWasteC2C3GWP");
+
+    if (elNet) elNet.textContent = `${epd.Net_Total_GWP > 0 ? "+" : ""}${Number(epd.Net_Total_GWP).toFixed(2)} kg CO2e`;
+    if (elC4) elC4.textContent = `${epd.C4_final_disposal > 0 ? "+" : ""}${Number(epd.C4_final_disposal).toFixed(2)} kg CO2e`;
+    if (elC4Sub) {
+      elC4Sub.textContent = `Fosil: ${Number(epd.C4_fossil_gwp).toFixed(2)} | Biogenico: ${Number(epd.C4_biogenic_gwp).toFixed(2)}`;
+    }
+    if (elModD) elModD.textContent = `${Number(epd.Module_D_avoided_burdens).toFixed(2)} kg CO2e`;
+    const c2c3Total = Number((epd.C2_transport_to_treatment || 0) + (epd.C3_waste_processing || 0)).toFixed(2);
+    if (elC2C3) elC2C3.textContent = `+${c2c3Total} kg CO2e`;
+
+    const elEnergy = document.getElementById("resWasteEnergyList");
+    if (elEnergy) {
+      elEnergy.innerHTML = `
+        <li>Electricidad exportada: <strong>${Number(avoided.gross_electricity_mj || 0).toFixed(2)} MJ</strong> (${Number(avoided.gwp_avoided_electricity || 0).toFixed(2)} kg CO2e evitados)</li>
+        <li>Calor util exportado: <strong>${Number(avoided.gross_heat_mj || 0).toFixed(2)} MJ</strong> (${Number(avoided.gwp_avoided_heat || 0).toFixed(2)} kg CO2e evitados)</li>
+      `;
+    }
+
+    const elSolids = document.getElementById("resWasteSolidsList");
+    if (elSolids) {
+      elSolids.innerHTML = `
+        <li>Escoria de fondo (Bottom ash): <strong>${Number(solids.bottom_ash_kg || 0).toFixed(2)} kg</strong></li>
+        <li>Cenizas volantes (Fly ash): <strong>${Number(solids.fly_ash_kg || 0).toFixed(2)} kg</strong></li>
+        <li>Chatarra de hierro recuperada: <strong>${Number(avoided.recovered_iron_scrap_kg || 0).toFixed(2)} kg</strong></li>
+      `;
+    }
+
+    const btnExport = document.getElementById("btnExportWasteJson");
+    const btnInsert = document.getElementById("btnInsertWasteToCanvas");
+    if (btnExport) btnExport.style.display = "inline-flex";
+    if (btnInsert) btnInsert.style.display = "inline-flex";
+  }
+
+  function exportWasteCalculationJson() {
+    if (!lastWasteCalculationResult) return;
+    const str = JSON.stringify(lastWasteCalculationResult, null, 2);
+    const blob = new Blob([str], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Fin_de_Vida_WasteTools_${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function insertWasteTreatmentNodeToCanvas() {
+    if (!lastWasteCalculationResult) return;
+    const input = lastWasteCalculationResult.input_summary || {};
+    const epd = lastWasteCalculationResult.epd_modules_gwp || {};
+    const procName = `Fin de Vida: ${input.material_name} (${input.technology_name})`;
+    
+    if (typeof addNodeToCanvas === "function") {
+      const inputs = [
+        { name: input.material_name, amount: input.mass_kg, unit: "kg", is_unit: true },
+        { name: `Transporte EoL (${input.transport_km} km)`, amount: Number((input.mass_kg * input.transport_km / 1000).toFixed(3)), unit: "tkm", is_unit: false }
+      ];
+      const outputs = [
+        { name: `Tratamiento: ${input.material_name}`, amount: input.mass_kg, unit: "kg", is_reference: true },
+        { name: "GWP Neto (C1-C4 + D)", amount: epd.Net_Total_GWP, unit: "kg CO2e", is_elementary: true }
+      ];
+      addNodeToCanvas(procName, "treatment", "kg", null, null, inputs, outputs);
+      showNotification(`Proceso "${procName}" anadido al lienzo del sistema.`);
+      showView("canvas");
+    } else {
+      showNotification(`Proceso "${procName}" calculado (GWP: ${epd.Net_Total_GWP} kg CO2e).`);
+    }
+  }
+
+  function setupWasteToolsEventListeners() {
+    document.getElementById("btnFloatWasteTools")?.addEventListener("click", openWasteToolsModal);
+    document.getElementById("drawerBtnWasteTools")?.addEventListener("click", () => {
+      if (typeof closeDrawerMenu === "function") closeDrawerMenu();
+      openWasteToolsModal();
+    });
+    document.getElementById("btnCloseWasteModal")?.addEventListener("click", closeWasteToolsModal);
+    document.getElementById("btnCancelWasteModal")?.addEventListener("click", closeWasteToolsModal);
+
+    document.getElementById("btnWasteModePredefined")?.addEventListener("click", () => {
+      document.getElementById("btnWasteModePredefined")?.classList.add("active");
+      document.getElementById("btnWasteModeCustom")?.classList.remove("active");
+      const secP = document.getElementById("wastePredefinedSection");
+      const secC = document.getElementById("wasteCustomSection");
+      if (secP) secP.style.display = "block";
+      if (secC) secC.style.display = "none";
+    });
+
+    document.getElementById("btnWasteModeCustom")?.addEventListener("click", () => {
+      document.getElementById("btnWasteModeCustom")?.classList.add("active");
+      document.getElementById("btnWasteModePredefined")?.classList.remove("active");
+      const secP = document.getElementById("wastePredefinedSection");
+      const secC = document.getElementById("wasteCustomSection");
+      if (secP) secP.style.display = "none";
+      if (secC) secC.style.display = "block";
+    });
+
+    document.getElementById("wasteCategorySelect")?.addEventListener("change", (e) => {
+      loadWasteMaterials(e.target.value);
+    });
+
+    document.getElementById("wasteMaterialSelect")?.addEventListener("change", updateWasteMaterialBadges);
+    document.getElementById("btnCalculateWaste")?.addEventListener("click", executeWasteCalculation);
+    document.getElementById("btnExportWasteJson")?.addEventListener("click", exportWasteCalculationJson);
+    document.getElementById("btnInsertWasteToCanvas")?.addEventListener("click", insertWasteTreatmentNodeToCanvas);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", setupWasteToolsEventListeners);
+  } else {
+    setupWasteToolsEventListeners();
+  }
+
   window.ECONODE = null;
   window.EconodeApp = {
+    openWasteToolsModal,
+    closeWasteToolsModal,
+    initWasteToolsData,
+    executeWasteCalculation,
+    exportWasteCalculationJson,
+    insertWasteTreatmentNodeToCanvas,
     toggleProjectCollapse,
     toggleStandaloneCollapse,
     openNewProjectModal,

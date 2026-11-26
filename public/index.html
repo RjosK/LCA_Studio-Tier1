@@ -48,6 +48,9 @@
       <button class="nav-btn" data-view="ghg" id="navBtnGhg" aria-label="GHG Protocol">
         <span data-i18n="nav.ghg">GHG Protocol</span>
       </button>
+      <button class="nav-btn" data-view="waste" id="navBtnWaste" aria-label="Fin de Vida (Doka 2026)">
+        <span data-i18n="waste.nav_btn">Fin de Vida</span>
+      </button>
     </nav>
 
     <!-- Navigation Links (Visible in Landing Mode) -->
@@ -57,6 +60,7 @@
       <a href="#homeProfiles" class="landing-nav-link" id="lnkProfiles" data-i18n="home.nav_profiles">Perfiles</a>
       <a href="#homeCases" class="landing-nav-link" id="lnkCases" data-i18n="home.nav_cases">Casos</a>
       <a href="#homePricing" class="landing-nav-link" id="lnkPricing" data-i18n="home.nav_pricing">Planes</a>
+      <button type="button" class="landing-nav-link" id="lnkWasteTools" onclick="window.EconodeApp ? window.EconodeApp.showView('waste') : (document.querySelectorAll('.view-container').forEach(v => v.style.display='none'), document.getElementById('viewWaste').style.display='block')" style="background:none; border:none; cursor:pointer; font-size:12px; color:var(--text-secondary);" data-i18n="waste.nav_btn">Fin de Vida</button>
     </nav>
 
     <!-- Top Right Actions -->
@@ -2700,6 +2704,189 @@
               <!-- Resultados de búsqueda dinámicos -->
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================= -->
+  <!-- VISTA: MODELADOR DE FIN DE VIDA Y RESIDUOS (#viewWaste) - TIER 1 -->
+  <!-- ============================================================= -->
+  <main class="view-container" id="viewWaste" role="region" aria-label="Fin de Vida y Tratamiento de Residuos" style="display: none; padding: 24px; max-width: 1200px; margin: 0 auto;">
+    <div class="view-header" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h1 style="font-size: 20px; font-weight: 700; margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
+            <span>♻️</span>
+            <span data-i18n="waste.modal_title">Fin de Vida y Tratamiento de Residuos</span>
+            <span class="badge badge-success" style="font-size: 10px; padding: 2px 8px; font-weight: 600;">Tier 1 Incluido</span>
+          </h1>
+          <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="waste.modal_subtitle">
+            Modelado estequiométrico oficial ecoinvent v3.12 (Gabor Doka 2026) - Tier 1
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="window.EconodeApp ? window.EconodeApp.showView('canvas') : (document.querySelectorAll('.view-container').forEach(v => v.style.display='none'), document.getElementById('viewCanvas').style.display='block')">
+            &larr; Volver al Canvas
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contenedor Principal de la Herramienta -->
+    <div style="background: var(--bg-card, #1e293b); border: 1px solid var(--border-color, #334155); border-radius: 12px; padding: 24px;">
+      <!-- Selector de Modo Apple Segmented Control -->
+      <div style="margin-bottom: 20px; display: flex; justify-content: center;">
+        <div class="apple-segmented-control" style="max-width: 480px; width: 100%;">
+          <button type="button" class="segment-btn active" id="btnWasteModePredefined" data-i18n="waste.tab_predefined">Material Predefinido</button>
+          <button type="button" class="segment-btn" id="btnWasteModeCustom" data-i18n="waste.tab_custom">Composición Química Personalizada</button>
+        </div>
+      </div>
+
+      <!-- Sección 1A: Material Predefinido -->
+      <div id="wastePredefinedSection">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px; margin-bottom: 16px;">
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.category">Categoría de Residuo:</label>
+            <select class="form-control styled-select-compact" id="wasteCategorySelect" style="width: 100%; height: 34px; font-size: 12px;">
+              <option value="">Todas las categorías</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.select_material">Seleccionar Material de Residuo (220 fracciones):</label>
+            <select class="form-control styled-select-compact" id="wasteMaterialSelect" style="width: 100%; height: 34px; font-size: 12px;">
+              <option value="">Cargando catálogo de residuos...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Badges de Propiedades Químicas del Material Seleccionado -->
+        <div id="wasteMaterialPropsBadges" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px;">
+          <span class="stat-pill" id="badgeWasteHu" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">PCI (Hu): -- MJ/kg</span>
+          <span class="stat-pill" id="badgeWasteH2O" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Humedad: -- %</span>
+          <span class="stat-pill" id="badgeWasteC" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Carbono (C): -- %</span>
+          <span class="stat-pill" id="badgeWasteBio" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Biogénico: -- %</span>
+          <span class="stat-pill" id="badgeWasteDegrad" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Degradabilidad 100a: --</span>
+        </div>
+      </div>
+
+      <!-- Sección 1B: Composición Química Personalizada (oculta por defecto) -->
+      <div id="wasteCustomSection" style="display: none; margin-bottom: 20px; padding: 16px 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_hu">Poder Calorífico (Hu, MJ/kg):</label>
+            <input type="number" step="0.1" class="form-control" id="inputCustomHu" value="15.0" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_c">Carbono Total (% masa):</label>
+            <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomC" value="0.45" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_bio">Fracción C Biogénico (0-1):</label>
+            <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomBio" value="0.30" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_h2o">Humedad (% masa):</label>
+            <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomH2O" value="0.20" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_n">Nitrógeno N (%):</label>
+            <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomN" value="0.01" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_s">Azufre S (%):</label>
+            <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomS" value="0.002" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_cl">Cloro Cl (%):</label>
+            <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomCl" value="0.005" style="width: 100%; height: 32px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_degrad">Degradabilidad 100a (0-1):</label>
+            <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomDegrad" value="0.35" style="width: 100%; height: 32px;" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección 2: Parámetros Operacionales -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.technology">Tecnología de Tratamiento:</label>
+          <select class="form-control styled-select-compact" id="wasteTechSelect" style="width: 100%; height: 34px; font-size: 12px;">
+            <option value="mswi" data-i18n="waste.tech_mswi">Incineración con Recuperación de Energía (MSWI)</option>
+            <option value="landfill" data-i18n="waste.tech_landfill">Relleno Sanitario Controlado (Captura de Biogás)</option>
+            <option value="open_burning" data-i18n="waste.tech_open_burning">Quema no Controlada a Cielo Abierto</option>
+            <option value="construction_landfill" data-i18n="waste.tech_construction">Relleno de Residuos Inertes / Construcción</option>
+            <option value="wastewater" data-i18n="waste.tech_wastewater">Planta de Tratamiento de Aguas Residuales (PTAR)</option>
+          </select>
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.mass_kg">Masa a Tratar (kg):</label>
+          <input type="number" min="0.1" step="1" class="form-control" id="inputWasteMass" value="100" style="width: 100%; height: 34px;" />
+        </div>
+        <div>
+          <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.transport_km">Transporte C2 (km):</label>
+          <input type="number" min="0" step="5" class="form-control" id="inputWasteTransport" value="20" style="width: 100%; height: 34px;" />
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
+        <button type="button" class="btn btn-primary" id="btnCalculateWaste" style="padding: 8px 24px; font-weight: 600;">
+          <span data-i18n="waste.btn_calculate">Calcular Inventario y Módulos EPD</span>
+        </button>
+      </div>
+
+      <!-- Sección 3: Resultados de Módulos EPD y Fin de Vida -->
+      <div id="wasteResultsContainer" style="display: none; border-top: 1px solid var(--border-color); padding-top: 20px;">
+        <h3 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 700;" data-i18n="waste.results_title">Resultados de Inventario y Módulos EPD (EN 15804)</h3>
+        
+        <!-- Fila de Tarjetas de Impacto Principal -->
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;">
+          <div style="padding: 14px 16px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;" data-i18n="waste.gwp_net">Huella de Carbono Neta</div>
+            <div style="font-size: 20px; font-weight: 700; color: #10b981;" id="resWasteNetGWP">0.00 kg CO2e</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">C2 + C3 + C4 + Módulo D</div>
+          </div>
+          <div style="padding: 14px 16px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: 10px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;" data-i18n="waste.gwp_disposal">Módulo C4 (Disposición Final)</div>
+            <div style="font-size: 20px; font-weight: 700; color: #ef4444;" id="resWasteC4GWP">0.00 kg CO2e</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;" id="resWasteC4Sub">Fósil: 0.00 | Biogénico: 0.00</div>
+          </div>
+          <div style="padding: 14px 16px; background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 8px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;" data-i18n="waste.gwp_module_d">Módulo D (Créditos Evitados)</div>
+            <div style="font-size: 20px; font-weight: 700; color: #3b82f6;" id="resWasteModDGWP">-0.00 kg CO2e</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Crédito ambiental neto</div>
+          </div>
+          <div style="padding: 14px 16px; background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.25); border-radius: 10px;">
+            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 4px;" data-i18n="waste.gwp_transport">Módulos C2 + C3</div>
+            <div style="font-size: 20px; font-weight: 700; color: #f59e0b;" id="resWasteC2C3GWP">0.00 kg CO2e</div>
+            <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Transporte & Procesamiento</div>
+          </div>
+        </div>
+
+        <!-- Desglose de Energía Evitada y Residuos Sólidos -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+          <div style="padding: 14px 18px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+            <strong style="display: block; font-size: 12px; margin-bottom: 8px;" data-i18n="waste.avoided_energy">Energía Neta Recuperada (Módulo D):</strong>
+            <ul id="resWasteEnergyList" style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-secondary); line-height: 1.7;">
+              <li>Sin recuperación aplicable</li>
+            </ul>
+          </div>
+          <div style="padding: 14px 18px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+            <strong style="display: block; font-size: 12px; margin-bottom: 8px;" data-i18n="waste.solid_residues">Residuos Sólidos Resultantes:</strong>
+            <ul id="resWasteSolidsList" style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-secondary); line-height: 1.7;">
+              <li>Sin residuos adicionales</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnExportWasteJson">
+            <span>Descargar JSON de Inventario</span>
+          </button>
+          <button type="button" class="btn btn-primary btn-sm" id="btnInsertWasteToCanvas">
+            <span data-i18n="waste.btn_insert_canvas">Insertar como Proceso en el Canvas</span>
+          </button>
         </div>
       </div>
     </div>
