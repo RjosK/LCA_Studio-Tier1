@@ -1177,6 +1177,8 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/api/waste/export/simapro":
             try:
                 calc_result = body.get("result", body)
+                if isinstance(calc_result, dict) and "result" in calc_result and isinstance(calc_result["result"], dict):
+                    calc_result = calc_result["result"]
                 csv_str = DokaExportEngine.to_simapro_csv(calc_result)
                 self._send_json({
                     "status": "success",
@@ -1191,6 +1193,8 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path == "/api/waste/export/ecospold2":
             try:
                 calc_result = body.get("result", body)
+                if isinstance(calc_result, dict) and "result" in calc_result and isinstance(calc_result["result"], dict):
+                    calc_result = calc_result["result"]
                 xml_str = DokaExportEngine.to_ecospold2_xml(calc_result)
                 self._send_json({
                     "status": "success",
