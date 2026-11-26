@@ -454,6 +454,14 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 })
                 return
 
+            elif path == "/api/waste/elements":
+                suite = get_doka_suite() if get_doka_suite else None
+                if suite and hasattr(suite, "get_elements_metadata"):
+                    self._send_json({"status": "success", "elements": suite.get_elements_metadata()})
+                else:
+                    self._send_error_json("Suite Doka 2026 no disponible", 503)
+                return
+
             conn = get_active_db_connection()
             try:
                 # Listar Claves de API del usuario autenticado

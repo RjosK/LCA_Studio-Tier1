@@ -2764,12 +2764,33 @@
         </div>
 
         <!-- Badges de Propiedades Químicas del Material Seleccionado -->
-        <div id="wasteMaterialPropsBadges" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div id="wasteMaterialPropsBadges" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; padding: 12px 16px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px;">
           <span class="stat-pill" id="badgeWasteHu" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">PCI (Hu): -- MJ/kg</span>
           <span class="stat-pill" id="badgeWasteH2O" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Humedad: -- %</span>
           <span class="stat-pill" id="badgeWasteC" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Carbono (C): -- %</span>
           <span class="stat-pill" id="badgeWasteBio" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Biogénico: -- %</span>
           <span class="stat-pill" id="badgeWasteDegrad" style="padding: 4px 10px; background: rgba(255,255,255,0.05); border-radius: 6px; font-size: 11.5px;">Degradabilidad 100a: --</span>
+        </div>
+
+        <!-- Botones de Acción de Composición Química Predefinida -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnTogglePredefinedElements" style="font-size: 11px; padding: 4px 12px;">
+            <span class="mono">[+]</span> <span data-i18n="waste.btn_inspect_elements">Inspeccionar 50 Elementos Químicos</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyPredefinedToCustom" style="font-size: 11px; padding: 4px 12px; color: var(--accent-emerald, #10b981);">
+            <span data-i18n="waste.btn_customize_elements">Personalizar en Editor Químico &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Cajón Desplegable: Tabla de los 50 Elementos Químicos del Material Seleccionado -->
+        <div id="wastePredefinedElementsDrawer" style="display: none; margin-bottom: 20px; padding: 14px 16px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <strong style="font-size: 12px;">Perfil Químico Estequiométrico Completo (50 Especies)</strong>
+            <span style="font-size: 11px; color: var(--text-muted);">Valores oficiales ecoinvent v3.12 (Gabor Doka)</span>
+          </div>
+          <div id="wastePredefinedElementsTableContainer" style="max-height: 280px; overflow-y: auto;">
+            <!-- Tabla renderizada dinámicamente -->
+          </div>
         </div>
       </div>
 
@@ -2795,49 +2816,288 @@
         </div>
 
         <!-- Badges de Estequiometría de la Mezcla Sintetizada -->
-        <div id="wasteMixtureSynthesizedBadges" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: 6px;">
+        <div id="wasteMixtureSynthesizedBadges" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: 6px; margin-bottom: 12px;">
           <span class="stat-pill" id="badgeMixHu" style="padding: 3px 8px; font-size: 11px;">PCI Ponderado (Hu): -- MJ/kg</span>
           <span class="stat-pill" id="badgeMixH2O" style="padding: 3px 8px; font-size: 11px;">Humedad: -- %</span>
           <span class="stat-pill" id="badgeMixC" style="padding: 3px 8px; font-size: 11px;">Carbono Total: -- %</span>
           <span class="stat-pill" id="badgeMixBio" style="padding: 3px 8px; font-size: 11px;">Fracción Biogénica: -- %</span>
           <span class="stat-pill" id="badgeMixDegrad" style="padding: 3px 8px; font-size: 11px;">Degradabilidad 100a: --</span>
         </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-secondary btn-sm" id="btnToggleMixtureElements" style="font-size: 11px; padding: 4px 12px;">
+            <span class="mono">[+]</span> <span>Ver Composición Elemental de la Mezcla</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnCopyMixtureToCustom" style="font-size: 11px; padding: 4px 12px; color: var(--accent-emerald, #10b981);">
+            <span>Personalizar Mezcla en Editor Químico &rarr;</span>
+          </button>
+        </div>
+
+        <!-- Cajón Desplegable de la Mezcla Sintetizada -->
+        <div id="wasteMixtureElementsDrawer" style="display: none; margin-top: 14px; padding: 14px 16px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px;">
+          <div style="font-size: 12px; font-weight: 600; margin-bottom: 8px;">Composición Elemental Sintetizada de la Mezcla</div>
+          <div id="wasteMixtureElementsTableContainer" style="max-height: 260px; overflow-y: auto;">
+            <!-- Renderizado dinámicamente -->
+          </div>
+        </div>
       </div>
 
-      <!-- Sección 1C: Composición Química Personalizada (oculta por defecto) -->
-      <div id="wasteCustomSection" style="display: none; margin-bottom: 20px; padding: 16px 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_hu">Poder Calorífico (Hu, MJ/kg):</label>
-            <input type="number" step="0.1" class="form-control" id="inputCustomHu" value="15.0" style="width: 100%; height: 32px;" />
+            <!-- Seccion 1C: Composicion Quimica Elemental Completa (44 Elementos Doka) -->
+      <div id="wasteCustomSection" style="display: none; margin-bottom: 20px; padding: 18px 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+        <!-- Barra de Herramientas del Editor Elemental -->
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border-color);">
+          <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 280px;">
+            <label style="font-size: 11.5px; font-weight: 600; white-space: nowrap;" data-i18n="waste.load_template">Plantilla desde Catalogo:</label>
+            <select class="form-control styled-select-compact" id="customTemplateSelect" style="max-width: 320px; height: 30px; font-size: 11.5px;">
+              <option value="">Seleccionar residuo como base...</option>
+            </select>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnLoadCustomTemplate" style="padding: 3px 10px; font-size: 11px;">
+              Cargar en Editor
+            </button>
           </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_c">Carbono Total (% masa):</label>
-            <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomC" value="0.45" style="width: 100%; height: 32px;" />
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <input type="text" id="inputSearchChemicals" class="form-control" placeholder="Filtrar quimico (ej. Pb, Mercurio, F)..." style="height: 30px; font-size: 11px; padding: 4px 10px; width: 220px;" />
+            <button type="button" class="btn btn-secondary btn-sm" id="btnResetCustomDefaults" style="padding: 3px 10px; font-size: 11px;" title="Restablecer valores predeterminados">
+              Restablecer
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" id="btnClearCustomChemicals" style="padding: 3px 10px; font-size: 11px; color: #ef4444;" title="Poner todos los elementos en cero">
+              Poner a Cero
+            </button>
           </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_bio">Fracción C Biogénico (0-1):</label>
-            <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomBio" value="0.30" style="width: 100%; height: 32px;" />
+        </div>
+
+        <!-- Grupo 1: Macro-Propiedades y Combustion -->
+        <div class="chem-group-card" data-group="macro" style="margin-bottom: 16px; padding: 14px 16px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+          <strong style="display: block; font-size: 12px; margin-bottom: 10px; color: #10b981;">[1] Macro-Propiedades y Combustion</strong>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+            <div class="chem-input-cell" data-sym="Hu">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Poder Calorifico (Hu, PCI) [MJ/kg]:</label>
+              <input type="number" step="0.1" class="form-control" id="inputCustomHu" value="15.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Ho">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Calor Superior (Ho, PCS) [MJ/kg]:</label>
+              <input type="number" step="0.1" class="form-control" id="inputCustomHo" value="18.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="H2O">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Humedad (H2O) [% masa]:</label>
+              <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomH2O" value="0.20" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="C">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Carbono Total (C) [% masa]:</label>
+              <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomC" value="0.45" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="biogenic_c_share">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Fraccion C Biogenico [0-1]:</label>
+              <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomBio" value="0.30" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="ash">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cenizas / Inertes [% masa]:</label>
+              <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomAsh" value="0.05" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="degradability_100a">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Degradabilidad 100a [0-1]:</label>
+              <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomDegrad" value="0.35" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
           </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_h2o">Humedad (% masa):</label>
-            <input type="number" step="0.01" min="0" max="1" class="form-control" id="inputCustomH2O" value="0.20" style="width: 100%; height: 32px;" />
+        </div>
+
+        <!-- Grupo 2: Halogenos y No Metales -->
+        <div class="chem-group-card" data-group="halogens_nonmetals" style="margin-bottom: 16px; padding: 14px 16px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+          <strong style="display: block; font-size: 12px; margin-bottom: 10px; color: #60a5fa;">[2] Halogenos y No Metales</strong>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+            <div class="chem-input-cell" data-sym="H">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Hidrogeno (H) [%]:</label>
+              <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomH" value="0.06" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="O">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Oxigeno (O) [%]:</label>
+              <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomO" value="0.25" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="N">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Nitrogeno (N) [%]:</label>
+              <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomN" value="0.01" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="S">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Azufre (S) [%]:</label>
+              <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomS" value="0.002" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="P">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Fosforo (P) [%]:</label>
+              <input type="number" step="0.0005" min="0" max="1" class="form-control" id="inputCustomP" value="0.001" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Cl">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cloro (Cl) [%]:</label>
+              <input type="number" step="0.0005" min="0" max="1" class="form-control" id="inputCustomCl" value="0.005" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="F">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Fluor (F) [%]:</label>
+              <input type="number" step="0.0001" min="0" max="1" class="form-control" id="inputCustomF" value="0.0001" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Br">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Bromo (Br) [ppm]:</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomBr" value="10.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="I">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Yodo (I) [ppm]:</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="inputCustomI" value="0.5" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="B">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Boro (B) [ppm]:</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomB" value="25.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
           </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_n">Nitrógeno N (%):</label>
-            <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomN" value="0.01" style="width: 100%; height: 32px;" />
+        </div>
+
+        <!-- Grupo 3: Metales Pesados Regulados -->
+        <div class="chem-group-card" data-group="heavy_metals" style="margin-bottom: 16px; padding: 14px 16px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+          <strong style="display: block; font-size: 12px; margin-bottom: 10px; color: #f59e0b;">[3] Metales Pesados Regulados (Toxicos - mg/kg o ppm)</strong>
+          <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;">
+            <div class="chem-input-cell" data-sym="Hg">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Mercurio (Hg):</label>
+              <input type="number" step="0.01" min="0" class="form-control" id="inputCustomHg" value="0.1" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Pb">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Plomo (Pb):</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomPb" value="50.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Cd">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cadmio (Cd):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomCd" value="2.5" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="As">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Arsenico (As):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomAs" value="5.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Cr">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cromo (Cr):</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomCr" value="40.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Cu">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cobre (Cu):</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomCu" value="80.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Ni">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Niquel (Ni):</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomNi" value="20.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Zn">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Zinc (Zn):</label>
+              <input type="number" step="1.0" min="0" class="form-control" id="inputCustomZn" value="250.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Sb">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Antimonio (Sb):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomSb" value="15.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Tl">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Talio (Tl):</label>
+              <input type="number" step="0.05" min="0" class="form-control" id="inputCustomTl" value="0.5" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Se">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Selenio (Se):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomSe" value="2.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
           </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_s">Azufre S (%):</label>
-            <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomS" value="0.002" style="width: 100%; height: 32px;" />
+        </div>
+
+        <!-- Grupo 4: Metales Mayores y Minerales -->
+        <div class="chem-group-card" data-group="major_metals" style="margin-bottom: 16px; padding: 14px 16px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+          <strong style="display: block; font-size: 12px; margin-bottom: 10px; color: #a78bfa;">[4] Metales Mayores y Minerales (ppm & Chatarra Reciclable)</strong>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+            <div class="chem-input-cell" data-sym="Fe">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Hierro (Fe) [ppm]:</label>
+              <input type="number" step="5.0" min="0" class="form-control" id="inputCustomFe" value="2500.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="share_bulk_fe">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Fe Chatarra a Granel [0-1]:</label>
+              <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomBulkFe" value="0.50" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Al">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Aluminio (Al) [ppm]:</label>
+              <input type="number" step="5.0" min="0" class="form-control" id="inputCustomAl" value="1200.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="share_bulk_al">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Al Chatarra a Granel [0-1]:</label>
+              <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomBulkAl" value="0.40" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="share_bulk_cu">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cu Chatarra a Granel [0-1]:</label>
+              <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomBulkCu" value="0.30" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Ca">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Calcio (Ca) [ppm]:</label>
+              <input type="number" step="10.0" min="0" class="form-control" id="inputCustomCa" value="8000.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Mg">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Magnesio (Mg) [ppm]:</label>
+              <input type="number" step="5.0" min="0" class="form-control" id="inputCustomMg" value="1500.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Na">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Sodio (Na) [ppm]:</label>
+              <input type="number" step="5.0" min="0" class="form-control" id="inputCustomNa" value="3000.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="K">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Potasio (K) [ppm]:</label>
+              <input type="number" step="5.0" min="0" class="form-control" id="inputCustomK" value="2000.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Si">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Silicio (Si) [ppm]:</label>
+              <input type="number" step="10.0" min="0" class="form-control" id="inputCustomSi" value="15000.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Ti">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Titanio (Ti) [ppm]:</label>
+              <input type="number" step="2.0" min="0" class="form-control" id="inputCustomTi" value="500.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Mn">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Manganeso (Mn) [ppm]:</label>
+              <input type="number" step="1.0" min="0" class="form-control" id="inputCustomMn" value="150.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
           </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_cl">Cloro Cl (%):</label>
-            <input type="number" step="0.001" min="0" max="1" class="form-control" id="inputCustomCl" value="0.005" style="width: 100%; height: 32px;" />
-          </div>
-          <div>
-            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.custom_degrad">Degradabilidad 100a (0-1):</label>
-            <input type="number" step="0.05" min="0" max="1" class="form-control" id="inputCustomDegrad" value="0.35" style="width: 100%; height: 32px;" />
+        </div>
+
+        <!-- Grupo 5: Elementos Traza -->
+        <div class="chem-group-card" data-group="trace_elements" style="padding: 14px 16px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
+          <strong style="display: block; font-size: 12px; margin-bottom: 10px; color: #f472b6;">[5] Elementos Traza (mg/kg o ppm)</strong>
+          <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+            <div class="chem-input-cell" data-sym="Ag">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Plata (Ag):</label>
+              <input type="number" step="0.05" min="0" class="form-control" id="inputCustomAg" value="1.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Ba">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Bario (Ba):</label>
+              <input type="number" step="1.0" min="0" class="form-control" id="inputCustomBa" value="120.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Be">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Berilio (Be):</label>
+              <input type="number" step="0.05" min="0" class="form-control" id="inputCustomBe" value="0.8" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Co">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Cobalto (Co):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomCo" value="4.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Mo">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Molibdeno (Mo):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomMo" value="3.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Sc">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Escandio (Sc):</label>
+              <input type="number" step="0.05" min="0" class="form-control" id="inputCustomSc" value="1.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Sn">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Estano (Sn):</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomSn" value="10.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="Sr">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Estroncio (Sr):</label>
+              <input type="number" step="1.0" min="0" class="form-control" id="inputCustomSr" value="60.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="V">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Vanadio (V):</label>
+              <input type="number" step="0.5" min="0" class="form-control" id="inputCustomV" value="12.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
+            <div class="chem-input-cell" data-sym="W">
+              <label style="display: block; font-size: 11px; margin-bottom: 3px;">Wolframio (W):</label>
+              <input type="number" step="0.1" min="0" class="form-control" id="inputCustomW" value="2.0" style="width: 100%; height: 30px; font-size: 11.5px;" />
+            </div>
           </div>
         </div>
       </div>
@@ -2999,8 +3259,17 @@
           </div>
         </div>
 
-        <!-- Desglose de Energía Evitada y Residuos Sólidos -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+        <!-- Selector de Pestañas de Resultados -->
+        <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+          <div class="apple-segmented-control" style="max-width: 680px; width: 100%; font-size: 11.5px;">
+            <button type="button" class="segment-btn active" id="btnResTabOverview">Energía & Residuos Sólidos</button>
+            <button type="button" class="segment-btn" id="btnResTabAir">Emisiones al Aire (Todos los Químicos)</button>
+            <button type="button" class="segment-btn" id="btnResTabWater">Lixiviados al Agua / Suelo</button>
+          </div>
+        </div>
+
+        <!-- Panel 1: Resumen de Energía y Residuos Sólidos -->
+        <div id="resPanelOverview" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
           <div style="padding: 14px 18px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
             <strong style="display: block; font-size: 12px; margin-bottom: 8px;" data-i18n="waste.avoided_energy">Energía Neta Recuperada (Módulo D):</strong>
             <ul id="resWasteEnergyList" style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-secondary); line-height: 1.7;">
@@ -3008,10 +3277,26 @@
             </ul>
           </div>
           <div style="padding: 14px 18px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
-            <strong style="display: block; font-size: 12px; margin-bottom: 8px;" data-i18n="waste.solid_residues">Residuos Sólidos Resultantes:</strong>
+            <strong style="display: block; font-size: 12px; margin-bottom: 8px;" data-i18n="waste.solid_residues">Residuos Sólidos & Metales Secundarios:</strong>
             <ul id="resWasteSolidsList" style="margin: 0; padding-left: 20px; font-size: 12px; color: var(--text-secondary); line-height: 1.7;">
               <li>Sin residuos adicionales</li>
             </ul>
+          </div>
+        </div>
+
+        <!-- Panel 2: Emisiones al Aire con Todos los Metales y Gases -->
+        <div id="resPanelAir" style="display: none; margin-bottom: 20px; padding: 14px 18px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+          <strong style="display: block; font-size: 12.5px; margin-bottom: 10px;">Inventario Detallado de Emisiones Atmosféricas (Gases & Metales)</strong>
+          <div id="resWasteAirEmissionsContainer" style="max-height: 320px; overflow-y: auto;">
+            <!-- Tabla de emisiones al aire inyectada dinámicamente -->
+          </div>
+        </div>
+
+        <!-- Panel 3: Lixiviados al Agua / Suelo -->
+        <div id="resPanelWater" style="display: none; margin-bottom: 20px; padding: 14px 18px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+          <strong style="display: block; font-size: 12.5px; margin-bottom: 10px;">Inventario de Lixiviación Acuosa (Corto y Largo Plazo)</strong>
+          <div id="resWasteWaterEmissionsContainer" style="max-height: 320px; overflow-y: auto;">
+            <!-- Tabla de lixiviados inyectada dinámicamente -->
           </div>
         </div>
 

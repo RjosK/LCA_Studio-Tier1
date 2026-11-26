@@ -1188,7 +1188,9 @@ const I18N_DICTIONARY = {
     "waste.ww_stage_label": "Etapa de Depuración (PTAR):",
     "waste.sludge_fate_label": "Destino de Lodos de Depuración:",
     "waste.btn_export_simapro": "Exportar SimaPro CSV",
-    "waste.btn_export_ecospold": "Exportar EcoSpold2 XML"
+    "waste.btn_export_ecospold": "Exportar EcoSpold2 XML",
+    "waste.btn_inspect_elements": "Inspeccionar 50 Elementos Químicos",
+    "waste.btn_customize_elements": "Personalizar en Editor Químico"
  },
 
  en: {
@@ -2377,7 +2379,9 @@ const I18N_DICTIONARY = {
     "waste.ww_stage_label": "WWTP Treatment Stage:",
     "waste.sludge_fate_label": "Sludge Disposal Route:",
     "waste.btn_export_simapro": "Export SimaPro CSV",
-    "waste.btn_export_ecospold": "Export EcoSpold2 XML"
+    "waste.btn_export_ecospold": "Export EcoSpold2 XML",
+    "waste.btn_inspect_elements": "Inspect All 50 Chemical Elements",
+    "waste.btn_customize_elements": "Customize in Chemical Editor"
  }
 };
 

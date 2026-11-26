@@ -101,6 +101,10 @@ class WasteMixtureEngine:
         if len(resolved_fractions) > 4:
             names_summary += f" + {len(resolved_fractions)-4} mas"
 
+        share_bulk_fe = round(sum(f['share'] * f['mat'].get('share_bulk_fe', 0.0) for f in resolved_fractions), 4)
+        share_bulk_al = round(sum(f['share'] * f['mat'].get('share_bulk_al', 0.0) for f in resolved_fractions), 4)
+        share_bulk_cu = round(sum(f['share'] * f['mat'].get('share_bulk_cu', 0.0) for f in resolved_fractions), 4)
+
         return {
             "id": "composite_mixture_" + str(abs(hash(names_summary)) % 100000),
             "name": f"Mezcla Compuesta: {names_summary}",
@@ -122,6 +126,9 @@ class WasteMixtureEngine:
             "Br": round(Br, 5),
             "I": round(I, 5),
             "ash": ash,
+            "share_bulk_fe": share_bulk_fe,
+            "share_bulk_al": share_bulk_al,
+            "share_bulk_cu": share_bulk_cu,
             "elements_ppm": mixed_metals,
             "total_mass_kg": round(total_mass, 2),
             "fractions_count": len(resolved_fractions)
@@ -170,6 +177,26 @@ class DokaIncinerationEngine:
         hf_air = mass_kg * F * (20.01 / 18.998) * (1.0 - 0.98)
         hg_air = (mass_kg * metals.get("Hg", 0.05) * 1e-6) * (1.0 - 0.98)
         pm_air = mass_kg * ash * 0.00015
+
+        # Transfer coefficients to air for heavy metals and trace elements from Doka MSWI model (permil)
+        tk_air_permil = {
+            "Pb": 0.08239, "Cd": 0.5097, "As": 7.833, "Cr": 0.8732, "Cu": 0.09159,
+            "Ni": 1.256, "Zn": 0.6703, "Sb": 0.500, "Tl": 0.800, "Se": 11.93,
+            "Co": 1.819, "Mn": 0.191, "Mo": 1.316, "Sn": 0.000653, "V": 21.209,
+            "Ba": 0.020, "Be": 0.050, "Ag": 0.050, "B": 0.100, "Br": 0.4995,
+            "I": 0.555, "P": 1.016, "Fe": 0.00179, "Al": 0.000815, "Ca": 7.870,
+            "Mg": 1.055, "Na": 8.210, "K": 4.940, "Si": 0.00156, "Ti": 0.050
+        }
+        metals_air = {}
+        for elem_k, tk_val in tk_air_permil.items():
+            conc_ppm = float(metals.get(elem_k, 0.0))
+            if conc_ppm <= 0 and elem_k in material and isinstance(material[elem_k], (int, float)):
+                conc_ppm = float(material[elem_k]) * 10000.0
+            if conc_ppm > 0:
+                elem_mass_kg = mass_kg * (conc_ppm * 1e-6)
+                air_kg = elem_mass_kg * (tk_val / 1000.0)
+                if air_kg > 1e-10:
+                    metals_air[f"{elem_k} to air"] = round(air_kg, 8)
 
         # Factor de caracterizacion EN 15804+A2 (GWP100 fosil=1, biogenico=1 al emitirse para equilibrar uptake)
         gwp_c4_fossil = co2_fossil + (ch4_air * 29.8) + (n2o_air * 273.0)
@@ -229,6 +256,46 @@ class DokaIncinerationEngine:
 
         net_total_gwp = gwp_c2 + gwp_c3 + gwp_c4 + module_d_total
 
+        # Inventario de Emisiones Atmosfericas Completo (44 elementos Doka 2026)
+        air_emissions_dict = {
+            "Carbon dioxide, fossil (CO2)": round(co2_fossil, 4),
+            "Carbon dioxide, biogenic (CO2)": round(co2_bio, 4),
+            "Methane, fossil (CH4)": round(ch4_air, 6),
+            "Dinitrogen monoxide (N2O)": round(n2o_air, 6),
+            "Nitrogen oxides (NOx as NO2)": round(nox_air, 5),
+            "Sulfur dioxide (SO2)": round(so2_air, 5),
+            "Hydrogen chloride (HCl)": round(hcl_air, 5),
+            "Hydrogen fluoride (HF)": round(hf_air, 6),
+            "Mercury (Hg to air)": round(hg_air, 8),
+            "Particulates (< 2.5 um)": round(pm_air, 5)
+        }
+        metals_air_dict = {}
+
+        elem_tks = cfg.get("element_transfer_coefficients", {})
+        for elem_key, tk_info in elem_tks.items():
+            if elem_key in ("C", "Org.-C", "H2O", "Water content", "O", "Oxygen", "H", "Hydrogen", "N", "Nitrogen", "S", "Sulfur", "Cl", "Chlorine", "F", "Fluorine", "Hg", "Mercury"):
+                continue
+            conc_val = 0.0
+            if elem_key in metals:
+                conc_val = float(metals[elem_key]) * 1e-6
+            elif elem_key in material and isinstance(material[elem_key], (int, float)):
+                v = float(material[elem_key])
+                conc_val = v * 1e-6 if elem_key in ("Br", "I", "B") and v > 0.05 else v
+
+            if conc_val > 0:
+                tk_permil = float(tk_info.get("tk_air_permil", 0.0))
+                if fgc_mode == "wet_scrubber":
+                    tk_permil = tk_permil * 0.8
+                m_air_kg = mass_kg * conc_val * (tk_permil / 1000.0)
+                if m_air_kg > 1e-12:
+                    flow_name = f"{tk_info.get('name', elem_key)} to air"
+                    air_emissions_dict[flow_name] = round(m_air_kg, 8)
+                    metals_air_dict[elem_key] = {
+                        "name": tk_info.get("name", elem_key),
+                        "kg_air": round(m_air_kg, 8),
+                        "mg_air": round(m_air_kg * 1e6, 4)
+                    }
+
         return {
             "technology": "mswi",
             "technology_name": f"Incineracion Municipal MSWI (DeNOx: {denox_info.get('name', 'SNCR')})",
@@ -251,16 +318,19 @@ class DokaIncinerationEngine:
                 "unit": "kg CO2 eq"
             },
             "lci_air_emissions": {
-                "Carbon dioxide, fossil (CO2)": round(co2_fossil, 4),
-                "Carbon dioxide, biogenic (CO2)": round(co2_bio, 4),
-                "Methane, fossil (CH4)": round(ch4_air, 6),
-                "Dinitrogen monoxide (N2O)": round(n2o_air, 6),
-                "Nitrogen oxides (NOx as NO2)": round(nox_air, 5),
-                "Sulfur dioxide (SO2)": round(so2_air, 5),
-                "Hydrogen chloride (HCl)": round(hcl_air, 5),
-                "Hydrogen fluoride (HF)": round(hf_air, 6),
-                "Mercury (Hg to air)": round(hg_air, 8),
-                "Particulates (< 2.5 um)": round(pm_air, 5)
+                **{
+                    "Carbon dioxide, fossil (CO2)": round(co2_fossil, 4),
+                    "Carbon dioxide, biogenic (CO2)": round(co2_bio, 4),
+                    "Methane, fossil (CH4)": round(ch4_air, 6),
+                    "Dinitrogen monoxide (N2O)": round(n2o_air, 6),
+                    "Nitrogen oxides (NOx as NO2)": round(nox_air, 5),
+                    "Sulfur dioxide (SO2)": round(so2_air, 5),
+                    "Hydrogen chloride (HCl)": round(hcl_air, 5),
+                    "Hydrogen fluoride (HF)": round(hf_air, 6),
+                    "Mercury (Hg to air)": round(hg_air, 8),
+                    "Particulates (< 2.5 um)": round(pm_air, 5)
+                },
+                **metals_air
             },
             "lci_solid_residues": {
                 "Bottom ash (escoria a vertedero)": round(bottom_ash_kg, 4),
@@ -301,7 +371,7 @@ class DokaLandfillEngine:
         cap_rate = gas_capture_rate if gas_capture_rate is not None else site_info.get("default_gas_capture_rate", 0.45)
         cap_rate = max(0.0, min(0.95, float(cap_rate)))
 
-        tk_dict = cfg.get("transfer_coefficients", {})
+        tk_dict = cfg.get("element_leachate_coefficients", cfg.get("transfer_coefficients", {}))
 
         C_tot = max(0.0, float(material.get("C", 0.3)))
         bio_share = max(0.0, min(1.0, float(material.get("biogenic_c_share", 0.0))))
@@ -461,7 +531,7 @@ class DokaTailingsEngine:
                   ard_potential: bool = True,
                   model_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         cfg = model_config or {}
-        tk_dict = cfg.get("transfer_coefficients", {})
+        tk_dict = cfg.get("element_leachate_coefficients", cfg.get("transfer_coefficients", {}))
 
         tkm = (mass_kg / 1000.0) * transport_km
         gwp_c2 = tkm * 0.11
@@ -740,6 +810,70 @@ class DokaExportEngine:
 class DokaMasterSuite:
     """Fachada unificada para la suite completa WasteTools 2026."""
 
+    ELEMENTS_METADATA = [
+        # Combustion & Macro-properties
+        {"key": "Hu", "symbol": "Hu", "name_es": "Poder Calorifico Neto (PCI)", "name_en": "Net Calorific Value", "category": "combustion", "unit": "MJ/kg", "type": "macro", "default": 15.0},
+        {"key": "Ho", "symbol": "Ho", "name_es": "Poder Calorifico Bruto (PCS)", "name_en": "Gross Calorific Value", "category": "combustion", "unit": "MJ/kg", "type": "macro", "default": 16.5},
+        {"key": "H2O", "symbol": "H2O", "name_es": "Humedad (Agua)", "name_en": "Water Content", "category": "combustion", "unit": "% masa", "type": "macro", "default": 0.20},
+        {"key": "C", "symbol": "C", "name_es": "Carbono Organico Total", "name_en": "Total Organic Carbon", "category": "combustion", "unit": "% masa", "type": "macro", "default": 0.45},
+        {"key": "biogenic_c_share", "symbol": "C_bio", "name_es": "Fraccion C Biogenico", "name_en": "Biogenic Carbon Share", "category": "combustion", "unit": "0-1", "type": "macro", "default": 0.30},
+        {"key": "ash", "symbol": "Ash", "name_es": "Cenizas / Inertes", "name_en": "Ash / Mineral Residue", "category": "combustion", "unit": "% masa", "type": "macro", "default": 0.05},
+        {"key": "degradability_100a", "symbol": "Degrad", "name_es": "Degradabilidad 100a (Vertedero)", "name_en": "Degradability 100a", "category": "combustion", "unit": "0-1", "type": "macro", "default": 0.35},
+
+        # Non-metals & Halogens
+        {"key": "O", "symbol": "O", "name_es": "Oxigeno", "name_en": "Oxygen", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.25},
+        {"key": "H", "symbol": "H", "name_es": "Hidrogeno", "name_en": "Hydrogen", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.05},
+        {"key": "N", "symbol": "N", "name_es": "Nitrogeno", "name_en": "Nitrogen", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.01},
+        {"key": "S", "symbol": "S", "name_es": "Azufre", "name_en": "Sulfur", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.002},
+        {"key": "P", "symbol": "P", "name_es": "Fosforo", "name_en": "Phosphorus", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.001},
+        {"key": "Cl", "symbol": "Cl", "name_es": "Cloro", "name_en": "Chlorine", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.005},
+        {"key": "F", "symbol": "F", "name_es": "Fluor", "name_en": "Fluorine", "category": "non_metals", "unit": "% masa", "type": "macro", "default": 0.0001},
+        {"key": "Br", "symbol": "Br", "name_es": "Bromo", "name_en": "Bromine", "category": "non_metals", "unit": "ppm", "type": "ppm", "default": 10.0},
+        {"key": "I", "symbol": "I", "name_es": "Yodo", "name_en": "Iodine", "category": "non_metals", "unit": "ppm", "type": "ppm", "default": 0.5},
+        {"key": "B", "symbol": "B", "name_es": "Boro", "name_en": "Boron", "category": "non_metals", "unit": "ppm", "type": "ppm", "default": 25.0},
+
+        # Regulated Heavy Metals (ppm)
+        {"key": "Hg", "symbol": "Hg", "name_es": "Mercurio", "name_en": "Mercury", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 0.5},
+        {"key": "Pb", "symbol": "Pb", "name_es": "Plomo", "name_en": "Lead", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 55.0},
+        {"key": "Cd", "symbol": "Cd", "name_es": "Cadmio", "name_en": "Cadmium", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 5.0},
+        {"key": "As", "symbol": "As", "name_es": "Arsenico", "name_en": "Arsenic", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 3.0},
+        {"key": "Cr", "symbol": "Cr", "name_es": "Cromo", "name_en": "Chromium", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 45.0},
+        {"key": "Cu", "symbol": "Cu", "name_es": "Cobre", "name_en": "Copper", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 120.0},
+        {"key": "Ni", "symbol": "Ni", "name_es": "Niquel", "name_en": "Nickel", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 25.0},
+        {"key": "Zn", "symbol": "Zn", "name_es": "Zinc", "name_en": "Zinc", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 450.0},
+        {"key": "Sb", "symbol": "Sb", "name_es": "Antimonio", "name_en": "Antimony", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 15.0},
+        {"key": "Tl", "symbol": "Tl", "name_es": "Talio", "name_en": "Thallium", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 0.5},
+        {"key": "Se", "symbol": "Se", "name_es": "Selenio", "name_en": "Selenium", "category": "heavy_metals", "unit": "ppm", "type": "ppm", "default": 2.0},
+
+        # Industrial Metals & Major Minerals
+        {"key": "Fe", "symbol": "Fe", "name_es": "Hierro", "name_en": "Iron", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 6500.0},
+        {"key": "Al", "symbol": "Al", "name_es": "Aluminio", "name_en": "Aluminium", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 3200.0},
+        {"key": "Ca", "symbol": "Ca", "name_es": "Calcio", "name_en": "Calcium", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 18000.0},
+        {"key": "Mg", "symbol": "Mg", "name_es": "Magnesio", "name_en": "Magnesium", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 2500.0},
+        {"key": "Na", "symbol": "Na", "name_es": "Sodio", "name_en": "Sodium", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 4500.0},
+        {"key": "K", "symbol": "K", "name_es": "Potasio", "name_en": "Potassium", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 3500.0},
+        {"key": "Si", "symbol": "Si", "name_es": "Silicio", "name_en": "Silicon", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 25000.0},
+        {"key": "Ti", "symbol": "Ti", "name_es": "Titanio", "name_en": "Titanium", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 850.0},
+        {"key": "Mn", "symbol": "Mn", "name_es": "Manganeso", "name_en": "Manganese", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 180.0},
+        {"key": "Sn", "symbol": "Sn", "name_es": "Estaño", "name_en": "Tin", "category": "minerals_metals", "unit": "ppm", "type": "ppm", "default": 12.0},
+
+        # Trace & Rare Elements
+        {"key": "Ag", "symbol": "Ag", "name_es": "Plata", "name_en": "Silver", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 1.5},
+        {"key": "Ba", "symbol": "Ba", "name_es": "Bario", "name_en": "Barium", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 250.0},
+        {"key": "Be", "symbol": "Be", "name_es": "Berilio", "name_en": "Beryllium", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 0.8},
+        {"key": "Co", "symbol": "Co", "name_es": "Cobalto", "name_en": "Cobalt", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 4.5},
+        {"key": "Mo", "symbol": "Mo", "name_es": "Molibdeno", "name_en": "Molybdenum", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 2.5},
+        {"key": "Sc", "symbol": "Sc", "name_es": "Escandio", "name_en": "Scandium", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 0.1},
+        {"key": "Sr", "symbol": "Sr", "name_es": "Estroncio", "name_en": "Strontium", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 65.0},
+        {"key": "V", "symbol": "V", "name_es": "Vanadio", "name_en": "Vanadium", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 28.0},
+        {"key": "W", "symbol": "W", "name_es": "Wolframio", "name_en": "Tungsten", "category": "trace_elements", "unit": "ppm", "type": "ppm", "default": 1.0}
+    ]
+
+    def get_elements_metadata(self) -> list:
+        """Retorna la lista completa de metadatos de los 47 elementos y parametros quimicos."""
+        return self.ELEMENTS_METADATA
+
+
     _instance = None
 
     def __init__(self, data_file: Optional[str] = None):
@@ -762,11 +896,16 @@ class DokaMasterSuite:
             raw = json.load(f)
 
         self.metadata = raw.get("metadata", {})
+        self.element_catalog = raw.get("element_catalog", [])
         self.materials = raw.get("materials", [])
         for m in self.materials:
             self.materials_map[m["id"]] = m
 
         self.models_config = raw.get("models", {})
+
+    def get_element_catalog(self) -> List[Dict[str, Any]]:
+        """Devuelve el catalogo oficial de los 44 elementos y macro-propiedades quimicas."""
+        return self.element_catalog
 
     def get_categories(self) -> List[str]:
         cats = sorted(list(set(m["category"] for m in self.materials if m.get("category"))))

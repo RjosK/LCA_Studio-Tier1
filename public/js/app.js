@@ -14696,6 +14696,9 @@ print("Actividad GEI registrada:", res.get("status"))`;
   let wasteMixtureRows = [];
   let currentWasteMode = "predefined"; // "predefined", "mixture", "custom"
   let lastWasteCalculationResult = null;
+  let wasteElementsList = [];
+  let activeChemCategory = "all";
+  let lastSynthesizedMixture = null;
 
   const tWaste = (key, fallback) => (window.I18n ? window.I18n.t(key, fallback) : fallback);
 
@@ -14709,6 +14712,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
 
   async function initWasteToolsData() {
     try {
+      // 1. Cargar Categorias
       const catSelect = document.getElementById("wasteCategorySelect");
       if (catSelect && catSelect.options.length <= 1) {
         const resCats = await fetch("/api/waste/categories");
@@ -14722,8 +14726,14 @@ print("Actividad GEI registrada:", res.get("status"))`;
           });
         }
       }
+
+      // 2. Cargar Elementos Quimicos y Metadatos (50 Especies)
+      await loadWasteElements();
+
+      // 3. Cargar Materiales
       await loadWasteMaterials();
 
+      // 4. Inicializar Mezcla por defecto si esta vacia
       if (!wasteMixtureRows || wasteMixtureRows.length === 0) {
         wasteMixtureRows = [
           { material_id: "dokamat_11", share: 50.0 },
@@ -14734,6 +14744,393 @@ print("Actividad GEI registrada:", res.get("status"))`;
     } catch (err) {
       console.error("Error al inicializar WasteTools:", err);
     }
+  }
+
+  async function loadWasteElements() {
+    try {
+      const res = await fetch("/api/waste/elements");
+      const data = await res.json();
+      if (data.status === "success" && data.elements) {
+        wasteElementsList = data.elements;
+        renderChemicalElementsGrid();
+      }
+    } catch (e) {
+      console.warn("No se pudo cargar /api/waste/elements:", e);
+    }
+  }
+
+  function renderChemicalElementsGrid() {
+    const grid = document.getElementById("wasteChemicalElementsGrid");
+    if (!grid || !wasteElementsList || wasteElementsList.length === 0) return;
+
+    grid.innerHTML = wasteElementsList.map(el => {
+      const isMacro = el.type === "macro";
+      const step = isMacro ? (el.unit === "0-1" ? "0.01" : "0.001") : "0.1";
+      const defaultVal = el.default != null ? el.default : (isMacro ? 0.01 : 10.0);
+      const searchTerms = `${el.key} ${el.symbol} ${el.name_es} ${el.name_en}`.toLowerCase();
+
+      return `
+        <div class="chem-card" data-category="${el.category}" data-search="${searchTerms}" style="padding: 8px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px; display: flex; flex-direction: column; justify-content: space-between;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span class="mono" style="font-size: 11.5px; font-weight: 700; color: var(--accent-emerald, #10b981); background: rgba(16,185,129,0.1); padding: 1px 6px; border-radius: 4px;">
+              [${el.symbol}]
+            </span>
+            <span style="font-size: 10px; color: var(--text-muted); text-transform: uppercase;">
+              ${el.unit}
+            </span>
+          </div>
+          <div style="font-size: 11px; font-weight: 500; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${el.name_es} (${el.name_en})">
+            ${el.name_es}
+          </div>
+          <input type="number" step="${step}" min="0" id="chemInput_${el.key}" value="${defaultVal}" class="form-control chem-value-input" style="height: 28px; font-size: 11px; text-align: right; width: 100%;" oninput="window.EconodeApp.updateLiveMassBalance()" />
+        </div>
+      `;
+    }).join("");
+
+    updateLiveMassBalance();
+  }
+
+  function updateLiveMassBalance() {
+    const badge = document.getElementById("badgeLiveMassBalance");
+    if (!badge) return;
+
+    const hu = parseFloat(document.getElementById("chemInput_Hu")?.value || "0");
+    const h2o = parseFloat(document.getElementById("chemInput_H2O")?.value || "0");
+    const c = parseFloat(document.getElementById("chemInput_C")?.value || "0");
+    const o = parseFloat(document.getElementById("chemInput_O")?.value || "0");
+    const h = parseFloat(document.getElementById("chemInput_H")?.value || "0");
+    const n = parseFloat(document.getElementById("chemInput_N")?.value || "0");
+    const s = parseFloat(document.getElementById("chemInput_S")?.value || "0");
+    const p = parseFloat(document.getElementById("chemInput_P")?.value || "0");
+    const cl = parseFloat(document.getElementById("chemInput_Cl")?.value || "0");
+    const f = parseFloat(document.getElementById("chemInput_F")?.value || "0");
+    const ash = parseFloat(document.getElementById("chemInput_ash")?.value || "0");
+
+    // Suma en porcentaje (0 a 100%)
+    // Si los valores estan en fraccion (0-1), convertimos
+    const sumFrac = (h2o > 1 ? h2o / 100 : h2o) +
+                    (c > 1 ? c / 100 : c) +
+                    (o > 1 ? o / 100 : o) +
+                    (h > 1 ? h / 100 : h) +
+                    (n > 1 ? n / 100 : n) +
+                    (s > 1 ? s / 100 : s) +
+                    (p > 1 ? p / 100 : p) +
+                    (cl > 1 ? cl / 100 : cl) +
+                    (f > 1 ? f / 100 : f) +
+                    (ash > 1 ? ash / 100 : ash);
+
+    const sumPct = sumFrac * 100.0;
+    badge.textContent = `${sumPct.toFixed(1)}%`;
+    if (Math.abs(sumPct - 100.0) <= 2.0) {
+      badge.style.color = "#10b981";
+    } else if (sumPct < 100.0) {
+      badge.style.color = "#f59e0b";
+    } else {
+      badge.style.color = "#ef4444";
+    }
+  }
+
+  function filterChemicalElements() {
+    const q = (document.getElementById("inputSearchChemicals")?.value || "").toLowerCase().trim();
+    const cards = document.querySelectorAll("#wasteChemicalElementsGrid .chem-card");
+
+    cards.forEach(card => {
+      const cat = card.getAttribute("data-category");
+      const search = card.getAttribute("data-search") || "";
+      const matchesCat = (activeChemCategory === "all" || cat === activeChemCategory);
+      const matchesQuery = (!q || search.includes(q));
+
+      if (matchesCat && matchesQuery) {
+        card.style.display = "flex";
+      } else {
+        card.style.display = "none";
+      }
+    });
+  }
+
+  function setChemicalCategoryFilter(cat) {
+    activeChemCategory = cat;
+    document.querySelectorAll("[data-chem-cat]").forEach(btn => {
+      if (btn.getAttribute("data-chem-cat") === cat) {
+        btn.classList.add("active");
+      } else {
+        btn.classList.remove("active");
+      }
+    });
+    filterChemicalElements();
+  }
+
+  function populateCustomTemplateSelect() {
+    const sel = document.getElementById("selectCustomTemplate");
+    if (!sel || !wasteMaterialsCache) return;
+
+    sel.innerHTML = `<option value="">-- Cargar Quimicos desde Material del Catalogo (${wasteMaterialsCache.length} disponibles) --</option>`;
+    wasteMaterialsCache.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m.id;
+      opt.textContent = `${m.name} (${m.category})`;
+      sel.appendChild(opt);
+    });
+  }
+
+  function loadMaterialIntoCustomEditor(matId) {
+    if (!matId) return;
+    const mat = wasteMaterialsCache.find(m => m.id === matId);
+    if (!mat) return;
+
+    // Cargar Macro
+    const setVal = (id, val) => {
+      const inp = document.getElementById(id);
+      if (inp) inp.value = val != null ? val : 0;
+    };
+
+    setVal("chemInput_Hu", mat.Hu != null ? Number(mat.Hu).toFixed(2) : 15.0);
+    setVal("chemInput_Ho", mat.Ho != null ? Number(mat.Ho).toFixed(2) : 16.5);
+    setVal("chemInput_H2O", mat.H2O != null ? Number(mat.H2O).toFixed(4) : 0.20);
+    setVal("chemInput_C", mat.C != null ? Number(mat.C).toFixed(4) : 0.45);
+    setVal("chemInput_biogenic_c_share", mat.biogenic_c_share != null ? Number(mat.biogenic_c_share).toFixed(3) : 0.0);
+    setVal("chemInput_ash", mat.ash != null ? Number(mat.ash).toFixed(4) : 0.05);
+    setVal("chemInput_degradability_100a", mat.degradability_100a != null ? Number(mat.degradability_100a).toFixed(3) : 0.1);
+    setVal("chemInput_O", mat.O != null ? Number(mat.O).toFixed(4) : 0.0);
+    setVal("chemInput_H", mat.H != null ? Number(mat.H).toFixed(4) : 0.05);
+    setVal("chemInput_N", mat.N != null ? Number(mat.N).toFixed(5) : 0.005);
+    setVal("chemInput_S", mat.S != null ? Number(mat.S).toFixed(5) : 0.001);
+    setVal("chemInput_P", mat.P != null ? Number(mat.P).toFixed(5) : 0.0);
+    setVal("chemInput_Cl", mat.Cl != null ? Number(mat.Cl).toFixed(5) : 0.002);
+    setVal("chemInput_F", mat.F != null ? Number(mat.F).toFixed(6) : 0.0);
+    setVal("chemInput_Br", mat.Br != null ? (Number(mat.Br) * 1e4).toFixed(2) : 0.0);
+    setVal("chemInput_I", mat.I != null ? (Number(mat.I) * 1e4).toFixed(3) : 0.0);
+
+    // Cargar Oligoelementos en ppm
+    const metals = mat.elements_ppm || {};
+    wasteElementsList.forEach(el => {
+      if (el.type === "ppm") {
+        const val = metals[el.key] != null ? Number(metals[el.key]).toFixed(2) : 0.0;
+        setVal(`chemInput_${el.key}`, val);
+      }
+    });
+
+    updateLiveMassBalance();
+    showNotification(`Plantilla de quimicos cargada desde: ${mat.name}`);
+  }
+
+  function applyPreset(presetType) {
+    const setVal = (k, v) => {
+      const inp = document.getElementById(`chemInput_${k}`);
+      if (inp) inp.value = v;
+    };
+
+    if (presetType === "zero") {
+      wasteElementsList.forEach(el => setVal(el.key, 0));
+      showNotification("Todos los parametros quimicos se han puesto a cero.");
+    } else if (presetType === "msw") {
+      setVal("Hu", 11.5); setVal("Ho", 13.0); setVal("H2O", 0.35); setVal("C", 0.28);
+      setVal("biogenic_c_share", 0.65); setVal("ash", 0.22); setVal("degradability_100a", 0.45);
+      setVal("O", 0.18); setVal("H", 0.04); setVal("N", 0.008); setVal("S", 0.0025);
+      setVal("P", 0.0015); setVal("Cl", 0.006); setVal("F", 0.0001);
+      setVal("Fe", 8500); setVal("Al", 2200); setVal("Cu", 450); setVal("Pb", 180);
+      setVal("Zn", 950); setVal("Cd", 6.5); setVal("Hg", 1.2); setVal("As", 8.0);
+      setVal("Cr", 75); setVal("Ni", 45); setVal("Ca", 16000); setVal("Na", 4500);
+      showNotification("Plantilla de Residuos Solidos Urbanos (RSU) cargada.");
+    } else if (presetType === "plastics") {
+      setVal("Hu", 38.5); setVal("Ho", 41.0); setVal("H2O", 0.01); setVal("C", 0.83);
+      setVal("biogenic_c_share", 0.0); setVal("ash", 0.015); setVal("degradability_100a", 0.01);
+      setVal("O", 0.02); setVal("H", 0.13); setVal("N", 0.001); setVal("S", 0.0004);
+      setVal("Cl", 0.003); setVal("Fe", 650); setVal("Al", 250); setVal("Cu", 45);
+      setVal("Pb", 22); setVal("Zn", 280); setVal("Cd", 12.0); setVal("Hg", 0.05);
+      showNotification("Plantilla de Plasticos Mixtos (PE/PP) cargada.");
+    } else if (presetType === "ewaste") {
+      setVal("Hu", 13.0); setVal("Ho", 15.0); setVal("H2O", 0.02); setVal("C", 0.22);
+      setVal("biogenic_c_share", 0.0); setVal("ash", 0.48); setVal("degradability_100a", 0.00);
+      setVal("Cl", 0.025); setVal("Br", 1500); setVal("Fe", 180000); setVal("Al", 75000);
+      setVal("Cu", 48000); setVal("Pb", 3800); setVal("Zn", 8500); setVal("Cd", 125);
+      setVal("Hg", 18); setVal("As", 95); setVal("Ag", 450); setVal("Ni", 4800); setVal("Sn", 8200);
+      showNotification("Plantilla de RAEE / Chatarra Electronica cargada.");
+    }
+    updateLiveMassBalance();
+  }
+
+  function togglePredefinedElementsDrawer() {
+    const drawer = document.getElementById("wastePredefinedElementsDrawer");
+    const btn = document.getElementById("btnTogglePredefinedElements");
+    if (!drawer) return;
+
+    if (drawer.style.display === "none") {
+      drawer.style.display = "block";
+      if (btn) btn.innerHTML = `<span class="mono">[-]</span> <span>Ocultar Elementos Quimicos</span>`;
+      renderPredefinedElementsTable();
+    } else {
+      drawer.style.display = "none";
+      if (btn) btn.innerHTML = `<span class="mono">[+]</span> <span>Inspeccionar 50 Elementos Quimicos</span>`;
+    }
+  }
+
+  function renderPredefinedElementsTable() {
+    const container = document.getElementById("wastePredefinedElementsTableContainer");
+    const matSelect = document.getElementById("wasteMaterialSelect");
+    if (!container || !matSelect || !matSelect.value) return;
+
+    const mat = wasteMaterialsCache.find(m => m.id === matSelect.value);
+    if (!mat) return;
+
+    const metals = mat.elements_ppm || {};
+    const rows = wasteElementsList.map(el => {
+      let valStr = "--";
+      if (el.type === "macro") {
+        const raw = mat[el.key];
+        if (raw != null) {
+          valStr = el.unit === "% masa" ? `${(Number(raw) * 100).toFixed(2)} %` : Number(raw).toFixed(2);
+        }
+      } else {
+        const raw = metals[el.key];
+        if (raw != null) {
+          valStr = `${Number(raw).toFixed(2)} ppm`;
+        }
+      }
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td class="mono" style="padding: 4px 8px; font-weight: 700; color: var(--accent-emerald, #10b981);">${el.symbol}</td>
+          <td style="padding: 4px 8px;">${el.name_es}</td>
+          <td style="padding: 4px 8px; text-align: right; font-family: monospace; font-weight: 600;">${valStr}</td>
+          <td style="padding: 4px 8px; font-size: 10px; color: var(--text-muted); text-transform: uppercase;">${el.category}</td>
+        </tr>
+      `;
+    }).join("");
+
+    container.innerHTML = `
+      <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-secondary); font-size: 10.5px;">
+            <th style="padding: 4px 8px;">Simbolo</th>
+            <th style="padding: 4px 8px;">Elemento / Parametro</th>
+            <th style="padding: 4px 8px; text-align: right;">Concentracion</th>
+            <th style="padding: 4px 8px;">Categoria</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function copyPredefinedToCustom() {
+    const matSelect = document.getElementById("wasteMaterialSelect");
+    if (!matSelect || !matSelect.value) return;
+
+    // Cambiar a pestaña custom
+    const btnCust = document.getElementById("btnWasteModeCustom");
+    if (btnCust) btnCust.click();
+
+    loadMaterialIntoCustomEditor(matSelect.value);
+    showNotification("Perfil quimico transferido al Editor Elemental para personalizacion.");
+  }
+
+  function toggleMixtureElementsDrawer() {
+    const drawer = document.getElementById("wasteMixtureElementsDrawer");
+    const btn = document.getElementById("btnToggleMixtureElements");
+    if (!drawer) return;
+
+    if (drawer.style.display === "none") {
+      drawer.style.display = "block";
+      if (btn) btn.innerHTML = `<span class="mono">[-]</span> <span>Ocultar Composicion de Mezcla</span>`;
+      renderMixtureElementsTable();
+    } else {
+      drawer.style.display = "none";
+      if (btn) btn.innerHTML = `<span class="mono">[+]</span> <span>Ver Composicion Elemental de la Mezcla</span>`;
+    }
+  }
+
+  function renderMixtureElementsTable() {
+    const container = document.getElementById("wasteMixtureElementsTableContainer");
+    if (!container || !lastSynthesizedMixture) {
+      if (container) container.innerHTML = `<div style="font-size: 11px; color: var(--text-muted); padding: 8px;">No hay calculo de mezcla sintetizada disponible todavia.</div>`;
+      return;
+    }
+
+    const m = lastSynthesizedMixture;
+    const metals = m.elements_ppm || {};
+    const rows = wasteElementsList.map(el => {
+      let valStr = "--";
+      if (el.type === "macro") {
+        const raw = m[el.key];
+        if (raw != null) {
+          valStr = el.unit === "% masa" ? `${(Number(raw) * 100).toFixed(2)} %` : Number(raw).toFixed(2);
+        }
+      } else {
+        const raw = metals[el.key];
+        if (raw != null) {
+          valStr = `${Number(raw).toFixed(2)} ppm`;
+        }
+      }
+
+      return `
+        <tr style="border-bottom: 1px solid var(--border-color);">
+          <td class="mono" style="padding: 4px 8px; font-weight: 700; color: #3b82f6;">${el.symbol}</td>
+          <td style="padding: 4px 8px;">${el.name_es}</td>
+          <td style="padding: 4px 8px; text-align: right; font-family: monospace; font-weight: 600;">${valStr}</td>
+          <td style="padding: 4px 8px; font-size: 10px; color: var(--text-muted);">${el.category}</td>
+        </tr>
+      `;
+    }).join("");
+
+    container.innerHTML = `
+      <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+        <thead>
+          <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-secondary); font-size: 10.5px;">
+            <th style="padding: 4px 8px;">Simbolo</th>
+            <th style="padding: 4px 8px;">Elemento</th>
+            <th style="padding: 4px 8px; text-align: right;">Concentracion Sintetizada</th>
+            <th style="padding: 4px 8px;">Categoria</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows}
+        </tbody>
+      </table>
+    `;
+  }
+
+  function copyMixtureToCustom() {
+    if (!lastSynthesizedMixture) {
+      showNotification("Calcula primero una mezcla compuesta.");
+      return;
+    }
+
+    const m = lastSynthesizedMixture;
+    const btnCust = document.getElementById("btnWasteModeCustom");
+    if (btnCust) btnCust.click();
+
+    const setVal = (id, val) => {
+      const inp = document.getElementById(id);
+      if (inp) inp.value = val != null ? val : 0;
+    };
+
+    setVal("chemInput_Hu", Number(m.Hu).toFixed(2));
+    setVal("chemInput_Ho", Number(m.Ho).toFixed(2));
+    setVal("chemInput_H2O", Number(m.H2O).toFixed(4));
+    setVal("chemInput_C", Number(m.C).toFixed(4));
+    setVal("chemInput_biogenic_c_share", Number(m.biogenic_c_share).toFixed(3));
+    setVal("chemInput_ash", Number(m.ash).toFixed(4));
+    setVal("chemInput_degradability_100a", Number(m.degradability_100a).toFixed(3));
+    setVal("chemInput_O", Number(m.O).toFixed(4));
+    setVal("chemInput_H", Number(m.H).toFixed(4));
+    setVal("chemInput_N", Number(m.N).toFixed(5));
+    setVal("chemInput_S", Number(m.S).toFixed(5));
+    setVal("chemInput_P", Number(m.P).toFixed(5));
+    setVal("chemInput_Cl", Number(m.Cl).toFixed(5));
+    setVal("chemInput_F", Number(m.F).toFixed(6));
+
+    const metals = m.elements_ppm || {};
+    wasteElementsList.forEach(el => {
+      if (el.type === "ppm") {
+        setVal(`chemInput_${el.key}`, Number(metals[el.key] || 0).toFixed(2));
+      }
+    });
+
+    updateLiveMassBalance();
+    showNotification("Composicion de la mezcla transferida al Editor Elemental.");
   }
 
   async function loadWasteMaterials(category = "") {
@@ -14757,6 +15154,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
         });
         updateWasteMaterialBadges();
         renderWasteMixtureRows();
+        populateCustomTemplateSelect();
       }
     } catch (err) {
       console.error("Error al cargar materiales de residuos:", err);
@@ -14786,6 +15184,12 @@ print("Actividad GEI registrada:", res.get("status"))`;
     if (bC) bC.textContent = `Carbono (C): ${c}%`;
     if (bBio) bBio.textContent = `Biogenico: ${bio}%`;
     if (bDegrad) bDegrad.textContent = `Degradabilidad 100a: ${degrad}`;
+
+    // Si el drawer de elementos esta abierto, refrescarlo
+    const drawer = document.getElementById("wastePredefinedElementsDrawer");
+    if (drawer && drawer.style.display !== "none") {
+      renderPredefinedElementsTable();
+    }
   }
 
   function renderWasteMixtureRows() {
@@ -14872,6 +15276,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
         });
         const data = await res.json();
         if (data.status === "success" && data.mixed_material) {
+          lastSynthesizedMixture = data.mixed_material;
           const m = data.mixed_material;
           const bHu = document.getElementById("badgeMixHu");
           const bH2O = document.getElementById("badgeMixH2O");
@@ -14884,6 +15289,11 @@ print("Actividad GEI registrada:", res.get("status"))`;
           if (bC) bC.textContent = `Carbono Total: ${(Number(m.C) * 100).toFixed(1)}%`;
           if (bBio) bBio.textContent = `Fraccion Biogenica: ${(Number(m.biogenic_c_share) * 100).toFixed(0)}%`;
           if (bDegrad) bDegrad.textContent = `Degradabilidad 100a: ${Number(m.degradability_100a).toFixed(2)}`;
+
+          const mixDrawer = document.getElementById("wasteMixtureElementsDrawer");
+          if (mixDrawer && mixDrawer.style.display !== "none") {
+            renderMixtureElementsTable();
+          }
         }
       } catch (e) {}
     }
@@ -14929,17 +15339,38 @@ print("Actividad GEI registrada:", res.get("status"))`;
         }
         payload.fractions = wasteMixtureRows.map(r => ({ material_id: r.material_id, share: r.share }));
       } else {
-        payload.custom_properties = {
-          Hu: parseFloat(document.getElementById("inputCustomHu")?.value || "15"),
-          C: parseFloat(document.getElementById("inputCustomC")?.value || "0.45"),
-          biogenic_c_share: parseFloat(document.getElementById("inputCustomBio")?.value || "0.3"),
-          H2O: parseFloat(document.getElementById("inputCustomH2O")?.value || "0.2"),
-          ash: parseFloat(document.getElementById("inputCustomAsh")?.value || "0.05"),
-          N: parseFloat(document.getElementById("inputCustomN")?.value || "0.01"),
-          S: parseFloat(document.getElementById("inputCustomS")?.value || "0.002"),
-          Cl: parseFloat(document.getElementById("inputCustomCl")?.value || "0.005"),
-          degradability_100a: parseFloat(document.getElementById("inputCustomDegrad")?.value || "0.35")
+        // Modo Quimico Completo: Leer los 47 parametros
+        const custom_props = {
+          name: "Residuo Personalizado (Estequiometria Doka)",
+          Hu: parseFloat(document.getElementById("chemInput_Hu")?.value || "15.0"),
+          Ho: parseFloat(document.getElementById("chemInput_Ho")?.value || "16.5"),
+          H2O: parseFloat(document.getElementById("chemInput_H2O")?.value || "0.20"),
+          C: parseFloat(document.getElementById("chemInput_C")?.value || "0.45"),
+          biogenic_c_share: parseFloat(document.getElementById("chemInput_biogenic_c_share")?.value || "0.30"),
+          ash: parseFloat(document.getElementById("chemInput_ash")?.value || "0.05"),
+          degradability_100a: parseFloat(document.getElementById("chemInput_degradability_100a")?.value || "0.35"),
+          O: parseFloat(document.getElementById("chemInput_O")?.value || "0.25"),
+          H: parseFloat(document.getElementById("chemInput_H")?.value || "0.05"),
+          N: parseFloat(document.getElementById("chemInput_N")?.value || "0.01"),
+          S: parseFloat(document.getElementById("chemInput_S")?.value || "0.002"),
+          P: parseFloat(document.getElementById("chemInput_P")?.value || "0.001"),
+          Cl: parseFloat(document.getElementById("chemInput_Cl")?.value || "0.005"),
+          F: parseFloat(document.getElementById("chemInput_F")?.value || "0.0001"),
+          elements_ppm: {}
         };
+
+        if (wasteElementsList && wasteElementsList.length > 0) {
+          wasteElementsList.forEach(el => {
+            if (el.type === "ppm") {
+              const inp = document.getElementById(`chemInput_${el.key}`);
+              if (inp) {
+                custom_props.elements_ppm[el.key] = parseFloat(inp.value) || 0.0;
+              }
+            }
+          });
+        }
+
+        payload.custom_properties = custom_props;
       }
 
       if (tech === "mswi") {
@@ -14991,6 +15422,8 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const avoidedEnergy = raw.avoided_energy || raw.avoided_burdens || {};
     const modDBreakdown = raw.module_d_breakdown || {};
     const solids = raw.lci_solid_residues || raw.solid_residues || {};
+    const airEmissions = raw.lci_air_emissions || {};
+    const waterLeachate = raw.lci_leachate_short_term_100a || raw.lci_water_emissions || {};
 
     const container = document.getElementById("wasteResultsContainer");
     if (container) container.style.display = "block";
@@ -14998,6 +15431,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const badgeTech = document.getElementById("badgeActiveTechIndicator");
     if (badgeTech) badgeTech.textContent = raw.technology_name || raw.technology || "Doka Model";
 
+    // Tarjetas Principales GWP
     const elNet = document.getElementById("resWasteNetGWP");
     const elC4 = document.getElementById("resWasteC4GWP");
     const elC4Sub = document.getElementById("resWasteC4Sub");
@@ -15020,6 +15454,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
     if (elModD) elModD.textContent = `${modDGwp.toFixed(2)} kg CO2e`;
     if (elC2C3) elC2C3.textContent = `+${(c2 + c3).toFixed(2)} kg CO2e`;
 
+    // 1. Panel Overview (Energia & Solidos)
     const elEnergy = document.getElementById("resWasteEnergyList");
     if (elEnergy) {
       const elecKwh = avoidedEnergy["Electricity recovered (kWh)"] || (avoidedEnergy.gross_electricity_mj ? (avoidedEnergy.gross_electricity_mj / 3.6) : 0);
@@ -15039,14 +15474,90 @@ print("Actividad GEI registrada:", res.get("status"))`;
       const flyAsh = solids["Air pollution control (APC) filter residues"] || solids.fly_ash_kg || 0;
       const iron = raw.avoided_materials?.["Scrap iron recovered (kg)"] || raw.avoided_burdens?.recovered_iron_scrap_kg || 0;
       const alu = raw.avoided_materials?.["Scrap aluminium recovered (kg)"] || 0;
+      const cu = raw.avoided_materials?.["Scrap copper recovered (kg)"] || 0;
 
       elSolids.innerHTML = `
         <li>Escoria residual / Confinamiento: <strong>${Number(bottomAsh).toFixed(2)} kg</strong></li>
         <li>Cenizas volantes y filtros (APC): <strong>${Number(flyAsh).toFixed(2)} kg</strong></li>
-        <li>Chatarra recuperada (Fe + Al): <strong>${Number(iron + alu).toFixed(2)} kg</strong></li>
+        <li>Chatarra recuperada (Fe + Al + Cu): <strong>${Number(iron + alu + cu).toFixed(3)} kg</strong></li>
       `;
     }
 
+    // 2. Panel Air: Renderizar tabla completa de emisiones atmosfericas (Gases y Metales Pesados)
+    const elAirContainer = document.getElementById("resWasteAirEmissionsContainer");
+    if (elAirContainer) {
+      const airEntries = Object.entries(airEmissions);
+      if (airEntries.length === 0) {
+        elAirContainer.innerHTML = `<div style="font-size: 11px; color: var(--text-muted); padding: 8px;">No hay emisiones atmosfericas directas registradas.</div>`;
+      } else {
+        const rows = airEntries.map(([name, val]) => {
+          const valNum = Number(val);
+          const valGrams = valNum * 1000.0;
+          const isHeavyMetal = name.includes("to air") && !name.includes("Carbon") && !name.includes("Methane") && !name.includes("Nitrogen") && !name.includes("Sulfur");
+
+          return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td style="padding: 5px 8px; font-weight: ${isHeavyMetal ? "600" : "400"}; color: ${isHeavyMetal ? "var(--accent-emerald, #10b981)" : "inherit"};">
+                ${name}
+              </td>
+              <td style="padding: 5px 8px; text-align: right; font-family: monospace;">${valNum >= 0.001 ? valNum.toFixed(4) : valNum.toExponential(3)} kg</td>
+              <td style="padding: 5px 8px; text-align: right; font-family: monospace; color: var(--text-secondary);">${valGrams >= 0.001 ? valGrams.toFixed(3) : valGrams.toExponential(2)} g</td>
+            </tr>
+          `;
+        }).join("");
+
+        elAirContainer.innerHTML = `
+          <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-secondary); font-size: 10.5px;">
+                <th style="padding: 5px 8px;">Compuesto / Flujo Elemental</th>
+                <th style="padding: 5px 8px; text-align: right;">Masa Emitida (kg)</th>
+                <th style="padding: 5px 8px; text-align: right;">Masa en Gramos (g)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
+      }
+    }
+
+    // 3. Panel Water: Renderizar tabla de lixiviacion acuosa
+    const elWaterContainer = document.getElementById("resWasteWaterEmissionsContainer");
+    if (elWaterContainer) {
+      if (typeof waterLeachate === "object" && Object.keys(waterLeachate).length > 0) {
+        const rows = Object.entries(waterLeachate).map(([elem, val]) => {
+          const valNum = Number(val);
+          return `
+            <tr style="border-bottom: 1px solid var(--border-color);">
+              <td class="mono" style="padding: 5px 8px; font-weight: 700; color: #3b82f6;">${elem}</td>
+              <td style="padding: 5px 8px; text-align: right; font-family: monospace;">${valNum >= 0.001 ? valNum.toFixed(5) : valNum.toExponential(3)} kg</td>
+              <td style="padding: 5px 8px; text-align: right; font-family: monospace; color: var(--text-secondary);">${(valNum * 1000).toFixed(3)} g</td>
+            </tr>
+          `;
+        }).join("");
+
+        elWaterContainer.innerHTML = `
+          <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+            <thead>
+              <tr style="border-bottom: 2px solid var(--border-color); text-align: left; color: var(--text-secondary); font-size: 10.5px;">
+                <th style="padding: 5px 8px;">Elemento Lixiviado</th>
+                <th style="padding: 5px 8px; text-align: right;">Masa Lixiviada (kg)</th>
+                <th style="padding: 5px 8px; text-align: right;">Masa en Gramos (g)</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        `;
+      } else {
+        elWaterContainer.innerHTML = `<div style="font-size: 11px; color: var(--text-muted); padding: 8px;">Sin lixiviacion acuosa directa para esta tecnologia o material inerte.</div>`;
+      }
+    }
+
+    // Botones de exportacion
     const btnExport = document.getElementById("btnExportWasteJson");
     const btnSima = document.getElementById("btnExportWasteSimaPro");
     const btnEco = document.getElementById("btnExportWasteEcoSpold");
@@ -15186,6 +15697,70 @@ print("Actividad GEI registrada:", res.get("status"))`;
       if (secPred) secPred.style.display = "none";
       if (secMix) secMix.style.display = "none";
       if (secCust) secCust.style.display = "block";
+      if (wasteElementsList.length === 0) {
+        loadWasteElements();
+      }
+    });
+
+    // Botones de inspeccion de elementos
+    document.getElementById("btnTogglePredefinedElements")?.addEventListener("click", togglePredefinedElementsDrawer);
+    document.getElementById("btnCopyPredefinedToCustom")?.addEventListener("click", copyPredefinedToCustom);
+    document.getElementById("btnToggleMixtureElements")?.addEventListener("click", toggleMixtureElementsDrawer);
+    document.getElementById("btnCopyMixtureToCustom")?.addEventListener("click", copyMixtureToCustom);
+
+    // Herramientas de plantilla y preajustes en modo custom
+    document.getElementById("btnApplyCustomTemplate")?.addEventListener("click", () => {
+      const sel = document.getElementById("selectCustomTemplate");
+      if (sel && sel.value) loadMaterialIntoCustomEditor(sel.value);
+    });
+
+    document.getElementById("btnPresetMSW")?.addEventListener("click", () => applyPreset("msw"));
+    document.getElementById("btnPresetPlastics")?.addEventListener("click", () => applyPreset("plastics"));
+    document.getElementById("btnPresetEwaste")?.addEventListener("click", () => applyPreset("ewaste"));
+    document.getElementById("btnClearCustomElements")?.addEventListener("click", () => applyPreset("zero"));
+
+    // Buscador y filtros de categorias de quimicos
+    document.getElementById("inputSearchChemicals")?.addEventListener("input", filterChemicalElements);
+    document.querySelectorAll("[data-chem-cat]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const cat = btn.getAttribute("data-chem-cat");
+        setChemicalCategoryFilter(cat);
+      });
+    });
+
+    // Pestañas de Resultados
+    const resTabOverview = document.getElementById("btnResTabOverview");
+    const resTabAir = document.getElementById("btnResTabAir");
+    const resTabWater = document.getElementById("btnResTabWater");
+    const resPanelOverview = document.getElementById("resPanelOverview");
+    const resPanelAir = document.getElementById("resPanelAir");
+    const resPanelWater = document.getElementById("resPanelWater");
+
+    resTabOverview?.addEventListener("click", () => {
+      resTabOverview.classList.add("active");
+      resTabAir?.classList.remove("active");
+      resTabWater?.classList.remove("active");
+      if (resPanelOverview) resPanelOverview.style.display = "grid";
+      if (resPanelAir) resPanelAir.style.display = "none";
+      if (resPanelWater) resPanelWater.style.display = "none";
+    });
+
+    resTabAir?.addEventListener("click", () => {
+      resTabAir.classList.add("active");
+      resTabOverview?.classList.remove("active");
+      resTabWater?.classList.remove("active");
+      if (resPanelOverview) resPanelOverview.style.display = "none";
+      if (resPanelAir) resPanelAir.style.display = "block";
+      if (resPanelWater) resPanelWater.style.display = "none";
+    });
+
+    resTabWater?.addEventListener("click", () => {
+      resTabWater.classList.add("active");
+      resTabOverview?.classList.remove("active");
+      resTabAir?.classList.remove("active");
+      if (resPanelOverview) resPanelOverview.style.display = "none";
+      if (resPanelAir) resPanelAir.style.display = "none";
+      if (resPanelWater) resPanelWater.style.display = "block";
     });
 
     document.getElementById("btnAddMixtureRow")?.addEventListener("click", () => addWasteMixtureRow());
@@ -15212,8 +15787,12 @@ print("Actividad GEI registrada:", res.get("status"))`;
     setupWasteToolsEventListeners();
   }
 
+
   window.ECONODE = null;
   window.EconodeApp = {
+    updateLiveMassBalance,
+    loadMaterialIntoCustomEditor,
+    applyPreset,
     openWasteToolsModal,
     closeWasteToolsModal,
     initWasteToolsData,

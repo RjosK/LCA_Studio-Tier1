@@ -68,7 +68,10 @@
         "K": 55666.085,
         "Mg": 10568.017,
         "Na": 72987.811
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_11",
@@ -125,7 +128,10 @@
         "K": 0.0,
         "Mg": 98.766,
         "Na": 1350.621
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_12",
@@ -182,7 +188,10 @@
         "K": 0.0,
         "Mg": 83.396,
         "Na": 1140.434
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_13",
@@ -239,7 +248,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1420.599
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_14",
@@ -296,7 +308,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1545.869
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_15",
@@ -353,7 +368,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1444.651
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_16",
@@ -410,7 +428,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1485.046
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_17",
@@ -467,7 +488,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1367.5
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_18",
@@ -524,7 +548,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_19",
@@ -581,7 +608,10 @@
         "K": 233.0,
         "Mg": 0.0,
         "Na": 128.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_20",
@@ -638,7 +668,10 @@
         "K": 1.0,
         "Mg": 0.0,
         "Na": 151.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_21",
@@ -695,7 +728,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1545.869
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_22",
@@ -752,7 +788,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_23",
@@ -809,7 +848,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_24",
@@ -866,7 +908,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_25",
@@ -923,7 +968,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 1.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_26",
@@ -980,7 +1028,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 64471.618
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_27",
@@ -1037,7 +1088,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 4115.331
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_28",
@@ -1094,7 +1148,10 @@
         "K": 4679.658,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_29",
@@ -1151,7 +1208,10 @@
         "K": 955.026,
         "Mg": 4775.132,
         "Na": 1020.923
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_30",
@@ -1208,7 +1268,10 @@
         "K": 1327.49,
         "Mg": 4297.619,
         "Na": 918.831
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_31",
@@ -1265,7 +1328,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_32",
@@ -1322,7 +1388,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_33",
@@ -1379,7 +1448,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_34",
@@ -1436,7 +1508,10 @@
         "K": 65.176,
         "Mg": 196.846,
         "Na": 334.082
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_35",
@@ -1493,7 +1568,10 @@
         "K": 65.307,
         "Mg": 197.242,
         "Na": 156.133
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_36",
@@ -1550,7 +1628,10 @@
         "K": 65.412,
         "Mg": 197.558,
         "Na": 14.071
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_37",
@@ -1607,7 +1688,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 4115.331
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_38",
@@ -1664,7 +1748,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_39",
@@ -1721,7 +1808,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_40",
@@ -1778,7 +1868,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_41",
@@ -1835,7 +1928,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_42",
@@ -1892,7 +1988,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1502.74
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_43",
@@ -1949,7 +2048,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1412.327
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_44",
@@ -2006,7 +2108,10 @@
         "K": 0.0,
         "Mg": 98.306,
         "Na": 1344.341
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_45",
@@ -2063,7 +2168,10 @@
         "K": 0.0,
         "Mg": 92.149,
         "Na": 1260.141
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_46",
@@ -2120,7 +2228,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_47",
@@ -2177,7 +2288,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_48",
@@ -2234,7 +2348,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_49",
@@ -2291,7 +2408,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 35.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_50",
@@ -2348,7 +2468,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 1.0
     },
     {
       "id": "dokamat_51",
@@ -2405,7 +2528,10 @@
         "K": 0.0,
         "Mg": 28.932,
         "Na": 1415.074
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_52",
@@ -2462,7 +2588,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 3.5
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_53",
@@ -2519,7 +2648,10 @@
         "K": 148.0,
         "Mg": 1670.0,
         "Na": 71.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_54",
@@ -2576,7 +2708,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_55",
@@ -2633,7 +2768,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_56",
@@ -2690,7 +2828,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_57",
@@ -2747,7 +2888,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_58",
@@ -2804,7 +2948,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_59",
@@ -2861,7 +3008,10 @@
         "K": 6483.301,
         "Mg": 5743.929,
         "Na": 8762.147
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_60",
@@ -2918,7 +3068,10 @@
         "K": 19600.0,
         "Mg": 58800.0,
         "Na": 9800.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_61",
@@ -2975,7 +3128,10 @@
         "K": 5880.0,
         "Mg": 29400.0,
         "Na": 8820.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_62",
@@ -3032,7 +3188,10 @@
         "K": 3500.0,
         "Mg": 8000.0,
         "Na": 20000.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_63",
@@ -3089,7 +3248,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_64",
@@ -3146,7 +3308,10 @@
         "K": 54500.0,
         "Mg": 32100.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_65",
@@ -3203,7 +3368,10 @@
         "K": 2344.639,
         "Mg": 3357.918,
         "Na": 12848.688
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_66",
@@ -3260,7 +3428,10 @@
         "K": 14896.898,
         "Mg": 29415.49,
         "Na": 90756.556
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_67",
@@ -3317,7 +3488,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 165820.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_68",
@@ -3374,7 +3548,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_69",
@@ -3431,7 +3608,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_70",
@@ -3488,7 +3668,10 @@
         "K": 10739.479,
         "Mg": 17336.503,
         "Na": 12085.541
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_71",
@@ -3545,7 +3728,10 @@
         "K": 937.06,
         "Mg": 52599.856,
         "Na": 3501.873
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_72",
@@ -3602,7 +3788,10 @@
         "K": 0.0,
         "Mg": 22057.883,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_73",
@@ -3659,7 +3848,10 @@
         "K": 1826.33,
         "Mg": 61811.793,
         "Na": 1446.635
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_74",
@@ -3716,7 +3908,10 @@
         "K": 10739.479,
         "Mg": 19574.588,
         "Na": 12085.541
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_75",
@@ -3773,7 +3968,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_76",
@@ -3830,7 +4028,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 59687.655
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_77",
@@ -3887,7 +4088,10 @@
         "K": 4099.157,
         "Mg": 0.0,
         "Na": 98757.188
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_78",
@@ -3944,7 +4148,10 @@
         "K": 2486.72,
         "Mg": 0.0,
         "Na": 97853.375
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_79",
@@ -4001,7 +4208,10 @@
         "K": 0.0,
         "Mg": 900.0,
         "Na": 63080.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_80",
@@ -4058,7 +4268,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_81",
@@ -4115,7 +4328,10 @@
         "K": 2059.697,
         "Mg": 47700.0,
         "Na": 113000.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_82",
@@ -4172,7 +4388,10 @@
         "K": 0.0,
         "Mg": 30000.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_83",
@@ -4229,7 +4448,10 @@
         "K": 2059.697,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_84",
@@ -4286,7 +4508,10 @@
         "K": 6363.883,
         "Mg": 47830.255,
         "Na": 290634.498
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_85",
@@ -4343,7 +4568,10 @@
         "K": 0.0,
         "Mg": 197984.563,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_86",
@@ -4400,7 +4628,10 @@
         "K": 0.0,
         "Mg": 197969.714,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_87",
@@ -4457,7 +4688,10 @@
         "K": 0.0,
         "Mg": 9083.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_88",
@@ -4514,7 +4748,10 @@
         "K": 639.22,
         "Mg": 9498.76,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_89",
@@ -4571,7 +4808,10 @@
         "K": 940.0,
         "Mg": 2650.0,
         "Na": 5380.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_90",
@@ -4628,7 +4868,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_91",
@@ -4685,7 +4928,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_92",
@@ -4742,7 +4988,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_93",
@@ -4799,7 +5048,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_94",
@@ -4856,7 +5108,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_95",
@@ -4913,7 +5168,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_96",
@@ -4970,7 +5228,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 1.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_97",
@@ -5027,7 +5288,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_98",
@@ -5084,7 +5348,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_99",
@@ -5141,7 +5408,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_100",
@@ -5198,7 +5468,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_101",
@@ -5255,7 +5528,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_102",
@@ -5312,7 +5588,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 1.0
     },
     {
       "id": "dokamat_103",
@@ -5369,7 +5648,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_104",
@@ -5426,7 +5708,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_105",
@@ -5483,7 +5768,10 @@
         "K": 2575.0,
         "Mg": 14125.0,
         "Na": 3250.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_106",
@@ -5540,7 +5828,10 @@
         "K": 3062.694,
         "Mg": 2467.656,
         "Na": 1312.583
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_107",
@@ -5597,7 +5888,10 @@
         "K": 3500.0,
         "Mg": 2820.0,
         "Na": 1500.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_108",
@@ -5654,7 +5948,10 @@
         "K": 1750.111,
         "Mg": 1410.089,
         "Na": 750.048
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_109",
@@ -5711,7 +6008,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 1.0,
+      "share_bulk_cu": 1.0
     },
     {
       "id": "dokamat_110",
@@ -5768,7 +6068,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_111",
@@ -5825,7 +6128,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_112",
@@ -5882,7 +6188,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_113",
@@ -5939,7 +6248,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_114",
@@ -5996,7 +6308,10 @@
         "K": 0.0,
         "Mg": 1467.975,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_115",
@@ -6053,7 +6368,10 @@
         "K": 0.0,
         "Mg": 2244.822,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_116",
@@ -6110,7 +6428,10 @@
         "K": 943.0,
         "Mg": 4710.0,
         "Na": 660.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_117",
@@ -6167,7 +6488,10 @@
         "K": 9480.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_118",
@@ -6224,7 +6548,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_119",
@@ -6281,7 +6608,10 @@
         "K": 707.25,
         "Mg": 3532.5,
         "Na": 495.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_120",
@@ -6338,7 +6668,10 @@
         "K": 0.0,
         "Mg": 18.31,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_121",
@@ -6395,7 +6728,10 @@
         "K": 141.45,
         "Mg": 706.5,
         "Na": 99.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_122",
@@ -6452,7 +6788,10 @@
         "K": 200.0,
         "Mg": 2700.0,
         "Na": 113200.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_123",
@@ -6509,7 +6848,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_124",
@@ -6566,7 +6908,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 10000.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_125",
@@ -6623,7 +6968,10 @@
         "K": 3000.0,
         "Mg": 5160.0,
         "Na": 5125.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_126",
@@ -6680,7 +7028,10 @@
         "K": 3500.0,
         "Mg": 2820.0,
         "Na": 1500.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_127",
@@ -6737,7 +7088,10 @@
         "K": 0.0,
         "Mg": 30000.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.83,
+      "share_bulk_al": 0.83,
+      "share_bulk_cu": 0.83
     },
     {
       "id": "dokamat_128",
@@ -6794,7 +7148,10 @@
         "K": 6658.829,
         "Mg": 14.13,
         "Na": 1.98
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.6,
+      "share_bulk_cu": 1.0
     },
     {
       "id": "dokamat_129",
@@ -6851,7 +7208,10 @@
         "K": 0.0,
         "Mg": 30000.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_130",
@@ -6908,7 +7268,10 @@
         "K": 139393.939,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_131",
@@ -6965,7 +7328,10 @@
         "K": 6658.829,
         "Mg": 14.13,
         "Na": 1.98
-      }
+      },
+      "share_bulk_fe": 0.6,
+      "share_bulk_al": 0.6,
+      "share_bulk_cu": 1.0
     },
     {
       "id": "dokamat_132",
@@ -7022,7 +7388,10 @@
         "K": 2292.16,
         "Mg": 2050.877,
         "Na": 3066.617
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_133",
@@ -7079,7 +7448,10 @@
         "K": 85.947,
         "Mg": 9216.862,
         "Na": 26238.358
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 1.0,
+      "share_bulk_cu": 1.0
     },
     {
       "id": "dokamat_134",
@@ -7136,7 +7508,10 @@
         "K": 4150.779,
         "Mg": 48247.668,
         "Na": 22258.065
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_135",
@@ -7193,7 +7568,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_136",
@@ -7250,7 +7628,10 @@
         "K": 3383.328,
         "Mg": 207.337,
         "Na": 95.398
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_137",
@@ -7307,7 +7688,10 @@
         "K": 1762.703,
         "Mg": 1565.145,
         "Na": 1013.028
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_138",
@@ -7364,7 +7748,10 @@
         "K": 1762.703,
         "Mg": 1565.145,
         "Na": 1013.028
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_139",
@@ -7421,7 +7808,10 @@
         "K": 1832.474,
         "Mg": 1606.061,
         "Na": 1060.35
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_140",
@@ -7478,7 +7868,10 @@
         "K": 4448.766,
         "Mg": 3031.383,
         "Na": 620.297
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_141",
@@ -7535,7 +7928,10 @@
         "K": 2186.99,
         "Mg": 1408.906,
         "Na": 1044.135
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_142",
@@ -7592,7 +7988,10 @@
         "K": 2278.204,
         "Mg": 1457.788,
         "Na": 1075.784
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_143",
@@ -7649,7 +8048,10 @@
         "K": 3161.319,
         "Mg": 4059.097,
         "Na": 4329.284
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_144",
@@ -7706,7 +8108,10 @@
         "K": 17296.522,
         "Mg": 12915.841,
         "Na": 4225.44
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_145",
@@ -7763,7 +8168,10 @@
         "K": 1317.118,
         "Mg": 858.553,
         "Na": 685.464
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_146",
@@ -7820,7 +8228,10 @@
         "K": 5981.47,
         "Mg": 1779.453,
         "Na": 2440.746
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_147",
@@ -7877,7 +8288,10 @@
         "K": 0.859,
         "Mg": 0.325,
         "Na": 145.64
-      }
+      },
+      "share_bulk_fe": 0.377,
+      "share_bulk_al": 0.0618,
+      "share_bulk_cu": 0.1102
     },
     {
       "id": "dokamat_148",
@@ -7934,7 +8348,10 @@
         "K": 0.0,
         "Mg": 27.947,
         "Na": 3.856
-      }
+      },
+      "share_bulk_fe": 0.9971,
+      "share_bulk_al": 0.9878,
+      "share_bulk_cu": 0.8391
     },
     {
       "id": "dokamat_149",
@@ -7991,7 +8408,10 @@
         "K": 1993.057,
         "Mg": 6080.028,
         "Na": 1074.18
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_150",
@@ -8048,7 +8468,10 @@
         "K": 31700.0,
         "Mg": 4850.0,
         "Na": 8000.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_151",
@@ -8105,7 +8528,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_152",
@@ -8162,7 +8588,10 @@
         "K": 2059.7,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_153",
@@ -8219,7 +8648,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 31899.645
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_154",
@@ -8276,7 +8708,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_155",
@@ -8333,7 +8768,10 @@
         "K": 5709.824,
         "Mg": 14420.06,
         "Na": 1971.521
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_156",
@@ -8390,7 +8828,10 @@
         "K": 1823.05,
         "Mg": 1468.858,
         "Na": 781.307
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_157",
@@ -8447,7 +8888,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_158",
@@ -8504,7 +8948,10 @@
         "K": 15417.322,
         "Mg": 3576.242,
         "Na": 10441.782
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_159",
@@ -8561,7 +9008,10 @@
         "K": 0.0,
         "Mg": 12120.207,
         "Na": 8069.204
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_160",
@@ -8618,7 +9068,10 @@
         "K": 1584.508,
         "Mg": 4685.803,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_161",
@@ -8675,7 +9128,10 @@
         "K": 0.0,
         "Mg": 492.43,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 1.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_162",
@@ -8732,7 +9188,10 @@
         "K": 6267.733,
         "Mg": 12857.339,
         "Na": 2083.528
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_163",
@@ -8789,7 +9248,10 @@
         "K": 0.014,
         "Mg": 35.313,
         "Na": 4.057
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_164",
@@ -8846,7 +9308,10 @@
         "K": 0.0,
         "Mg": 6553.796,
         "Na": 476.263
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_165",
@@ -8903,7 +9368,10 @@
         "K": 22683.484,
         "Mg": 15888.521,
         "Na": 26108.445
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_166",
@@ -8960,7 +9428,10 @@
         "K": 9115.153,
         "Mg": 4702.587,
         "Na": 6199.87
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_167",
@@ -9017,7 +9488,10 @@
         "K": 1689.063,
         "Mg": 1664.544,
         "Na": 1325.534
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_168",
@@ -9074,7 +9548,10 @@
         "K": 12.374,
         "Mg": 8.07,
         "Na": 64.56
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_169",
@@ -9131,7 +9608,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_170",
@@ -9188,7 +9668,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_171",
@@ -9245,7 +9728,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_172",
@@ -9302,7 +9788,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_173",
@@ -9359,7 +9848,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_174",
@@ -9416,7 +9908,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_175",
@@ -9473,7 +9968,10 @@
         "K": 4.0,
         "Mg": 2.2,
         "Na": 212.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_176",
@@ -9530,7 +10028,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_177",
@@ -9587,7 +10088,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_178",
@@ -9644,7 +10148,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_179",
@@ -9701,7 +10208,10 @@
         "K": 318.2,
         "Mg": 0.0,
         "Na": 82.75
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_180",
@@ -9758,7 +10268,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_181",
@@ -9815,7 +10328,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_182",
@@ -9872,7 +10388,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_183",
@@ -9929,7 +10448,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_184",
@@ -9986,7 +10508,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_185",
@@ -10043,7 +10568,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_186",
@@ -10100,7 +10628,10 @@
         "K": 0.0,
         "Mg": 0.7,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_187",
@@ -10157,7 +10688,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_188",
@@ -10214,7 +10748,10 @@
         "K": 1800.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_189",
@@ -10271,7 +10808,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_190",
@@ -10328,7 +10868,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_191",
@@ -10385,7 +10928,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_192",
@@ -10442,7 +10988,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_193",
@@ -10499,7 +11048,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_194",
@@ -10556,7 +11108,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_195",
@@ -10613,7 +11168,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_196",
@@ -10670,7 +11228,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_197",
@@ -10727,7 +11288,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_198",
@@ -10784,7 +11348,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_199",
@@ -10841,7 +11408,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_200",
@@ -10898,7 +11468,10 @@
         "K": 0.0,
         "Mg": 3799.38,
         "Na": 3041.594
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_201",
@@ -10955,7 +11528,10 @@
         "K": 4648.832,
         "Mg": 12302.754,
         "Na": 12388.932
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_202",
@@ -11012,7 +11588,10 @@
         "K": 6060.085,
         "Mg": 15264.16,
         "Na": 10608.487
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_203",
@@ -11069,7 +11648,10 @@
         "K": 8000.0,
         "Mg": 0.0,
         "Na": 8500.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_204",
@@ -11126,7 +11708,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1367.5
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_205",
@@ -11183,7 +11768,10 @@
         "K": 31.623,
         "Mg": 50.0,
         "Na": 48.963
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_206",
@@ -11240,7 +11828,10 @@
         "K": 65.412,
         "Mg": 197.558,
         "Na": 14.071
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_207",
@@ -11297,7 +11888,10 @@
         "K": 20.0,
         "Mg": 269.0,
         "Na": 71.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_208",
@@ -11354,7 +11948,10 @@
         "K": 0.0,
         "Mg": 98.766,
         "Na": 1350.621
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_209",
@@ -11411,7 +12008,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1444.651
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_210",
@@ -11468,7 +12068,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1485.046
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_211",
@@ -11525,7 +12128,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1545.869
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_212",
@@ -11582,7 +12188,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_213",
@@ -11639,7 +12248,10 @@
         "K": 0.0,
         "Mg": 11214.336,
         "Na": 3400.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_214",
@@ -11696,7 +12308,10 @@
         "K": 20.0,
         "Mg": 269.0,
         "Na": 71.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_215",
@@ -11753,7 +12368,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 1367.5
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_216",
@@ -11810,7 +12428,10 @@
         "K": 0.726,
         "Mg": 5.324,
         "Na": 0.969
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_235",
@@ -11867,7 +12488,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_236",
@@ -11924,7 +12548,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_237",
@@ -11981,7 +12608,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_238",
@@ -12038,7 +12668,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_239",
@@ -12095,7 +12728,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_240",
@@ -12152,7 +12788,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_241",
@@ -12209,7 +12848,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_242",
@@ -12266,7 +12908,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_244",
@@ -12323,7 +12968,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_245",
@@ -12380,7 +13028,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_250",
@@ -12437,7 +13088,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     },
     {
       "id": "dokamat_252",
@@ -12494,7 +13148,10 @@
         "K": 0.0,
         "Mg": 0.0,
         "Na": 0.0
-      }
+      },
+      "share_bulk_fe": 0.0,
+      "share_bulk_al": 0.0,
+      "share_bulk_cu": 0.0
     }
   ],
   "models": {
@@ -12548,6 +13205,302 @@
         "concrete_m3": 1.2e-05,
         "reinforcing_steel_kg": 0.0018,
         "plant_lifespan_years": 35
+      },
+      "element_transfer_coefficients": {
+        "H2O": {
+          "name": "Water content",
+          "tk_air_permil": 1000.0,
+          "tk_air_fraction": 1.0,
+          "tk_bottom_ash_permil": 1.077953,
+          "tk_fly_ash_permil": 0.0
+        },
+        "O": {
+          "name": "Oxygen",
+          "tk_air_permil": 960.606061,
+          "tk_air_fraction": 0.960606061,
+          "tk_bottom_ash_permil": 1.400255,
+          "tk_fly_ash_permil": 2.299663
+        },
+        "H": {
+          "name": "Hydrogen",
+          "tk_air_permil": 1000.0,
+          "tk_air_fraction": 1.0,
+          "tk_bottom_ash_permil": 1.720878,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Org.-C": {
+          "name": "Carbon",
+          "tk_air_permil": 993.980893,
+          "tk_air_fraction": 0.993980893,
+          "tk_bottom_ash_permil": 1.353074,
+          "tk_fly_ash_permil": 0.0
+        },
+        "S": {
+          "name": "Sulfur",
+          "tk_air_permil": 5.317245,
+          "tk_air_fraction": 0.005317245,
+          "tk_bottom_ash_permil": 2.200869,
+          "tk_fly_ash_permil": 0.0
+        },
+        "N": {
+          "name": "Nitrogen",
+          "tk_air_permil": 989.0,
+          "tk_air_fraction": 0.989,
+          "tk_bottom_ash_permil": 2.023294,
+          "tk_fly_ash_permil": 0.0
+        },
+        "P": {
+          "name": "Phosphor",
+          "tk_air_permil": 1.016243,
+          "tk_air_fraction": 0.001016243,
+          "tk_bottom_ash_permil": 2.252036,
+          "tk_fly_ash_permil": 29.296012
+        },
+        "B": {
+          "name": "Boron",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 3.103194,
+          "tk_fly_ash_permil": 30.734215
+        },
+        "Cl": {
+          "name": "Chlorine",
+          "tk_air_permil": 0.555001,
+          "tk_air_fraction": 0.000555001,
+          "tk_bottom_ash_permil": 2.023294,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Br": {
+          "name": "Bromine",
+          "tk_air_permil": 0.4995,
+          "tk_air_fraction": 0.0004995,
+          "tk_bottom_ash_permil": 3.199922,
+          "tk_fly_ash_permil": 5.51872
+        },
+        "F": {
+          "name": "Fluorine",
+          "tk_air_permil": 6.409333,
+          "tk_air_fraction": 0.006409333,
+          "tk_bottom_ash_permil": 2.565389,
+          "tk_fly_ash_permil": 0.0
+        },
+        "I": {
+          "name": "Iodine",
+          "tk_air_permil": 0.555001,
+          "tk_air_fraction": 0.000555001,
+          "tk_bottom_ash_permil": 4.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Ag": {
+          "name": " Silver",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "As": {
+          "name": "Arsenic",
+          "tk_air_permil": 7.833255,
+          "tk_air_fraction": 0.007833255,
+          "tk_bottom_ash_permil": 3.398723,
+          "tk_fly_ash_permil": 50.491851
+        },
+        "Ba": {
+          "name": "Barium",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Cd": {
+          "name": "Cadmium",
+          "tk_air_permil": 0.509709,
+          "tk_air_fraction": 0.000509709,
+          "tk_bottom_ash_permil": 3.882536,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Co": {
+          "name": "Cobalt",
+          "tk_air_permil": 1.818678,
+          "tk_air_fraction": 0.001818678,
+          "tk_bottom_ash_permil": 3.232914,
+          "tk_fly_ash_permil": 14.06111
+        },
+        "Cr": {
+          "name": "Chromium",
+          "tk_air_permil": 0.87321,
+          "tk_air_fraction": 0.00087321,
+          "tk_bottom_ash_permil": 3.147864,
+          "tk_fly_ash_permil": 30.942396
+        },
+        "Cu": {
+          "name": "Copper",
+          "tk_air_permil": 0.09159,
+          "tk_air_fraction": 9.159e-05,
+          "tk_bottom_ash_permil": 3.001122,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Hg": {
+          "name": "Mercury",
+          "tk_air_permil": 28.353713,
+          "tk_air_fraction": 0.028353713,
+          "tk_bottom_ash_permil": 4.0,
+          "tk_fly_ash_permil": 2.12883
+        },
+        "Mn": {
+          "name": "Manganese",
+          "tk_air_permil": 0.190977,
+          "tk_air_fraction": 0.000190977,
+          "tk_bottom_ash_permil": 3.260207,
+          "tk_fly_ash_permil": 29.056044
+        },
+        "Mo": {
+          "name": "Molybdaenium",
+          "tk_air_permil": 1.315789,
+          "tk_air_fraction": 0.001315789,
+          "tk_bottom_ash_permil": 3.68996,
+          "tk_fly_ash_permil": 37.693387
+        },
+        "Ni": {
+          "name": "Nickel",
+          "tk_air_permil": 1.256223,
+          "tk_air_fraction": 0.001256223,
+          "tk_bottom_ash_permil": 3.218319,
+          "tk_fly_ash_permil": 21.461375
+        },
+        "Pb": {
+          "name": "Lead",
+          "tk_air_permil": 0.082385,
+          "tk_air_fraction": 8.2385e-05,
+          "tk_bottom_ash_permil": 2.995578,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Sb": {
+          "name": "Antimony",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Se": {
+          "name": "Selenium",
+          "tk_air_permil": 11.929909,
+          "tk_air_fraction": 0.011929909,
+          "tk_bottom_ash_permil": 3.64967,
+          "tk_fly_ash_permil": 134.730932
+        },
+        "Sn": {
+          "name": "Tin",
+          "tk_air_permil": 0.000653,
+          "tk_air_fraction": 6.53e-07,
+          "tk_bottom_ash_permil": 3.147953,
+          "tk_fly_ash_permil": 26.496228
+        },
+        "V": {
+          "name": "Vanadium",
+          "tk_air_permil": 21.208906,
+          "tk_air_fraction": 0.021208906,
+          "tk_bottom_ash_permil": 3.32544,
+          "tk_fly_ash_permil": 49.630747
+        },
+        "Zn": {
+          "name": "Zinc",
+          "tk_air_permil": 0.670266,
+          "tk_air_fraction": 0.000670266,
+          "tk_bottom_ash_permil": 2.788643,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Be": {
+          "name": "Beryllium",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Sc": {
+          "name": "Scandium",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Sr": {
+          "name": "Strontium",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Ti": {
+          "name": "Titanium",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Tl": {
+          "name": "Thallium",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "W": {
+          "name": "Tungsten",
+          "tk_air_permil": 0.0,
+          "tk_air_fraction": 0.0,
+          "tk_bottom_ash_permil": 1.0,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Si": {
+          "name": "Silicon",
+          "tk_air_permil": 0.001558,
+          "tk_air_fraction": 1.558e-06,
+          "tk_bottom_ash_permil": 1.606715,
+          "tk_fly_ash_permil": 30.234203
+        },
+        "Fe": {
+          "name": "Iron",
+          "tk_air_permil": 0.001792,
+          "tk_air_fraction": 1.792e-06,
+          "tk_bottom_ash_permil": 2.366589,
+          "tk_fly_ash_permil": 0.0
+        },
+        "Ca": {
+          "name": "Calcium",
+          "tk_air_permil": 7.869873,
+          "tk_air_fraction": 0.007869873,
+          "tk_bottom_ash_permil": 1.716462,
+          "tk_fly_ash_permil": 67.565735
+        },
+        "Al": {
+          "name": "Aluminium",
+          "tk_air_permil": 0.000815,
+          "tk_air_fraction": 8.15e-07,
+          "tk_bottom_ash_permil": 1.857574,
+          "tk_fly_ash_permil": 44.360198
+        },
+        "K": {
+          "name": "Potassium",
+          "tk_air_permil": 4.9405,
+          "tk_air_fraction": 0.0049405,
+          "tk_bottom_ash_permil": 2.047457,
+          "tk_fly_ash_permil": 82.371889
+        },
+        "Mg": {
+          "name": "Magnesium",
+          "tk_air_permil": 1.054777,
+          "tk_air_fraction": 0.001054777,
+          "tk_bottom_ash_permil": 2.086548,
+          "tk_fly_ash_permil": 31.023704
+        },
+        "Na": {
+          "name": "Sodium",
+          "tk_air_permil": 8.210181,
+          "tk_air_fraction": 0.008210181,
+          "tk_bottom_ash_permil": 2.20078,
+          "tk_fly_ash_permil": 139.573071
+        }
       }
     },
     "landfill_msw": {
@@ -12806,6 +13759,172 @@
           "short_term_leachate_100a": 0.04943863707694497,
           "long_term_leachate_60ka": 0.00025428546318066584,
           "transfer_to_air": 0.00024993751562109475
+        }
+      },
+      "element_leachate_coefficients": {
+        "O": {
+          "short_term_leachate_100a": 0.196738,
+          "long_term_leachate_60ka": 0.688582
+        },
+        "H": {
+          "short_term_leachate_100a": 0.14721,
+          "long_term_leachate_60ka": 0.515235
+        },
+        "C": {
+          "short_term_leachate_100a": 0.168265,
+          "long_term_leachate_60ka": 0.588926
+        },
+        "S": {
+          "short_term_leachate_100a": 0.187892,
+          "long_term_leachate_60ka": 0.657621
+        },
+        "N": {
+          "short_term_leachate_100a": 0.201976,
+          "long_term_leachate_60ka": 0.706917
+        },
+        "P": {
+          "short_term_leachate_100a": 0.271186,
+          "long_term_leachate_60ka": 0.94915
+        },
+        "B": {
+          "short_term_leachate_100a": 0.263549,
+          "long_term_leachate_60ka": 0.922422
+        },
+        "Cl": {
+          "short_term_leachate_100a": 0.071876,
+          "long_term_leachate_60ka": 0.251566
+        },
+        "Br": {
+          "short_term_leachate_100a": 0.04944,
+          "long_term_leachate_60ka": 0.17304
+        },
+        "F": {
+          "short_term_leachate_100a": 0.259176,
+          "long_term_leachate_60ka": 0.907115
+        },
+        "I": {
+          "short_term_leachate_100a": 0.269982,
+          "long_term_leachate_60ka": 0.944936
+        },
+        "Ag": {
+          "short_term_leachate_100a": 0.049016,
+          "long_term_leachate_60ka": 0.171557
+        },
+        "As": {
+          "short_term_leachate_100a": 0.267465,
+          "long_term_leachate_60ka": 0.936129
+        },
+        "Ba": {
+          "short_term_leachate_100a": 0.06429,
+          "long_term_leachate_60ka": 0.225014
+        },
+        "Cd": {
+          "short_term_leachate_100a": 0.067489,
+          "long_term_leachate_60ka": 0.23621
+        },
+        "Co": {
+          "short_term_leachate_100a": 0.268635,
+          "long_term_leachate_60ka": 0.940221
+        },
+        "Cr": {
+          "short_term_leachate_100a": 0.093807,
+          "long_term_leachate_60ka": 0.328324
+        },
+        "Cu": {
+          "short_term_leachate_100a": 0.049016,
+          "long_term_leachate_60ka": 0.171557
+        },
+        "Hg": {
+          "short_term_leachate_100a": 0.030305,
+          "long_term_leachate_60ka": 0.106069
+        },
+        "Mn": {
+          "short_term_leachate_100a": 0.020005,
+          "long_term_leachate_60ka": 0.070019
+        },
+        "Mo": {
+          "short_term_leachate_100a": 0.273207,
+          "long_term_leachate_60ka": 0.956223
+        },
+        "Ni": {
+          "short_term_leachate_100a": 0.061482,
+          "long_term_leachate_60ka": 0.215187
+        },
+        "Pb": {
+          "short_term_leachate_100a": 0.056961,
+          "long_term_leachate_60ka": 0.199364
+        },
+        "Sb": {
+          "short_term_leachate_100a": 0.054291,
+          "long_term_leachate_60ka": 0.190019
+        },
+        "Se": {
+          "short_term_leachate_100a": 0.180886,
+          "long_term_leachate_60ka": 0.6331
+        },
+        "Sn": {
+          "short_term_leachate_100a": 0.031527,
+          "long_term_leachate_60ka": 0.110345
+        },
+        "V": {
+          "short_term_leachate_100a": 0.187931,
+          "long_term_leachate_60ka": 0.657758
+        },
+        "Zn": {
+          "short_term_leachate_100a": 0.036886,
+          "long_term_leachate_60ka": 0.129101
+        },
+        "Be": {
+          "short_term_leachate_100a": 0.196093,
+          "long_term_leachate_60ka": 0.686327
+        },
+        "Sc": {
+          "short_term_leachate_100a": 0.240279,
+          "long_term_leachate_60ka": 0.840975
+        },
+        "Sr": {
+          "short_term_leachate_100a": 0.171184,
+          "long_term_leachate_60ka": 0.599145
+        },
+        "Ti": {
+          "short_term_leachate_100a": 0.053115,
+          "long_term_leachate_60ka": 0.185903
+        },
+        "Tl": {
+          "short_term_leachate_100a": 0.053115,
+          "long_term_leachate_60ka": 0.185903
+        },
+        "W": {
+          "short_term_leachate_100a": 0.240279,
+          "long_term_leachate_60ka": 0.840975
+        },
+        "Si": {
+          "short_term_leachate_100a": 0.08561,
+          "long_term_leachate_60ka": 0.299634
+        },
+        "Fe": {
+          "short_term_leachate_100a": 0.075423,
+          "long_term_leachate_60ka": 0.26398
+        },
+        "Ca": {
+          "short_term_leachate_100a": 0.171184,
+          "long_term_leachate_60ka": 0.599145
+        },
+        "Al": {
+          "short_term_leachate_100a": 0.154375,
+          "long_term_leachate_60ka": 0.540311
+        },
+        "K": {
+          "short_term_leachate_100a": 0.28395,
+          "long_term_leachate_60ka": 0.993824
+        },
+        "Mg": {
+          "short_term_leachate_100a": 0.196093,
+          "long_term_leachate_60ka": 0.686327
+        },
+        "Na": {
+          "short_term_leachate_100a": 0.049435,
+          "long_term_leachate_60ka": 0.173022
         }
       }
     },
@@ -13464,5 +14583,364 @@
       }
     }
   },
-  "simapro_mapping_raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<root>\r\n  <categories>\r\n      <category name=\"waste management\" type=\"process\">\r\n          <subCategory name=\"municipal incineration\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"hazardous waste incineration\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"sanitary landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"residual material landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"inert material landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"landfarming\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"underground deposit\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"building demolition\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"wastewater treatment\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"recycling\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"others\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"other\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"open burning\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"unsanitary landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"open dump\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"tailings impoundment\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"construction waste landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"excavation material landfill\" processType=\"waste treatment\"/>\r\n    </category>\r\n      <category name=\"air\" type=\"substance\">\r\n          <subCategory name=\"high population density\" substanceType=\"Air\" abbreviation=\"high. pop.\"/>\r\n          <subCategory name=\"low population density\" substanceType=\"Air\" abbreviation=\"low. Pop.\"/>\r\n          <subCategory name=\"lower stratosphere + upper troposphere\" substanceType=\"Air\" abbreviation=\"stratosphere + troposphere\"/>\r\n      "
+  "simapro_mapping_raw": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<root>\r\n  <categories>\r\n      <category name=\"waste management\" type=\"process\">\r\n          <subCategory name=\"municipal incineration\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"hazardous waste incineration\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"sanitary landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"residual material landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"inert material landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"landfarming\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"underground deposit\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"building demolition\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"wastewater treatment\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"recycling\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"others\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"other\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"open burning\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"unsanitary landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"open dump\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"tailings impoundment\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"construction waste landfill\" processType=\"waste treatment\"/>\r\n          <subCategory name=\"excavation material landfill\" processType=\"waste treatment\"/>\r\n    </category>\r\n      <category name=\"air\" type=\"substance\">\r\n          <subCategory name=\"high population density\" substanceType=\"Air\" abbreviation=\"high. pop.\"/>\r\n          <subCategory name=\"low population density\" substanceType=\"Air\" abbreviation=\"low. Pop.\"/>\r\n          <subCategory name=\"lower stratosphere + upper troposphere\" substanceType=\"Air\" abbreviation=\"stratosphere + troposphere\"/>\r\n      ",
+  "element_catalog": [
+    {
+      "symbol": "Ho",
+      "name": "Gross heating value (PCS)",
+      "category": "macro",
+      "unit": "MJ/kg",
+      "default": 18.0
+    },
+    {
+      "symbol": "Hu",
+      "name": "Net heating value (PCI)",
+      "category": "macro",
+      "unit": "MJ/kg",
+      "default": 15.0
+    },
+    {
+      "symbol": "H2O",
+      "name": "Water / Moisture content",
+      "category": "macro",
+      "unit": "%",
+      "default": 20.0
+    },
+    {
+      "symbol": "C",
+      "name": "Carbon total (C)",
+      "category": "macro",
+      "unit": "%",
+      "default": 45.0
+    },
+    {
+      "symbol": "biogenic_c_share",
+      "name": "Biogenic C fraction",
+      "category": "macro",
+      "unit": "0-1",
+      "default": 0.3
+    },
+    {
+      "symbol": "fossil_c_share",
+      "name": "Fossil C fraction",
+      "category": "macro",
+      "unit": "0-1",
+      "default": 0.7
+    },
+    {
+      "symbol": "ash",
+      "name": "Ash / Mineral residue",
+      "category": "macro",
+      "unit": "%",
+      "default": 5.0
+    },
+    {
+      "symbol": "degradability_100a",
+      "name": "Landfill Degradability 100a",
+      "category": "macro",
+      "unit": "0-1",
+      "default": 0.35
+    },
+    {
+      "symbol": "H",
+      "name": "Hydrogen (H)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 6.0
+    },
+    {
+      "symbol": "O",
+      "name": "Oxygen (O)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 25.0
+    },
+    {
+      "symbol": "N",
+      "name": "Nitrogen (N)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 1.0
+    },
+    {
+      "symbol": "S",
+      "name": "Sulfur (S)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 0.2
+    },
+    {
+      "symbol": "P",
+      "name": "Phosphorus (P)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 0.1
+    },
+    {
+      "symbol": "Cl",
+      "name": "Chlorine (Cl)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 0.5
+    },
+    {
+      "symbol": "F",
+      "name": "Fluorine (F)",
+      "category": "halogens_nonmetals",
+      "unit": "%",
+      "default": 0.01
+    },
+    {
+      "symbol": "Br",
+      "name": "Bromine (Br)",
+      "category": "halogens_nonmetals",
+      "unit": "ppm",
+      "default": 10.0
+    },
+    {
+      "symbol": "I",
+      "name": "Iodine (I)",
+      "category": "halogens_nonmetals",
+      "unit": "ppm",
+      "default": 0.5
+    },
+    {
+      "symbol": "B",
+      "name": "Boron (B)",
+      "category": "halogens_nonmetals",
+      "unit": "ppm",
+      "default": 25.0
+    },
+    {
+      "symbol": "Hg",
+      "name": "Mercury (Hg)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 0.1
+    },
+    {
+      "symbol": "Pb",
+      "name": "Lead (Pb)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 50.0
+    },
+    {
+      "symbol": "Cd",
+      "name": "Cadmium (Cd)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 2.5
+    },
+    {
+      "symbol": "As",
+      "name": "Arsenic (As)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 5.0
+    },
+    {
+      "symbol": "Cr",
+      "name": "Chromium (Cr)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 40.0
+    },
+    {
+      "symbol": "Cu",
+      "name": "Copper (Cu)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 80.0
+    },
+    {
+      "symbol": "Ni",
+      "name": "Nickel (Ni)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 20.0
+    },
+    {
+      "symbol": "Zn",
+      "name": "Zinc (Zn)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 250.0
+    },
+    {
+      "symbol": "Sb",
+      "name": "Antimony (Sb)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 15.0
+    },
+    {
+      "symbol": "Tl",
+      "name": "Thallium (Tl)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 0.5
+    },
+    {
+      "symbol": "Se",
+      "name": "Selenium (Se)",
+      "category": "heavy_metals",
+      "unit": "ppm",
+      "default": 2.0
+    },
+    {
+      "symbol": "Fe",
+      "name": "Iron (Fe)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 2500.0
+    },
+    {
+      "symbol": "share_bulk_fe",
+      "name": "Fe bulk recyclable share",
+      "category": "major_metals",
+      "unit": "0-1",
+      "default": 0.5
+    },
+    {
+      "symbol": "Al",
+      "name": "Aluminium (Al)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 1200.0
+    },
+    {
+      "symbol": "share_bulk_al",
+      "name": "Al bulk recyclable share",
+      "category": "major_metals",
+      "unit": "0-1",
+      "default": 0.4
+    },
+    {
+      "symbol": "share_bulk_cu",
+      "name": "Cu bulk recyclable share",
+      "category": "major_metals",
+      "unit": "0-1",
+      "default": 0.3
+    },
+    {
+      "symbol": "Ca",
+      "name": "Calcium (Ca)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 8000.0
+    },
+    {
+      "symbol": "Mg",
+      "name": "Magnesium (Mg)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 1500.0
+    },
+    {
+      "symbol": "Na",
+      "name": "Sodium (Na)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 3000.0
+    },
+    {
+      "symbol": "K",
+      "name": "Potassium (K)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 2000.0
+    },
+    {
+      "symbol": "Si",
+      "name": "Silicon (Si)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 15000.0
+    },
+    {
+      "symbol": "Ti",
+      "name": "Titanium (Ti)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 500.0
+    },
+    {
+      "symbol": "Mn",
+      "name": "Manganese (Mn)",
+      "category": "major_metals",
+      "unit": "ppm",
+      "default": 150.0
+    },
+    {
+      "symbol": "Ag",
+      "name": "Silver (Ag)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 1.0
+    },
+    {
+      "symbol": "Ba",
+      "name": "Barium (Ba)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 120.0
+    },
+    {
+      "symbol": "Be",
+      "name": "Beryllium (Be)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 0.8
+    },
+    {
+      "symbol": "Co",
+      "name": "Cobalt (Co)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 4.0
+    },
+    {
+      "symbol": "Mo",
+      "name": "Molybdenum (Mo)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 3.0
+    },
+    {
+      "symbol": "Sc",
+      "name": "Scandium (Sc)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 1.0
+    },
+    {
+      "symbol": "Sn",
+      "name": "Tin (Sn)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 10.0
+    },
+    {
+      "symbol": "Sr",
+      "name": "Strontium (Sr)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 60.0
+    },
+    {
+      "symbol": "V",
+      "name": "Vanadium (V)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 12.0
+    },
+    {
+      "symbol": "W",
+      "name": "Tungsten (W)",
+      "category": "trace_elements",
+      "unit": "ppm",
+      "default": 2.0
+    }
+  ]
 }
