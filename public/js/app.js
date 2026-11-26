@@ -9930,13 +9930,18 @@
     const compliantLabel = window.I18n ? window.I18n.t("app.compliant_btn", "Conforme") : "Conforme";
     const pendingLabel = window.I18n ? window.I18n.t("app.pending_btn", "Pendiente") : "Pendiente";
     const readOnlyLabel = window.I18n ? window.I18n.t("app.readonly_mode", "Solo lectura") : "Solo lectura";
+    const isEn = window.I18n && window.I18n.getCurrentLanguage() === "en";
 
     tbody.innerHTML = state.checklist
       .map((item) => {
         const isOk = item.is_compliant === true || item.status === "COMPLIANT";
-        const titleSafe = escapeHtml(item.title || "");
-        const critSafe = escapeHtml(item.criterion || "");
-        const evidSafe = escapeHtml(item.evidence || "Evidencia tecnica requerida por la norma.");
+        const titleText = isEn && item.clause_id ? window.I18n.t(`clause.${item.clause_id}.title`, item.title) : (item.title || "");
+        const critText = isEn && item.clause_id ? window.I18n.t(`clause.${item.clause_id}.criterion`, item.criterion) : (item.criterion || "");
+        const evidFallback = isEn ? "Technical evidence required by standard." : "Evidencia técnica requerida por la norma.";
+        const evidText = isEn && item.clause_id ? window.I18n.t(`clause.${item.clause_id}.evidence`, item.evidence || evidFallback) : (item.evidence || evidFallback);
+        const titleSafe = escapeHtml(titleText);
+        const critSafe = escapeHtml(critText);
+        const evidSafe = escapeHtml(evidText);
 
         return `
         <tr>

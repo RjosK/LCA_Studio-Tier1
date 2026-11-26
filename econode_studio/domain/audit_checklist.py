@@ -183,6 +183,38 @@ GHG_PROTOCOL_CLAUSES: List[AuditClause] = [
     AuditClause("GHG-07", "7. Reporte", "Reporte Público del Estándar de Producto", "Publicación de inventario con desglose por gas (CO2, CH4, N2O, HFCs).", "Reporte público de emisiones", True)
 ]
 
+EPEAT_CLAUSES: List[AuditClause] = [
+    # 4.1 Mitigación del Cambio Climático (Climate Change Mitigation & Climate+)
+    AuditClause("EPEAT-4.1.1", "4.1 Cambio Climático", "Huella de Carbono del Producto (PCF / ACV)", "Cuantificación de huella de carbono de ciclo de vida conforme a ISO 14040/14044 o ISO 14067 con revisión crítica independiente (Requerido para EPEAT Climate+).", "Reporte de ACV/PCF con dictamen de revisión crítica independiente (3ª parte)", True),
+    AuditClause("EPEAT-4.1.2", "4.1 Cambio Climático", "Divulgación Pública del PCF", "Publicación abierta del informe o ficha ejecutiva de la huella de carbono con desglose por fases de ciclo de vida (Manufactura, Transporte, Uso, Fin de vida).", "URL pública de divulgación o Declaración Ambiental de Producto (EPD)", True),
+    AuditClause("EPEAT-4.1.3", "4.1 Cambio Climático", "Inventario Corporativo de Emisiones GEI", "Inventario público verificado de emisiones corporativas Alcance 1, Alcance 2 (dual: Market y Location-Based) y Alcance 3 relevante según GHG Protocol.", "Reporte corporativo GEI verificado bajo ISO 14064-3 / CDP", True),
+    AuditClause("EPEAT-4.1.4", "4.1 Cambio Climático", "Metas Basadas en Ciencia (SBTi 1.5 °C / Net-Zero)", "Compromiso formal o validación de metas corporativas de descarbonización alineadas con la trayectoria de 1.5 °C de la iniciativa Science Based Targets.", "Carta de validación o aprobación pública en el registro SBTi", True),
+    AuditClause("EPEAT-4.1.5", "4.1 Cambio Climático", "Electricidad Renovable en Ensamble Final", "Uso documentado de electricidad renovable (mínimo 20%, 50% o 100%) en instalaciones de ensamble final mediante PPAs o certificados EAC (I-REC/CEL).", "Facturas y certificados contractuales de energía limpia (EACs)", True),
+    AuditClause("EPEAT-4.1.6", "4.1 Cambio Climático", "Eficiencia Energética del Producto (ENERGY STAR)", "Cumplimiento certificado con la versión vigente de la especificación ENERGY STAR aplicable a la categoría de producto tecnológico.", "Certificado oficial de cumplimiento ENERGY STAR / Informe de pruebas acreditado", True),
+    AuditClause("EPEAT-4.1.7", "4.1 Cambio Climático", "Materiales de Baja Huella de Carbono", "Uso documentado de insumos críticos de menor intensidad de carbono (aluminio bajo en carbono, semiconductores optimizados o resinas recicladas).", "Declaraciones ambientales de proveedores y factores de emisión trazables", False),
+
+    # 4.2 Uso Sostenible de Recursos y Circularidad (Sustainable Use of Resources)
+    AuditClause("EPEAT-4.2.1", "4.2 Circularidad", "Contenido de Plástico Reciclado Post-Consumo (PCR)", "Incorporación mínima verificada de plástico reciclado post-consumo (PCR) de al menos 5%, 10%, 25% o 50% en masa total de partes plásticas.", "Certificación de contenido reciclado ISO 14021 (UL 2809 / GRS / SCS)", True),
+    AuditClause("EPEAT-4.2.2", "4.2 Circularidad", "Contenido de Metales Reciclados", "Uso de metales secundarios o reciclados (aluminio, acero, cobre, cobalto, estaño u oro) con cadena de custodia documentada.", "Certificado de cadena de custodia y especificación técnica de aleación", True),
+    AuditClause("EPEAT-4.2.3", "4.2 Circularidad", "Diseño para Desensamble y Reparabilidad", "Uniones accesibles con herramientas comunes comerciales, ausencia de pegamentos ciegos en componentes clave y cumplimiento de EN 45554 / índice de reparabilidad.", "Manual técnico de servicio, diagrama de desensamble e índice de reparabilidad", True),
+    AuditClause("EPEAT-4.2.4", "4.2 Circularidad", "Disponibilidad de Refacciones y Documentación", "Garantía pública de disponibilidad de partes de repuesto críticas y manuales de reparación por al menos 3 a 7 años posteriores al retiro del mercado.", "Declaración pública de política de refacciones y catálogo de partes", True),
+    AuditClause("EPEAT-4.2.5", "4.2 Circularidad", "Longevidad y Reemplazabilidad de Baterías", "Baterías reemplazables por el usuario o técnicos calificados sin destruir el chasis, con garantía de retención de carga (>= 80% en 500-1000 ciclos).", "Reporte de prueba de ciclos de vida de batería y procedimiento de reemplazo", True),
+    AuditClause("EPEAT-4.2.6", "4.2 Circularidad", "Empaque Sustentable y Libre de EPS", "Empaque secundario y terciario con mínimo 50% a 90% de fibra reciclada certificada FSC/PEFC y eliminación total de poliestireno expandido (EPS).", "Ficha técnica de empaque y certificado de cadena de custodia forestal", True),
+    AuditClause("EPEAT-4.2.7", "4.2 Circularidad", "Programa de Retorno y Reciclaje de Fin de Vida (Takeback)", "Disponibilidad de canal formal de recolección y reciclaje de equipo obsoleto a través de procesadores certificados bajo R2v3 o e-Stewards.", "Contrato o convenio con reciclador acreditado R2v3 / e-Stewards", True),
+
+    # 4.3 Reducción de Químicos de Preocupación (Chemicals of Concern)
+    AuditClause("EPEAT-4.3.1", "4.3 Químicos", "Conformidad Obligatoria con Directivas RoHS y REACH", "Restricción estricta de plomo, mercurio, cadmio, cromo hexavalente, PBB, PBDE y ftalatos (DEHP, BBP, DBP, DIBP), y sustancias SVHC (< 0.1% peso/peso).", "Reporte de ensayos de laboratorio (XRF/ICP) y declaración formal de conformidad", True),
+    AuditClause("EPEAT-4.3.2", "4.3 Químicos", "Eliminación de Retardantes Halogenados (BFR/CFR)", "Partes plásticas mayores a 25g y placas de circuito impreso (PCB) libres de halógenos (< 900 ppm Cl/Br y < 1500 ppm total según IEC 61249-2-21).", "Certificado de análisis libre de halógenos (Halogen-Free)", True),
+    AuditClause("EPEAT-4.3.3", "4.3 Químicos", "Restricción y Monitoreo de Sustancias PFAS", "Eliminación o sustitución intencional de compuestos per- y polifluoroalquilados (PFAS) en piezas mecánicas, recubrimientos y empaques.", "Declaración de ausencia intencional de PFAS por proveedores de partes", False),
+    AuditClause("EPEAT-4.3.4", "4.3 Químicos", "Declaración Completa de Materiales (Full Material Disclosure)", "Inventario químico y desglose de sustancias químicas de la lista de materiales (BOM) a un umbral mínimo de 1,000 ppm (0.1%).", "BOM de sustancias químicas y fichas técnicas de seguridad (FDS/MSDS)", True),
+
+    # 4.4 Cadenas de Suministro Responsables (Responsible Supply Chains / ESG)
+    AuditClause("EPEAT-4.4.1", "4.4 Cadena Responsable", "Sistema de Gestión Ambiental Certificado (ISO 14001)", "Certificación ISO 14001 o EMAS de gestión ambiental en la planta de ensamblado final y en proveedores clave de componentes.", "Copia del certificado ISO 14001 vigente emitido por organismo acreditado", True),
+    AuditClause("EPEAT-4.4.2", "4.4 Cadena Responsable", "Auditorías Sociales y Laborales (Código RBA / SA8000)", "Auditoría laboral independiente en instalaciones de manufactura basada en el código de conducta de la Responsible Business Alliance (RBA VAP).", "Reporte de auditoría RBA VAP o certificación SA8000 sin hallazgos prioritarios", True),
+    AuditClause("EPEAT-4.4.3", "4.4 Cadena Responsable", "Diligencia Debida en Minerales de Conflicto (3TG + Cobalto)", "Trazabilidad y debida diligencia de cadenas de suministro para estaño, tantalio, tungsteno, oro (3TG) y cobalto conforme a lineamientos OCDE.", "Plantilla de reporte de minerales de conflicto (CMRT / EMRT) con fundidoras RMI", True),
+    AuditClause("EPEAT-4.4.4", "4.4 Cadena Responsable", "Salud y Seguridad en el Trabajo (ISO 45001)", "Sistema de gestión de seguridad y salud en el trabajo implementado y certificado en plantas principales de manufactura.", "Certificado ISO 45001 vigente en plantas de producción", True)
+]
+
 # Diccionario oficial de estándares precargados
 OFFICIAL_STANDARDS: Dict[str, AuditStandard] = {
     "nom070": AuditStandard(
@@ -228,6 +260,17 @@ OFFICIAL_STANDARDS: Dict[str, AuditStandard] = {
         is_official=True,
         created_by="system",
         clauses=GHG_PROTOCOL_CLAUSES
+    ),
+    "epeat_2024": AuditStandard(
+        id="epeat_2024",
+        name="EPEAT 2.0 / Climate+ (GEC — Criterios Armonizados)",
+        code="EPEAT-2024",
+        standard_family="Global Electronics Council (GEC) / Ecolabel",
+        description="Estándar ecológico global para electrónica y TI: Huella de carbono (PCF/ACV verificado), contenido reciclado PCR, circularidad, restricción de químicos (RoHS/REACH/PFAS) y cadena ética (RBA/3TG).",
+        version="2024/Climate+",
+        is_official=True,
+        created_by="system",
+        clauses=EPEAT_CLAUSES
     )
 }
 

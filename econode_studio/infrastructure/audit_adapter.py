@@ -323,6 +323,23 @@ def list_all_checklist_templates(user_id: Optional[str] = None) -> List[Dict[str
             "created_by": r["created_by"],
             "total_clauses": r["total_clauses"]
         } for r in rows]
+
+        # Asegurar inclusión de todas las normas oficiales del dominio
+        existing_ids = {r["id"] for r in result}
+        for std_id, std in OFFICIAL_STANDARDS.items():
+            if std_id not in existing_ids:
+                result.append({
+                    "id": std.id,
+                    "name": std.name,
+                    "code": std.code,
+                    "standard_family": std.standard_family,
+                    "description": std.description,
+                    "version": std.version,
+                    "is_official": True,
+                    "created_by": "system",
+                    "total_clauses": len(std.clauses)
+                })
+
         _STANDARDS_LIST_CACHE = result
         return result
 
@@ -338,9 +355,20 @@ def get_checklist_template(checklist_id: str) -> Optional[Dict[str, Any]]:
     with get_audit_db_connection() as conn:
         t_row = conn.execute("SELECT * FROM checklist_templates WHERE id = ?;", (clean_id,)).fetchone()
         if not t_row:
-            # Fallback a nom070
+            # Fallback a OFFICIAL_STANDARDS si la norma oficial existe en dominio
+            if clean_id in OFFICIAL_STANDARDS:
+                std = OFFICIAL_STANDARDS[clean_id]
+                std_dict = std.to_dict()
+                _TEMPLATE_CACHE[clean_id] = std_dict
+                return {**std_dict, "clauses": [dict(c) for c in std_dict["clauses"]]}
+
+            # Fallback secundario a nom070
             t_row = conn.execute("SELECT * FROM checklist_templates WHERE id = 'nom070';").fetchone()
             if not t_row:
+                if "nom070" in OFFICIAL_STANDARDS:
+                    std_dict = OFFICIAL_STANDARDS["nom070"].to_dict()
+                    _TEMPLATE_CACHE["nom070"] = std_dict
+                    return {**std_dict, "clauses": [dict(c) for c in std_dict["clauses"]]}
                 return None
             clean_id = "nom070"
             if clean_id in _TEMPLATE_CACHE:
