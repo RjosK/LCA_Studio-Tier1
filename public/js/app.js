@@ -14690,9 +14690,11 @@ print("Actividad GEI registrada:", res.get("status"))`;
   }
 
   // =============================================================================
-  // MODULO DE FIN DE VIDA Y TRATAMIENTO DE RESIDUOS (WASTETOOLS 2026 / DOKA)
+  // MODULO DE FIN DE VIDA Y TRATAMIENTO DE RESIDUOS (WASTETOOLS 2026 / DOKA FULL SUITE)
   // =============================================================================
   let wasteMaterialsCache = [];
+  let wasteMixtureRows = [];
+  let currentWasteMode = "predefined"; // "predefined", "mixture", "custom"
   let lastWasteCalculationResult = null;
 
   const tWaste = (key, fallback) => (window.I18n ? window.I18n.t(key, fallback) : fallback);
@@ -14721,6 +14723,14 @@ print("Actividad GEI registrada:", res.get("status"))`;
         }
       }
       await loadWasteMaterials();
+
+      if (!wasteMixtureRows || wasteMixtureRows.length === 0) {
+        wasteMixtureRows = [
+          { material_id: "dokamat_11", share: 50.0 },
+          { material_id: "dokamat_15", share: 50.0 }
+        ];
+        renderWasteMixtureRows();
+      }
     } catch (err) {
       console.error("Error al inicializar WasteTools:", err);
     }
@@ -14746,6 +14756,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
           matSelect.appendChild(opt);
         });
         updateWasteMaterialBadges();
+        renderWasteMixtureRows();
       }
     } catch (err) {
       console.error("Error al cargar materiales de residuos:", err);
@@ -14758,10 +14769,10 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const mat = wasteMaterialsCache.find(m => m.id === matSelect.value);
     if (!mat) return;
 
-    const hu = mat.net_heating_value_mj_kg != null ? Number(mat.net_heating_value_mj_kg).toFixed(1) : "--";
-    const h2o = mat.water_content != null ? (Number(mat.water_content) * 100).toFixed(1) : "--";
-    const c = mat.carbon_content != null ? (Number(mat.carbon_content) * 100).toFixed(1) : "--";
-    const bio = mat.biogenic_carbon_share != null ? (Number(mat.biogenic_carbon_share) * 100).toFixed(0) : "--";
+    const hu = mat.Hu != null ? Number(mat.Hu).toFixed(1) : (mat.net_heating_value_mj_kg != null ? Number(mat.net_heating_value_mj_kg).toFixed(1) : "--");
+    const h2o = mat.H2O != null ? (Number(mat.H2O) * 100).toFixed(1) : (mat.water_content != null ? (Number(mat.water_content) * 100).toFixed(1) : "--");
+    const c = mat.C != null ? (Number(mat.C) * 100).toFixed(1) : (mat.carbon_content != null ? (Number(mat.carbon_content) * 100).toFixed(1) : "--");
+    const bio = mat.biogenic_c_share != null ? (Number(mat.biogenic_c_share) * 100).toFixed(0) : "--";
     const degrad = mat.degradability_100a != null ? Number(mat.degradability_100a).toFixed(2) : "--";
 
     const bHu = document.getElementById("badgeWasteHu");
@@ -14777,9 +14788,122 @@ print("Actividad GEI registrada:", res.get("status"))`;
     if (bDegrad) bDegrad.textContent = `Degradabilidad 100a: ${degrad}`;
   }
 
+  function renderWasteMixtureRows() {
+    const container = document.getElementById("wasteMixtureRowsContainer");
+    if (!container) return;
+
+    if (!wasteMixtureRows || wasteMixtureRows.length === 0) {
+      container.innerHTML = `<div style="font-size: 11.5px; color: var(--text-muted); padding: 8px;">No hay fracciones en la mezcla. Haz clic en "+ Agregar Fraccion".</div>`;
+      updateWasteMixtureSum();
+      return;
+    }
+
+    container.innerHTML = wasteMixtureRows.map((row, idx) => {
+      const opts = wasteMaterialsCache.map(m => {
+        const sel = m.id === row.material_id ? "selected" : "";
+        return `<option value="${m.id}" ${sel}>${escapeHtml(m.name)} (${escapeHtml(m.category)})</option>`;
+      }).join("");
+
+      return `
+        <div style="display: grid; grid-template-columns: 3fr 1fr 40px; gap: 10px; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 6px;">
+          <select class="form-control styled-select-compact" style="height: 32px; font-size: 11.5px;" onchange="window.EconodeApp.updateWasteMixtureRowMaterial(${idx}, this.value)">
+            ${opts}
+          </select>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <input type="number" min="0" max="100" step="1" value="${row.share}" class="form-control" style="height: 32px; font-size: 11.5px; text-align: right;" onchange="window.EconodeApp.updateWasteMixtureRowShare(${idx}, this.value)" oninput="window.EconodeApp.updateWasteMixtureRowShare(${idx}, this.value)" />
+            <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">%</span>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" style="height: 32px; padding: 0 8px; color: #ef4444;" onclick="window.EconodeApp.removeWasteMixtureRow(${idx})" title="Eliminar fraccion">
+            &times;
+          </button>
+        </div>
+      `;
+    }).join("");
+
+    updateWasteMixtureSum();
+  }
+
+  function addWasteMixtureRow(matId = "dokamat_11", share = 10.0) {
+    if (!wasteMixtureRows) wasteMixtureRows = [];
+    const id = matId || (wasteMaterialsCache.length > 0 ? wasteMaterialsCache[0].id : "dokamat_11");
+    wasteMixtureRows.push({ material_id: id, share: parseFloat(share) || 10.0 });
+    renderWasteMixtureRows();
+  }
+
+  function removeWasteMixtureRow(index) {
+    if (!wasteMixtureRows || index < 0 || index >= wasteMixtureRows.length) return;
+    wasteMixtureRows.splice(index, 1);
+    renderWasteMixtureRows();
+  }
+
+  function updateWasteMixtureRowMaterial(index, matId) {
+    if (wasteMixtureRows && wasteMixtureRows[index]) {
+      wasteMixtureRows[index].material_id = matId;
+      updateWasteMixtureSum();
+    }
+  }
+
+  function updateWasteMixtureRowShare(index, shareVal) {
+    if (wasteMixtureRows && wasteMixtureRows[index]) {
+      wasteMixtureRows[index].share = parseFloat(shareVal) || 0.0;
+      updateWasteMixtureSum();
+    }
+  }
+
+  async function updateWasteMixtureSum() {
+    const sum = wasteMixtureRows.reduce((acc, r) => acc + (parseFloat(r.share) || 0), 0);
+    const sumBadge = document.getElementById("wasteMixtureSumBadge");
+    if (sumBadge) {
+      sumBadge.textContent = `${sum.toFixed(1)}%`;
+      if (Math.abs(sum - 100.0) < 0.5) {
+        sumBadge.style.color = "#10b981";
+      } else {
+        sumBadge.style.color = "#f59e0b";
+      }
+    }
+
+    if (wasteMixtureRows.length > 0 && sum > 0) {
+      try {
+        const fractionsPayload = wasteMixtureRows.map(r => ({ material_id: r.material_id, share: r.share / sum }));
+        const res = await fetch("/api/waste/mixture/calculate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fractions: fractionsPayload })
+        });
+        const data = await res.json();
+        if (data.status === "success" && data.mixed_material) {
+          const m = data.mixed_material;
+          const bHu = document.getElementById("badgeMixHu");
+          const bH2O = document.getElementById("badgeMixH2O");
+          const bC = document.getElementById("badgeMixC");
+          const bBio = document.getElementById("badgeMixBio");
+          const bDegrad = document.getElementById("badgeMixDegrad");
+
+          if (bHu) bHu.textContent = `PCI Ponderado (Hu): ${Number(m.Hu).toFixed(1)} MJ/kg`;
+          if (bH2O) bH2O.textContent = `Humedad: ${(Number(m.H2O) * 100).toFixed(1)}%`;
+          if (bC) bC.textContent = `Carbono Total: ${(Number(m.C) * 100).toFixed(1)}%`;
+          if (bBio) bBio.textContent = `Fraccion Biogenica: ${(Number(m.biogenic_c_share) * 100).toFixed(0)}%`;
+          if (bDegrad) bDegrad.textContent = `Degradabilidad 100a: ${Number(m.degradability_100a).toFixed(2)}`;
+        }
+      } catch (e) {}
+    }
+  }
+
+  function updateWasteTechPanels() {
+    const tech = document.getElementById("wasteTechSelect")?.value || "mswi";
+    const pMSWI = document.getElementById("techParamsMSWI");
+    const pLF = document.getElementById("techParamsLandfill");
+    const pTail = document.getElementById("techParamsTailings");
+    const pWW = document.getElementById("techParamsWastewater");
+
+    if (pMSWI) pMSWI.style.display = (tech === "mswi") ? "grid" : "none";
+    if (pLF) pLF.style.display = (tech === "landfill_msw" || tech === "landfill") ? "grid" : "none";
+    if (pTail) pTail.style.display = (tech === "tailings_impoundment") ? "flex" : "none";
+    if (pWW) pWW.style.display = (tech === "wastewater") ? "grid" : "none";
+  }
+
   async function executeWasteCalculation() {
     try {
-      const isPredefined = document.getElementById("btnWasteModePredefined")?.classList.contains("active");
       const tech = document.getElementById("wasteTechSelect")?.value || "mswi";
       const mass = parseFloat(document.getElementById("inputWasteMass")?.value || "100") || 100;
       const transportKm = parseFloat(document.getElementById("inputWasteTransport")?.value || "20") || 20;
@@ -14787,16 +14911,23 @@ print("Actividad GEI registrada:", res.get("status"))`;
       let payload = {
         technology: tech,
         mass_kg: mass,
-        transport_km: transportKm
+        transport_km: transportKm,
+        tech_kwargs: {}
       };
 
-      if (isPredefined) {
+      if (currentWasteMode === "predefined") {
         const matId = document.getElementById("wasteMaterialSelect")?.value;
         if (!matId) {
           showNotification(tWaste("waste.select_material_req", "Selecciona un material de residuo"));
           return;
         }
         payload.material_id = matId;
+      } else if (currentWasteMode === "mixture") {
+        if (!wasteMixtureRows || wasteMixtureRows.length === 0) {
+          showNotification("Agrega al menos una fraccion a la mezcla");
+          return;
+        }
+        payload.fractions = wasteMixtureRows.map(r => ({ material_id: r.material_id, share: r.share }));
       } else {
         payload.custom_properties = {
           Hu: parseFloat(document.getElementById("inputCustomHu")?.value || "15"),
@@ -14806,14 +14937,31 @@ print("Actividad GEI registrada:", res.get("status"))`;
           ash: parseFloat(document.getElementById("inputCustomAsh")?.value || "0.05"),
           N: parseFloat(document.getElementById("inputCustomN")?.value || "0.01"),
           S: parseFloat(document.getElementById("inputCustomS")?.value || "0.002"),
-          Cl: parseFloat(document.getElementById("inputCustomCl")?.value || "0.005")
+          Cl: parseFloat(document.getElementById("inputCustomCl")?.value || "0.005"),
+          degradability_100a: parseFloat(document.getElementById("inputCustomDegrad")?.value || "0.35")
         };
+      }
+
+      if (tech === "mswi") {
+        payload.tech_kwargs.denox = document.getElementById("paramMSWIDeNOx")?.value || "sncr";
+        payload.tech_kwargs.fgc_mode = document.getElementById("paramMSWIFGC")?.value || "wet_scrubber";
+        payload.tech_kwargs.recovery_scrap = document.getElementById("paramMSWIScrap")?.checked ?? true;
+      } else if (tech === "landfill_msw" || tech === "landfill") {
+        payload.tech_kwargs.climate_site = document.getElementById("paramLFClimate")?.value || "site_3_glo_temperate";
+        payload.tech_kwargs.gas_capture_rate = (parseFloat(document.getElementById("paramLFGasCapture")?.value || "45") / 100);
+        payload.tech_kwargs.gas_utilization = document.getElementById("paramLFGasDest")?.value || "flare";
+        payload.tech_kwargs.time_horizon = document.getElementById("paramLFTimeHorizon")?.value || "100a";
+      } else if (tech === "tailings_impoundment") {
+        payload.tech_kwargs.ard_potential = document.getElementById("paramTailingsARD")?.checked ?? true;
+      } else if (tech === "wastewater") {
+        payload.tech_kwargs.treatment_stage = document.getElementById("paramWWStage")?.value || "2_stage_biological";
+        payload.tech_kwargs.sludge_fate = document.getElementById("paramWWSludgeFate")?.value || "sludge_to_incineration";
       }
 
       const btn = document.getElementById("btnCalculateWaste");
       if (btn) btn.disabled = true;
 
-      const res = await fetch("/api/waste/calculate", {
+      const res = await fetch("/api/waste/calculate_advanced", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -14828,6 +14976,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
 
       lastWasteCalculationResult = data.result || data;
       renderWasteResults(lastWasteCalculationResult);
+      showNotification(`Calculo de fin de vida (${data.result.technology_name || tech}) completado.`);
     } catch (err) {
       console.error("Error al calcular residuo:", err);
       showNotification("Error de conexion al procesar el residuo: " + err.message);
@@ -14846,6 +14995,9 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const container = document.getElementById("wasteResultsContainer");
     if (container) container.style.display = "block";
 
+    const badgeTech = document.getElementById("badgeActiveTechIndicator");
+    if (badgeTech) badgeTech.textContent = raw.technology_name || raw.technology || "Doka Model";
+
     const elNet = document.getElementById("resWasteNetGWP");
     const elC4 = document.getElementById("resWasteC4GWP");
     const elC4Sub = document.getElementById("resWasteC4Sub");
@@ -14854,7 +15006,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
 
     const netGwp = Number(epd.Net_Total_GWP != null ? epd.Net_Total_GWP : 0);
     const c4Gwp = Number(epd.C4_final_disposal != null ? epd.C4_final_disposal : 0);
-    const c4Fossil = Number(epd.C4_fossil_gwp != null ? epd.C4_fossil_gwp : 0);
+    const c4Fossil = Number(epd.C4_fossil_gwp != null ? epd.C4_fossil_gwp : (epd.C4_methane_gwp || 0));
     const c4Bio = Number(epd.C4_biogenic_gwp != null ? epd.C4_biogenic_gwp : 0);
     const modDGwp = Number(epd.Module_D_avoided_burdens != null ? epd.Module_D_avoided_burdens : 0);
     const c2 = Number(epd.C2_transport != null ? epd.C2_transport : (epd.C2_transport_to_treatment || 0));
@@ -14863,7 +15015,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
     if (elNet) elNet.textContent = `${netGwp >= 0 ? "+" : ""}${netGwp.toFixed(2)} kg CO2e`;
     if (elC4) elC4.textContent = `${c4Gwp >= 0 ? "+" : ""}${c4Gwp.toFixed(2)} kg CO2e`;
     if (elC4Sub) {
-      elC4Sub.textContent = `Fosil: ${c4Fossil.toFixed(2)} | Biogenico: ${c4Bio.toFixed(2)}`;
+      elC4Sub.textContent = `Fosil/CH4: ${c4Fossil.toFixed(2)} | Biogenico: ${c4Bio.toFixed(2)}`;
     }
     if (elModD) elModD.textContent = `${modDGwp.toFixed(2)} kg CO2e`;
     if (elC2C3) elC2C3.textContent = `+${(c2 + c3).toFixed(2)} kg CO2e`;
@@ -14883,20 +15035,25 @@ print("Actividad GEI registrada:", res.get("status"))`;
 
     const elSolids = document.getElementById("resWasteSolidsList");
     if (elSolids) {
-      const bottomAsh = solids["Bottom ash (slag to landfill)"] || solids.bottom_ash_kg || 0;
+      const bottomAsh = solids["Bottom ash (escoria a vertedero)"] || solids["Bottom ash (slag to landfill)"] || solids.bottom_ash_kg || 0;
       const flyAsh = solids["Air pollution control (APC) filter residues"] || solids.fly_ash_kg || 0;
       const iron = raw.avoided_materials?.["Scrap iron recovered (kg)"] || raw.avoided_burdens?.recovered_iron_scrap_kg || 0;
+      const alu = raw.avoided_materials?.["Scrap aluminium recovered (kg)"] || 0;
 
       elSolids.innerHTML = `
-        <li>Escoria de fondo (Bottom ash): <strong>${Number(bottomAsh).toFixed(2)} kg</strong></li>
+        <li>Escoria residual / Confinamiento: <strong>${Number(bottomAsh).toFixed(2)} kg</strong></li>
         <li>Cenizas volantes y filtros (APC): <strong>${Number(flyAsh).toFixed(2)} kg</strong></li>
-        <li>Chatarra ferrosa recuperada: <strong>${Number(iron).toFixed(2)} kg</strong></li>
+        <li>Chatarra recuperada (Fe + Al): <strong>${Number(iron + alu).toFixed(2)} kg</strong></li>
       `;
     }
 
     const btnExport = document.getElementById("btnExportWasteJson");
+    const btnSima = document.getElementById("btnExportWasteSimaPro");
+    const btnEco = document.getElementById("btnExportWasteEcoSpold");
     const btnInsert = document.getElementById("btnInsertWasteToCanvas");
     if (btnExport) btnExport.style.display = "inline-flex";
+    if (btnSima) btnSima.style.display = "inline-flex";
+    if (btnEco) btnEco.style.display = "inline-flex";
     if (btnInsert) btnInsert.style.display = "inline-flex";
   }
 
@@ -14907,9 +15064,57 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `Fin_de_Vida_WasteTools_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `Fin_de_Vida_Doka2026_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function exportWasteCalculationSimaPro() {
+    if (!lastWasteCalculationResult) return;
+    try {
+      const res = await fetch("/api/waste/export/simapro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result: lastWasteCalculationResult })
+      });
+      const data = await res.json();
+      if (data.status === "success" && data.content) {
+        const blob = new Blob([data.content], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename || `Fin_de_Vida_SimaPro_${Date.now()}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification("Archivo SimaPro CSV exportado exitosamente.");
+      }
+    } catch (e) {
+      showNotification("Error al exportar a SimaPro: " + e.message);
+    }
+  }
+
+  async function exportWasteCalculationEcoSpold() {
+    if (!lastWasteCalculationResult) return;
+    try {
+      const res = await fetch("/api/waste/export/ecospold2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result: lastWasteCalculationResult })
+      });
+      const data = await res.json();
+      if (data.status === "success" && data.content) {
+        const blob = new Blob([data.content], { type: "application/xml;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = data.filename || `Fin_de_Vida_EcoSpold2_${Date.now()}.xml`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showNotification("Dataset EcoSpold 2 XML exportado exitosamente.");
+      }
+    } catch (e) {
+      showNotification("Error al exportar a EcoSpold2: " + e.message);
+    }
   }
 
   function insertWasteTreatmentNodeToCanvas() {
@@ -14917,7 +15122,7 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const raw = lastWasteCalculationResult.result || lastWasteCalculationResult;
     const input = raw.input_summary || {};
     const epd = raw.epd_modules_gwp || {};
-    const procName = `Fin de Vida: ${input.material_name} (${input.technology_name})`;
+    const procName = `Fin de Vida: ${input.material_name} (${raw.technology_name || input.technology || "Tratamiento"})`;
     
     if (typeof addNodeToCanvas === "function") {
       const inputs = [
@@ -14945,32 +15150,60 @@ print("Actividad GEI registrada:", res.get("status"))`;
     document.getElementById("btnCloseWasteModal")?.addEventListener("click", closeWasteToolsModal);
     document.getElementById("btnCancelWasteModal")?.addEventListener("click", closeWasteToolsModal);
 
-    document.getElementById("btnWasteModePredefined")?.addEventListener("click", () => {
-      document.getElementById("btnWasteModePredefined")?.classList.add("active");
-      document.getElementById("btnWasteModeCustom")?.classList.remove("active");
-      const secP = document.getElementById("wastePredefinedSection");
-      const secC = document.getElementById("wasteCustomSection");
-      if (secP) secP.style.display = "block";
-      if (secC) secC.style.display = "none";
+    const btnPred = document.getElementById("btnWasteModePredefined");
+    const btnMix = document.getElementById("btnWasteModeMixture");
+    const btnCust = document.getElementById("btnWasteModeCustom");
+    const secPred = document.getElementById("wastePredefinedSection");
+    const secMix = document.getElementById("wasteMixtureSection");
+    const secCust = document.getElementById("wasteCustomSection");
+
+    btnPred?.addEventListener("click", () => {
+      currentWasteMode = "predefined";
+      btnPred.classList.add("active");
+      btnMix?.classList.remove("active");
+      btnCust?.classList.remove("active");
+      if (secPred) secPred.style.display = "block";
+      if (secMix) secMix.style.display = "none";
+      if (secCust) secCust.style.display = "none";
     });
 
-    document.getElementById("btnWasteModeCustom")?.addEventListener("click", () => {
-      document.getElementById("btnWasteModeCustom")?.classList.add("active");
-      document.getElementById("btnWasteModePredefined")?.classList.remove("active");
-      const secP = document.getElementById("wastePredefinedSection");
-      const secC = document.getElementById("wasteCustomSection");
-      if (secP) secP.style.display = "none";
-      if (secC) secC.style.display = "block";
+    btnMix?.addEventListener("click", () => {
+      currentWasteMode = "mixture";
+      btnMix.classList.add("active");
+      btnPred?.classList.remove("active");
+      btnCust?.classList.remove("active");
+      if (secPred) secPred.style.display = "none";
+      if (secMix) secMix.style.display = "block";
+      if (secCust) secCust.style.display = "none";
+      renderWasteMixtureRows();
     });
+
+    btnCust?.addEventListener("click", () => {
+      currentWasteMode = "custom";
+      btnCust.classList.add("active");
+      btnPred?.classList.remove("active");
+      btnMix?.classList.remove("active");
+      if (secPred) secPred.style.display = "none";
+      if (secMix) secMix.style.display = "none";
+      if (secCust) secCust.style.display = "block";
+    });
+
+    document.getElementById("btnAddMixtureRow")?.addEventListener("click", () => addWasteMixtureRow());
 
     document.getElementById("wasteCategorySelect")?.addEventListener("change", (e) => {
       loadWasteMaterials(e.target.value);
     });
 
     document.getElementById("wasteMaterialSelect")?.addEventListener("change", updateWasteMaterialBadges);
+    document.getElementById("wasteTechSelect")?.addEventListener("change", updateWasteTechPanels);
+
     document.getElementById("btnCalculateWaste")?.addEventListener("click", executeWasteCalculation);
     document.getElementById("btnExportWasteJson")?.addEventListener("click", exportWasteCalculationJson);
+    document.getElementById("btnExportWasteSimaPro")?.addEventListener("click", exportWasteCalculationSimaPro);
+    document.getElementById("btnExportWasteEcoSpold")?.addEventListener("click", exportWasteCalculationEcoSpold);
     document.getElementById("btnInsertWasteToCanvas")?.addEventListener("click", insertWasteTreatmentNodeToCanvas);
+
+    updateWasteTechPanels();
   }
 
   if (document.readyState === "loading") {
@@ -14986,7 +15219,13 @@ print("Actividad GEI registrada:", res.get("status"))`;
     initWasteToolsData,
     executeWasteCalculation,
     exportWasteCalculationJson,
+    exportWasteCalculationSimaPro,
+    exportWasteCalculationEcoSpold,
     insertWasteTreatmentNodeToCanvas,
+    addWasteMixtureRow,
+    removeWasteMixtureRow,
+    updateWasteMixtureRowMaterial,
+    updateWasteMixtureRowShare,
     toggleProjectCollapse,
     toggleStandaloneCollapse,
     openNewProjectModal,

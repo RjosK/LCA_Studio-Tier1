@@ -136,6 +136,14 @@ try:
     from waste_engine import get_waste_engine
 except (ImportError, ValueError):
     from econode_studio.waste_engine import get_waste_engine
+try:
+    from waste_suite_full import get_doka_suite, DokaExportEngine
+except (ImportError, ValueError):
+    try:
+        from econode_studio.waste_suite_full import get_doka_suite, DokaExportEngine
+    except (ImportError, ValueError):
+        get_doka_suite = None
+        DokaExportEngine = None
 from infrastructure import (
     get_active_db_connection,
     get_configured_client_id,
@@ -358,30 +366,91 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         # 1. API Endpoints
         if path.startswith("/api"):
-            # Endpoints de Modelado de Residuos (WasteTools 2026 / Doka) - Tier 1
+            # Endpoints de Modelado de Residuos (WasteTools 2026 / Doka Full Suite)
             if path == "/api/waste/categories":
-                engine = get_waste_engine()
+                suite = get_doka_suite() if get_doka_suite else get_waste_engine()
                 self._send_json({
                     "status": "success",
-                    "categories": engine.get_categories()
+                    "categories": suite.get_categories()
                 })
                 return
 
             elif path == "/api/waste/materials":
-                engine = get_waste_engine()
+                suite = get_doka_suite() if get_doka_suite else get_waste_engine()
                 cat = query.get("category", [None])[0]
                 q = query.get("search", [None])[0]
                 self._send_json({
                     "status": "success",
-                    "materials": engine.get_materials(category=cat, search=q)
+                    "materials": suite.get_materials(category=cat, search=q)
                 })
                 return
 
             elif path == "/api/waste/technologies":
-                engine = get_waste_engine()
+                suite = get_doka_suite() if get_doka_suite else None
+                if suite and hasattr(suite, "models_config") and suite.models_config:
+                    mswi_cfg = suite.models_config.get("mswi", {})
+                    lf_cfg = suite.models_config.get("landfill_msw", {})
+                    ww_cfg = suite.models_config.get("wastewater", {})
+                    techs = [
+                        {
+                            "id": "mswi",
+                            "name": "Incineración con Recuperación Energética (MSWI)",
+                            "description": "Incineración municipal con recuperación de vapor y electricidad (R1 > 0.60), desmetalizado de escorias y purificación de humos FGC.",
+                            "has_denox": True,
+                            "denox_options": mswi_cfg.get("denox_options", {}),
+                            "has_fgc_mode": True,
+                            "fgc_options": ["wet_scrubber", "dry_sorbent_injection"]
+                        },
+                        {
+                            "id": "landfill_msw",
+                            "name": "Relleno Sanitario Municipal Controlado (MSW)",
+                            "description": "Vertedero controlado con captura de biogás, geomembrana impermeable y monitoreo hidrogeológico a 100 y 60,000 años.",
+                            "has_climate": True,
+                            "climate_sites": lf_cfg.get("climate_sites", {}),
+                            "has_gas_management": True,
+                            "gas_utilization_options": ["flare", "electricity"],
+                            "has_time_horizon": True,
+                            "time_horizons": ["100a", "60ka", "both"]
+                        },
+                        {
+                            "id": "landfill_cd",
+                            "name": "Relleno de Residuos de Construcción y Demolición (RCD)",
+                            "description": "Vertedero de residuos minerales inertes, hormigón, ladrillo, yeso y escombros.",
+                            "has_time_horizon": False
+                        },
+                        {
+                            "id": "landfill_excavation",
+                            "name": "Depósito de Tierras y Rocas de Excavación",
+                            "description": "Depósito de tierras limpias y materiales no reactivos de excavación geológica.",
+                            "has_time_horizon": False
+                        },
+                        {
+                            "id": "open_burning",
+                            "name": "Quema no Controlada a Cielo Abierto (Open Burning)",
+                            "description": "Combustión a baja temperatura sin filtros, con factores de emisión para carbono negro, CO y dioxinas.",
+                            "has_time_horizon": False
+                        },
+                        {
+                            "id": "tailings_impoundment",
+                            "name": "Presa de Relaves Mineros (Tailings Impoundment)",
+                            "description": "Disposición de relaves mineros con drenaje ácido de roca (ARD) y lixiviación de sulfuros y metales pesados.",
+                            "has_ard": True
+                        },
+                        {
+                            "id": "wastewater",
+                            "name": "Planta de Tratamiento de Aguas Residuales (PTAR / WWTP)",
+                            "description": "Depuración de efluentes líquidos en 1, 2 o 3 etapas con precipitación de fósforo y gestión de lodos.",
+                            "has_stages": True,
+                            "stages": ww_cfg.get("stages", {}),
+                            "has_sludge_fates": True,
+                            "sludge_fates": ww_cfg.get("sludge_fates", {})
+                        }
+                    ]
+                else:
+                    techs = get_waste_engine().technologies
                 self._send_json({
                     "status": "success",
-                    "technologies": engine.technologies
+                    "technologies": techs
                 })
                 return
 
@@ -1004,7 +1073,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self._set_headers(204)
             return
 
-        # Endpoint de Calculo de Fin de Vida (WasteTools 2026 / Doka) - Tier 1
+        # Endpoints de Modelado de Residuos (WasteTools 2026 / Doka Full Suite)
         if path == "/api/waste/calculate":
             try:
                 engine = get_waste_engine()
@@ -1033,6 +1102,104 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 })
             except Exception as e:
                 self._send_error_json(f"Error en calculo de residuo: {e}", 400)
+            return
+
+        if path == "/api/waste/mixture/calculate":
+            try:
+                suite = get_doka_suite()
+                if not suite:
+                    raise RuntimeError("Suite Doka 2026 no disponible")
+                fractions = body.get("fractions", [])
+                mixed_material = suite.mix_fractions(fractions)
+                
+                tech = body.get("technology")
+                calc_result = None
+                if tech:
+                    mass_val = float(body.get("mass_kg", mixed_material.get("total_mass_kg", 100.0)))
+                    trans_val = float(body.get("transport_km", 20.0))
+                    calc_result = suite.calculate_advanced(
+                        technology=tech,
+                        material_input=mixed_material,
+                        mass_kg=mass_val,
+                        transport_km=trans_val,
+                        **body.get("tech_kwargs", {})
+                    )
+                self._send_json({
+                    "status": "success",
+                    "mixed_material": mixed_material,
+                    "calculation": calc_result
+                })
+            except Exception as e:
+                self._send_error_json(f"Error al calcular mezcla de residuos: {e}", 400)
+            return
+
+        if path == "/api/waste/calculate_advanced":
+            try:
+                suite = get_doka_suite()
+                if not suite:
+                    raise RuntimeError("Suite Doka 2026 no disponible")
+                tech = body.get("technology", "mswi")
+                mat_id = body.get("material_id")
+                custom_props = body.get("custom_properties")
+                fractions = body.get("fractions")
+
+                if fractions:
+                    mat_input = suite.mix_fractions(fractions)
+                elif custom_props:
+                    mat_input = custom_props
+                elif mat_id:
+                    mat_input = mat_id
+                else:
+                    mat_input = "dokamat_11"
+
+                mass_kg = float(body.get("mass_kg", 100.0))
+                trans_km = float(body.get("transport_km", 20.0))
+                tech_kwargs = body.get("tech_kwargs", {})
+                for k in ("denox", "recovery_scrap", "fgc_mode", "climate_site", "gas_capture_rate", "gas_utilization", "time_horizon", "treatment_stage", "sludge_fate", "ard_potential"):
+                    if k in body and k not in tech_kwargs:
+                        tech_kwargs[k] = body[k]
+
+                res = suite.calculate_advanced(
+                    technology=tech,
+                    material_input=mat_input,
+                    mass_kg=mass_kg,
+                    transport_km=trans_km,
+                    **tech_kwargs
+                )
+                self._send_json({
+                    "status": "success",
+                    "result": res
+                })
+            except Exception as e:
+                self._send_error_json(f"Error en calculo avanzado Doka: {e}", 400)
+            return
+
+        if path == "/api/waste/export/simapro":
+            try:
+                calc_result = body.get("result", body)
+                csv_str = DokaExportEngine.to_simapro_csv(calc_result)
+                self._send_json({
+                    "status": "success",
+                    "format": "simapro_csv",
+                    "filename": f"Fin_de_Vida_SimaPro_{calc_result.get('technology', 'mswi')}.csv",
+                    "content": csv_str
+                })
+            except Exception as e:
+                self._send_error_json(f"Error al exportar SimaPro CSV: {e}", 400)
+            return
+
+        if path == "/api/waste/export/ecospold2":
+            try:
+                calc_result = body.get("result", body)
+                xml_str = DokaExportEngine.to_ecospold2_xml(calc_result)
+                self._send_json({
+                    "status": "success",
+                    "format": "ecospold2_xml",
+                    "filename": f"Fin_de_Vida_EcoSpold2_{calc_result.get('technology', 'mswi')}.xml",
+                    "content": xml_str
+                })
+            except Exception as e:
+                self._send_error_json(f"Error al exportar EcoSpold2 XML: {e}", 400)
             return
 
         conn = get_active_db_connection()

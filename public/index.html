@@ -2712,17 +2712,19 @@
   <!-- ============================================================= -->
   <!-- VISTA: MODELADOR DE FIN DE VIDA Y RESIDUOS (#viewWaste) - TIER 1 -->
   <!-- ============================================================= -->
+  <!-- VISTA: MODELADOR DE FIN DE VIDA Y RESIDUOS (#viewWaste) - DOKA 2026 COMPLETO -->
+  <!-- ============================================================= -->
   <main class="view-container" id="viewWaste" role="region" aria-label="Fin de Vida y Tratamiento de Residuos" style="display: none; padding: 24px; max-width: 1200px; margin: 0 auto;">
     <div class="view-header" style="margin-bottom: 24px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
       <div style="display: flex; justify-content: space-between; align-items: center;">
         <div>
           <h1 style="font-size: 20px; font-weight: 700; margin: 0 0 6px 0; display: flex; align-items: center; gap: 8px;">
-            <span>♻️</span>
+            <span class="mono" style="font-size: 13px; font-weight: 700; color: var(--accent-emerald, #10b981);">[EoL-Doka]</span>
             <span data-i18n="waste.modal_title">Fin de Vida y Tratamiento de Residuos</span>
-            <span class="badge badge-success" style="font-size: 10px; padding: 2px 8px; font-weight: 600;">Tier 1 Incluido</span>
+            <span class="badge badge-success" style="font-size: 10px; padding: 2px 8px; font-weight: 600;">Doka 2026 Full Suite</span>
           </h1>
           <p style="font-size: 12px; color: var(--text-secondary); margin: 0;" data-i18n="waste.modal_subtitle">
-            Modelado estequiométrico oficial ecoinvent v3.12 (Gabor Doka 2026) - Tier 1
+            Modelado estequiométrico integral ecoinvent v3.12 (Gabor Doka 2026) - 7 Tecnologías & Mezclador Compuesto
           </p>
         </div>
         <div style="display: flex; gap: 8px;">
@@ -2735,11 +2737,12 @@
 
     <!-- Contenedor Principal de la Herramienta -->
     <div style="background: var(--bg-card, #1e293b); border: 1px solid var(--border-color, #334155); border-radius: 12px; padding: 24px;">
-      <!-- Selector de Modo Apple Segmented Control -->
+      <!-- Selector de Modo Apple Segmented Control (3 Modos) -->
       <div style="margin-bottom: 20px; display: flex; justify-content: center;">
-        <div class="apple-segmented-control" style="max-width: 480px; width: 100%;">
-          <button type="button" class="segment-btn active" id="btnWasteModePredefined" data-i18n="waste.tab_predefined">Material Predefinido</button>
-          <button type="button" class="segment-btn" id="btnWasteModeCustom" data-i18n="waste.tab_custom">Composición Química Personalizada</button>
+        <div class="apple-segmented-control" style="max-width: 720px; width: 100%;">
+          <button type="button" class="segment-btn active" id="btnWasteModePredefined" data-i18n="waste.tab_predefined">Catálogo Oficial (219 Residuos)</button>
+          <button type="button" class="segment-btn" id="btnWasteModeMixture" data-i18n="waste.tab_mixture">Mezclador de Residuos Compuestos</button>
+          <button type="button" class="segment-btn" id="btnWasteModeCustom" data-i18n="waste.tab_custom">Composición Química Elemental</button>
         </div>
       </div>
 
@@ -2753,7 +2756,7 @@
             </select>
           </div>
           <div>
-            <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.select_material">Seleccionar Material de Residuo (220 fracciones):</label>
+            <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.select_material">Seleccionar Material de Residuo (219 fracciones oficiales):</label>
             <select class="form-control styled-select-compact" id="wasteMaterialSelect" style="width: 100%; height: 34px; font-size: 12px;">
               <option value="">Cargando catálogo de residuos...</option>
             </select>
@@ -2770,7 +2773,38 @@
         </div>
       </div>
 
-      <!-- Sección 1B: Composición Química Personalizada (oculta por defecto) -->
+      <!-- Sección 1B: Mezclador de Residuos Compuestos (Doka Waste Mixture) -->
+      <div id="wasteMixtureSection" style="display: none; margin-bottom: 20px; padding: 18px 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div>
+            <strong style="font-size: 13px;" data-i18n="waste.mixture_title">Composición de Fracciones del Residuo Compuesto</strong>
+            <div style="font-size: 11px; color: var(--text-muted);">Añade múltiples fracciones con su porcentaje de masa (deben sumar 100%).</div>
+          </div>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnAddMixtureRow" style="padding: 4px 12px; font-size: 11px;">
+            + Agregar Fracción
+          </button>
+        </div>
+
+        <div id="wasteMixtureRowsContainer" style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+          <!-- Filas inyectadas dinámicamente -->
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(0,0,0,0.25); border-radius: 6px; margin-bottom: 12px;">
+          <span style="font-size: 11.5px; font-weight: 600;">Suma Total de Fracciones:</span>
+          <span id="wasteMixtureSumBadge" style="font-size: 12px; font-weight: 700; color: #10b981; font-family: monospace;">100.0%</span>
+        </div>
+
+        <!-- Badges de Estequiometría de la Mezcla Sintetizada -->
+        <div id="wasteMixtureSynthesizedBadges" style="display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; background: rgba(255,255,255,0.03); border: 1px dashed var(--border-color); border-radius: 6px;">
+          <span class="stat-pill" id="badgeMixHu" style="padding: 3px 8px; font-size: 11px;">PCI Ponderado (Hu): -- MJ/kg</span>
+          <span class="stat-pill" id="badgeMixH2O" style="padding: 3px 8px; font-size: 11px;">Humedad: -- %</span>
+          <span class="stat-pill" id="badgeMixC" style="padding: 3px 8px; font-size: 11px;">Carbono Total: -- %</span>
+          <span class="stat-pill" id="badgeMixBio" style="padding: 3px 8px; font-size: 11px;">Fracción Biogénica: -- %</span>
+          <span class="stat-pill" id="badgeMixDegrad" style="padding: 3px 8px; font-size: 11px;">Degradabilidad 100a: --</span>
+        </div>
+      </div>
+
+      <!-- Sección 1C: Composición Química Personalizada (oculta por defecto) -->
       <div id="wasteCustomSection" style="display: none; margin-bottom: 20px; padding: 16px 20px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); border-radius: 8px;">
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;">
           <div>
@@ -2808,15 +2842,17 @@
         </div>
       </div>
 
-      <!-- Sección 2: Parámetros Operacionales -->
-      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <!-- Sección 2: Tecnologías Doka 2026 y Parámetros Operacionales -->
+      <div style="display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; margin-bottom: 16px;">
         <div>
-          <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.technology">Tecnología de Tratamiento:</label>
+          <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 11.5px;" data-i18n="waste.technology">Tecnología de Tratamiento (7 Modelos Doka):</label>
           <select class="form-control styled-select-compact" id="wasteTechSelect" style="width: 100%; height: 34px; font-size: 12px;">
             <option value="mswi" data-i18n="waste.tech_mswi">Incineración con Recuperación de Energía (MSWI)</option>
-            <option value="landfill" data-i18n="waste.tech_landfill">Relleno Sanitario Controlado (Captura de Biogás)</option>
-            <option value="open_burning" data-i18n="waste.tech_open_burning">Quema no Controlada a Cielo Abierto</option>
-            <option value="construction_landfill" data-i18n="waste.tech_construction">Relleno de Residuos Inertes / Construcción</option>
+            <option value="landfill_msw" data-i18n="waste.tech_landfill">Relleno Sanitario Municipal Controlado (MSW)</option>
+            <option value="landfill_cd" data-i18n="waste.tech_construction">Relleno de Residuos Inertes y Construcción (RCD)</option>
+            <option value="landfill_excavation" data-i18n="waste.tech_excavation">Depósito de Tierras de Excavación</option>
+            <option value="open_burning" data-i18n="waste.tech_open_burning">Quema no Controlada a Cielo Abierto (Open Burning)</option>
+            <option value="tailings_impoundment" data-i18n="waste.tech_tailings">Presa de Relaves Mineros (Tailings Impoundment)</option>
             <option value="wastewater" data-i18n="waste.tech_wastewater">Planta de Tratamiento de Aguas Residuales (PTAR)</option>
           </select>
         </div>
@@ -2830,15 +2866,114 @@
         </div>
       </div>
 
+      <!-- Sección 2B: Parámetros de Ingeniería de Planta (Doka Full Suite) -->
+      <div id="wasteTechParamsContainer" style="margin-bottom: 20px; padding: 14px 18px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 8px;">
+        <div style="font-size: 12px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+          <span data-i18n="waste.tech_params_title">Parámetros de Ingeniería de Planta (Doka Full Suite)</span>
+          <span class="stat-pill" style="font-size: 10px; padding: 2px 8px;">Configuración Científica</span>
+        </div>
+
+        <!-- Opciones MSWI -->
+        <div id="techParamsMSWI" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.denox_label">Tecnología DeNOx:</label>
+            <select class="form-control styled-select-compact" id="paramMSWIDeNOx" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="sncr">SNCR (Reducción no catalítica, 65%)</option>
+              <option value="scr_high_dust">SCR Alto Polvo (High Dust, 85%)</option>
+              <option value="scr_low_dust">SCR Bajo Polvo (Tail-End, 90%)</option>
+              <option value="none">Sin DeNOx (0%)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.fgc_label">Limpieza de Gases (FGC):</label>
+            <select class="form-control styled-select-compact" id="paramMSWIFGC" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="wet_scrubber">Lavador Húmedo (Wet Scrubber, 98.5%)</option>
+              <option value="dry_sorbent">Inyección Seca de Cal (Dry Sorbent, 95%)</option>
+            </select>
+          </div>
+          <div style="display: flex; align-items: center; padding-top: 18px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 11.5px; cursor: pointer;">
+              <input type="checkbox" id="paramMSWIScrap" checked />
+              <span data-i18n="waste.scrap_recovery_label">Separar chatarra (Fe, Al, Cu)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Opciones Landfill MSW -->
+        <div id="techParamsLandfill" style="display: none; grid-template-columns: repeat(4, 1fr); gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.climate_site_label">Perfil Geo-Climático:</label>
+            <select class="form-control styled-select-compact" id="paramLFClimate" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="site_3_glo_temperate">Promedio Global (GLO, 850 mm/a)</option>
+              <option value="site_1_ch_temperate">Suiza Templado Húmedo (CH, 1033 mm/a)</option>
+              <option value="site_2_jordan_arid">Jordania / Zona Árida (JO, 300 mm/a)</option>
+              <option value="site_4_arid_uncontrolled">Árido no controlado (Sin liner)</option>
+              <option value="site_5_open_dump_temperate">Tiradero Abierto Templado</option>
+              <option value="site_6_open_dump_arid">Tiradero Abierto Árido</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.gas_capture_label">Captura Biogás (%):</label>
+            <input type="number" min="0" max="95" step="5" class="form-control" id="paramLFGasCapture" value="45" style="width: 100%; height: 32px; font-size: 11.5px;" />
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.gas_dest_label">Destino del Biogás:</label>
+            <select class="form-control styled-select-compact" id="paramLFGasDest" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="flare">Quema en Antorcha (Flaring)</option>
+              <option value="electricity">Motogenerador Eléctrico (Exportación)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.time_horizon_label">Horizonte Lixiviados:</label>
+            <select class="form-control styled-select-compact" id="paramLFTimeHorizon" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="100a">100 años (Estándar EPD)</option>
+              <option value="60ka">60,000 años (Geológico)</option>
+              <option value="both">Ambos Horizontes</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Opciones Tailings -->
+        <div id="techParamsTailings" style="display: none; align-items: center; gap: 12px;">
+          <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer;">
+            <input type="checkbox" id="paramTailingsARD" checked />
+            <span data-i18n="waste.ard_label">Drenaje Ácido de Roca (ARD activo con oxidación de sulfuros)</span>
+          </label>
+        </div>
+
+        <!-- Opciones Wastewater -->
+        <div id="techParamsWastewater" style="display: none; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.ww_stage_label">Etapa de Depuración:</label>
+            <select class="form-control styled-select-compact" id="paramWWStage" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="2_stage_biological">2 Etapas: Biológica Secundaria (Estándar)</option>
+              <option value="3_stage_chemical_p">3 Etapas: Química Terciaria (Precipitación P con FeSO4)</option>
+              <option value="1_stage_mechanical">1 Etapa: Mecánica Primaria</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; margin-bottom: 4px;" data-i18n="waste.sludge_fate_label">Destino de Lodos:</label>
+            <select class="form-control styled-select-compact" id="paramWWSludgeFate" style="width: 100%; height: 32px; font-size: 11.5px;">
+              <option value="sludge_to_incineration">Incineración con Recuperación Energética</option>
+              <option value="sludge_to_landfill">Relleno Sanitario Controlado</option>
+              <option value="sludge_to_agriculture">Aplicación Directa en Agricultura</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       <div style="display: flex; justify-content: flex-end; margin-bottom: 24px;">
         <button type="button" class="btn btn-primary" id="btnCalculateWaste" style="padding: 8px 24px; font-weight: 600;">
-          <span data-i18n="waste.btn_calculate">Calcular Inventario y Módulos EPD</span>
+          <span data-i18n="waste.btn_calculate">Calcular Inventario y Módulos EPD (Doka Full)</span>
         </button>
       </div>
 
       <!-- Sección 3: Resultados de Módulos EPD y Fin de Vida -->
       <div id="wasteResultsContainer" style="display: none; border-top: 1px solid var(--border-color); padding-top: 20px;">
-        <h3 style="margin: 0 0 16px 0; font-size: 15px; font-weight: 700;" data-i18n="waste.results_title">Resultados de Inventario y Módulos EPD (EN 15804)</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="margin: 0; font-size: 15px; font-weight: 700;" data-i18n="waste.results_title">Resultados de Inventario y Módulos EPD (EN 15804)</h3>
+          <span id="badgeActiveTechIndicator" class="stat-pill" style="font-size: 11px; padding: 4px 10px;">MSWI</span>
+        </div>
         
         <!-- Fila de Tarjetas de Impacto Principal -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px;">
@@ -2880,9 +3015,16 @@
           </div>
         </div>
 
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <!-- Barra de Herramientas de Exportación Multi-Formato -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap;">
           <button type="button" class="btn btn-secondary btn-sm" id="btnExportWasteJson">
-            <span>Descargar JSON de Inventario</span>
+            <span>Descargar JSON</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnExportWasteSimaPro" style="border-color: #3b82f6; color: #60a5fa;">
+            <span data-i18n="waste.btn_export_simapro">Exportar SimaPro CSV</span>
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" id="btnExportWasteEcoSpold" style="border-color: #10b981; color: #34d399;">
+            <span data-i18n="waste.btn_export_ecospold">Exportar EcoSpold2 XML</span>
           </button>
           <button type="button" class="btn btn-primary btn-sm" id="btnInsertWasteToCanvas">
             <span data-i18n="waste.btn_insert_canvas">Insertar como Proceso en el Canvas</span>

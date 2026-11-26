@@ -1169,7 +1169,26 @@ const I18N_DICTIONARY = {
     "waste.custom_n": "Nitrógeno (% masa):",
     "waste.custom_s": "Azufre (% masa):",
     "waste.custom_cl": "Cloro (% masa):",
-    "waste.custom_degrad": "Degradabilidad a 100 años en vertedero (0.0 a 1.0):"
+    "waste.custom_degrad": "Degradabilidad a 100 años en vertedero (0.0 a 1.0):",
+    "waste.tab_mixture": "Mezclador de Residuos Compuestos",
+    "waste.add_fraction": "+ Agregar Fracción",
+    "waste.mixture_share": "% Participación",
+    "waste.mixture_sum": "Suma de fracciones:",
+    "waste.tech_tailings": "Presa de Relaves Mineros (Tailings Impoundment)",
+    "waste.tech_excavation": "Depósito de Tierras de Excavación",
+    "waste.tech_params_title": "Parámetros de Ingeniería de Planta (Doka Full Suite)",
+    "waste.denox_label": "Tecnología DeNOx:",
+    "waste.fgc_label": "Limpieza de Humos (FGC):",
+    "waste.scrap_recovery_label": "Separación de chatarra (Fe, Al, Cu) de escorias",
+    "waste.climate_site_label": "Perfil Geo-Climático del Vertedero:",
+    "waste.gas_capture_label": "Tasa de Captura de Biogás (%):",
+    "waste.gas_dest_label": "Destino del Biogás:",
+    "waste.time_horizon_label": "Horizonte Temporal de Lixiviación:",
+    "waste.ard_label": "Drenaje Ácido de Roca (ARD activo):",
+    "waste.ww_stage_label": "Etapa de Depuración (PTAR):",
+    "waste.sludge_fate_label": "Destino de Lodos de Depuración:",
+    "waste.btn_export_simapro": "Exportar SimaPro CSV",
+    "waste.btn_export_ecospold": "Exportar EcoSpold2 XML"
  },
 
  en: {
@@ -2339,7 +2358,26 @@ const I18N_DICTIONARY = {
     "waste.custom_n": "Nitrogen (% mass):",
     "waste.custom_s": "Sulfur (% mass):",
     "waste.custom_cl": "Chlorine (% mass):",
-    "waste.custom_degrad": "100-Year Landfill Degradability (0.0 to 1.0):"
+    "waste.custom_degrad": "100-Year Landfill Degradability (0.0 to 1.0):",
+    "waste.tab_mixture": "Waste Mixture Builder",
+    "waste.add_fraction": "+ Add Fraction",
+    "waste.mixture_share": "% Share",
+    "waste.mixture_sum": "Fractions sum:",
+    "waste.tech_tailings": "Mining Tailings Impoundment",
+    "waste.tech_excavation": "Excavation Material Landfill",
+    "waste.tech_params_title": "Facility Engineering Parameters (Doka Full Suite)",
+    "waste.denox_label": "DeNOx Technology:",
+    "waste.fgc_label": "Flue Gas Cleaning (FGC):",
+    "waste.scrap_recovery_label": "Metal scrap recovery (Fe, Al, Cu) from slag",
+    "waste.climate_site_label": "Landfill Geo-Climate Profile:",
+    "waste.gas_capture_label": "Biogas Capture Rate (%):",
+    "waste.gas_dest_label": "Biogas Fate:",
+    "waste.time_horizon_label": "Leachate Time Horizon:",
+    "waste.ard_label": "Acid Rock Drainage (ARD active):",
+    "waste.ww_stage_label": "WWTP Treatment Stage:",
+    "waste.sludge_fate_label": "Sludge Disposal Route:",
+    "waste.btn_export_simapro": "Export SimaPro CSV",
+    "waste.btn_export_ecospold": "Export EcoSpold2 XML"
  }
 };
 
