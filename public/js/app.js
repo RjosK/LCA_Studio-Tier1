@@ -14826,8 +14826,8 @@ print("Actividad GEI registrada:", res.get("status"))`;
         return;
       }
 
-      lastWasteCalculationResult = data;
-      renderWasteResults(data);
+      lastWasteCalculationResult = data.result || data;
+      renderWasteResults(lastWasteCalculationResult);
     } catch (err) {
       console.error("Error al calcular residuo:", err);
       showNotification("Error de conexion al procesar el residuo: " + err.message);
@@ -14837,9 +14837,11 @@ print("Actividad GEI registrada:", res.get("status"))`;
   }
 
   function renderWasteResults(res) {
-    const epd = res.epd_modules_gwp || {};
-    const avoided = res.avoided_burdens || {};
-    const solids = res.solid_residues || {};
+    const raw = res.result || res;
+    const epd = raw.epd_modules_gwp || {};
+    const avoidedEnergy = raw.avoided_energy || raw.avoided_burdens || {};
+    const modDBreakdown = raw.module_d_breakdown || {};
+    const solids = raw.lci_solid_residues || raw.solid_residues || {};
 
     const container = document.getElementById("wasteResultsContainer");
     if (container) container.style.display = "block";
@@ -14850,29 +14852,45 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const elModD = document.getElementById("resWasteModDGWP");
     const elC2C3 = document.getElementById("resWasteC2C3GWP");
 
-    if (elNet) elNet.textContent = `${epd.Net_Total_GWP > 0 ? "+" : ""}${Number(epd.Net_Total_GWP).toFixed(2)} kg CO2e`;
-    if (elC4) elC4.textContent = `${epd.C4_final_disposal > 0 ? "+" : ""}${Number(epd.C4_final_disposal).toFixed(2)} kg CO2e`;
+    const netGwp = Number(epd.Net_Total_GWP != null ? epd.Net_Total_GWP : 0);
+    const c4Gwp = Number(epd.C4_final_disposal != null ? epd.C4_final_disposal : 0);
+    const c4Fossil = Number(epd.C4_fossil_gwp != null ? epd.C4_fossil_gwp : 0);
+    const c4Bio = Number(epd.C4_biogenic_gwp != null ? epd.C4_biogenic_gwp : 0);
+    const modDGwp = Number(epd.Module_D_avoided_burdens != null ? epd.Module_D_avoided_burdens : 0);
+    const c2 = Number(epd.C2_transport != null ? epd.C2_transport : (epd.C2_transport_to_treatment || 0));
+    const c3 = Number(epd.C3_waste_processing != null ? epd.C3_waste_processing : 0);
+
+    if (elNet) elNet.textContent = `${netGwp >= 0 ? "+" : ""}${netGwp.toFixed(2)} kg CO2e`;
+    if (elC4) elC4.textContent = `${c4Gwp >= 0 ? "+" : ""}${c4Gwp.toFixed(2)} kg CO2e`;
     if (elC4Sub) {
-      elC4Sub.textContent = `Fosil: ${Number(epd.C4_fossil_gwp).toFixed(2)} | Biogenico: ${Number(epd.C4_biogenic_gwp).toFixed(2)}`;
+      elC4Sub.textContent = `Fosil: ${c4Fossil.toFixed(2)} | Biogenico: ${c4Bio.toFixed(2)}`;
     }
-    if (elModD) elModD.textContent = `${Number(epd.Module_D_avoided_burdens).toFixed(2)} kg CO2e`;
-    const c2c3Total = Number((epd.C2_transport_to_treatment || 0) + (epd.C3_waste_processing || 0)).toFixed(2);
-    if (elC2C3) elC2C3.textContent = `+${c2c3Total} kg CO2e`;
+    if (elModD) elModD.textContent = `${modDGwp.toFixed(2)} kg CO2e`;
+    if (elC2C3) elC2C3.textContent = `+${(c2 + c3).toFixed(2)} kg CO2e`;
 
     const elEnergy = document.getElementById("resWasteEnergyList");
     if (elEnergy) {
+      const elecKwh = avoidedEnergy["Electricity recovered (kWh)"] || (avoidedEnergy.gross_electricity_mj ? (avoidedEnergy.gross_electricity_mj / 3.6) : 0);
+      const heatMj = avoidedEnergy["District heat recovered (MJ)"] || avoidedEnergy.gross_heat_mj || 0;
+      const creditElec = Math.abs(modDBreakdown.avoided_electricity_credit_kg_co2e || 0);
+      const creditHeat = Math.abs(modDBreakdown.avoided_heat_credit_kg_co2e || 0);
+
       elEnergy.innerHTML = `
-        <li>Electricidad exportada: <strong>${Number(avoided.gross_electricity_mj || 0).toFixed(2)} MJ</strong> (${Number(avoided.gwp_avoided_electricity || 0).toFixed(2)} kg CO2e evitados)</li>
-        <li>Calor util exportado: <strong>${Number(avoided.gross_heat_mj || 0).toFixed(2)} MJ</strong> (${Number(avoided.gwp_avoided_heat || 0).toFixed(2)} kg CO2e evitados)</li>
+        <li>Electricidad exportada: <strong>${Number(elecKwh).toFixed(2)} kWh</strong> (${creditElec.toFixed(2)} kg CO2e evitados)</li>
+        <li>Calor util exportado: <strong>${Number(heatMj).toFixed(2)} MJ</strong> (${creditHeat.toFixed(2)} kg CO2e evitados)</li>
       `;
     }
 
     const elSolids = document.getElementById("resWasteSolidsList");
     if (elSolids) {
+      const bottomAsh = solids["Bottom ash (slag to landfill)"] || solids.bottom_ash_kg || 0;
+      const flyAsh = solids["Air pollution control (APC) filter residues"] || solids.fly_ash_kg || 0;
+      const iron = raw.avoided_materials?.["Scrap iron recovered (kg)"] || raw.avoided_burdens?.recovered_iron_scrap_kg || 0;
+
       elSolids.innerHTML = `
-        <li>Escoria de fondo (Bottom ash): <strong>${Number(solids.bottom_ash_kg || 0).toFixed(2)} kg</strong></li>
-        <li>Cenizas volantes (Fly ash): <strong>${Number(solids.fly_ash_kg || 0).toFixed(2)} kg</strong></li>
-        <li>Chatarra de hierro recuperada: <strong>${Number(avoided.recovered_iron_scrap_kg || 0).toFixed(2)} kg</strong></li>
+        <li>Escoria de fondo (Bottom ash): <strong>${Number(bottomAsh).toFixed(2)} kg</strong></li>
+        <li>Cenizas volantes y filtros (APC): <strong>${Number(flyAsh).toFixed(2)} kg</strong></li>
+        <li>Chatarra ferrosa recuperada: <strong>${Number(iron).toFixed(2)} kg</strong></li>
       `;
     }
 
@@ -14896,8 +14914,9 @@ print("Actividad GEI registrada:", res.get("status"))`;
 
   function insertWasteTreatmentNodeToCanvas() {
     if (!lastWasteCalculationResult) return;
-    const input = lastWasteCalculationResult.input_summary || {};
-    const epd = lastWasteCalculationResult.epd_modules_gwp || {};
+    const raw = lastWasteCalculationResult.result || lastWasteCalculationResult;
+    const input = raw.input_summary || {};
+    const epd = raw.epd_modules_gwp || {};
     const procName = `Fin de Vida: ${input.material_name} (${input.technology_name})`;
     
     if (typeof addNodeToCanvas === "function") {
