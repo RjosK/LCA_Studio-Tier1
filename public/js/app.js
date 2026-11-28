@@ -15305,11 +15305,13 @@ print("Actividad GEI registrada:", res.get("status"))`;
     const pLF = document.getElementById("techParamsLandfill");
     const pTail = document.getElementById("techParamsTailings");
     const pWW = document.getElementById("techParamsWastewater");
+    const pOB = document.getElementById("techParamsOpenBurning");
 
     if (pMSWI) pMSWI.style.display = (tech === "mswi") ? "grid" : "none";
     if (pLF) pLF.style.display = (tech === "landfill_msw" || tech === "landfill") ? "grid" : "none";
     if (pTail) pTail.style.display = (tech === "tailings_impoundment") ? "flex" : "none";
     if (pWW) pWW.style.display = (tech === "wastewater") ? "grid" : "none";
+    if (pOB) pOB.style.display = (tech === "open_burning") ? "grid" : "none";
   }
 
   async function executeWasteCalculation() {
@@ -15387,6 +15389,9 @@ print("Actividad GEI registrada:", res.get("status"))`;
       } else if (tech === "wastewater") {
         payload.tech_kwargs.treatment_stage = document.getElementById("paramWWStage")?.value || "2_stage_biological";
         payload.tech_kwargs.sludge_fate = document.getElementById("paramWWSludgeFate")?.value || "sludge_to_incineration";
+      } else if (tech === "open_burning") {
+        payload.tech_kwargs.burn_type = document.getElementById("paramOBBurnType")?.value || "open_dump";
+        payload.tech_kwargs.dispersion_air = document.getElementById("paramOBDispersion")?.value || "low";
       }
 
       const btn = document.getElementById("btnCalculateWaste");

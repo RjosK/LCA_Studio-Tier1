@@ -1163,7 +1163,7 @@ class EconodeRequestHandler(http.server.SimpleHTTPRequestHandler):
                 mass_kg = float(body.get("mass_kg", 100.0))
                 trans_km = float(body.get("transport_km", 20.0))
                 tech_kwargs = body.get("tech_kwargs", {})
-                for k in ("denox", "recovery_scrap", "fgc_mode", "climate_site", "gas_capture_rate", "gas_utilization", "time_horizon", "treatment_stage", "sludge_fate", "ard_potential"):
+                for k in ("denox", "recovery_scrap", "fgc_mode", "climate_site", "gas_capture_rate", "gas_utilization", "time_horizon", "treatment_stage", "sludge_fate", "ard_potential", "burn_type", "dispersion_air"):
                     if k in body and k not in tech_kwargs:
                         tech_kwargs[k] = body[k]
 

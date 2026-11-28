@@ -573,10 +573,163 @@ class DokaTailingsEngine:
 
 
 class DokaOpenBurningEngine:
-    """Modelo de Quema no Controlada a Cielo Abierto de Gabor Doka."""
+    """Modelo de Quema no Controlada a Cielo Abierto de Gabor Doka (Open Burning 2026.xlsm)."""
 
-    @staticmethod
-    def calculate(material: Dict[str, Any], mass_kg: float, transport_km: float,
+    OPEN_BURNING_TKS = {
+        "S": {
+                "to_air_g": 143.5656,
+                "to_res_g": 856.4344
+        },
+        "N": {
+                "to_air_g": 989.9878,
+                "to_res_g": 10.0122
+        },
+        "P": {
+                "to_air_g": 6.8707,
+                "to_res_g": 993.1293
+        },
+        "B": {
+                "to_air_g": 0.3999,
+                "to_res_g": 999.6
+        },
+        "Cl": {
+                "to_air_g": 667.1107,
+                "to_res_g": 332.8893
+        },
+        "Br": {
+                "to_air_g": 320.6793,
+                "to_res_g": 679.3207
+        },
+        "F": {
+                "to_air_g": 106.6093,
+                "to_res_g": 893.3907
+        },
+        "I": {
+                "to_air_g": 667.1107,
+                "to_res_g": 332.8893
+        },
+        "Ag": {
+                "to_air_g": 5.1321,
+                "to_res_g": 994.8679
+        },
+        "As": {
+                "to_air_g": 8.5229,
+                "to_res_g": 991.4771
+        },
+        "Ba": {
+                "to_air_g": 41.2162,
+                "to_res_g": 958.7838
+        },
+        "Cd": {
+                "to_air_g": 5.6578,
+                "to_res_g": 994.3422
+        },
+        "Co": {
+                "to_air_g": 40.3329,
+                "to_res_g": 959.6671
+        },
+        "Cr": {
+                "to_air_g": 1.4912,
+                "to_res_g": 998.5088
+        },
+        "Cu": {
+                "to_air_g": 1.0991,
+                "to_res_g": 998.9009
+        },
+        "Hg": {
+                "to_air_g": 606.0606,
+                "to_res_g": 393.9394
+        },
+        "Mn": {
+                "to_air_g": 8.5121,
+                "to_res_g": 991.4879
+        },
+        "Mo": {
+                "to_air_g": 4.9918,
+                "to_res_g": 995.0082
+        },
+        "Ni": {
+                "to_air_g": 1.4267,
+                "to_res_g": 998.5733
+        },
+        "Pb": {
+                "to_air_g": 8.4033,
+                "to_res_g": 991.5967
+        },
+        "Sb": {
+                "to_air_g": 0.0024,
+                "to_res_g": 999.9976
+        },
+        "Se": {
+                "to_air_g": 86.6683,
+                "to_res_g": 913.3317
+        },
+        "Sn": {
+                "to_air_g": 0.002,
+                "to_res_g": 999.998
+        },
+        "V": {
+                "to_air_g": 77.2089,
+                "to_res_g": 922.7911
+        },
+        "Zn": {
+                "to_air_g": 7.4399,
+                "to_res_g": 992.5601
+        },
+        "Be": {
+                "to_air_g": 1.89,
+                "to_res_g": 998.11
+        },
+        "Sc": {
+                "to_air_g": 1.0,
+                "to_res_g": 999.0
+        },
+        "Sr": {
+                "to_air_g": 1.0,
+                "to_res_g": 999.0
+        },
+        "Ti": {
+                "to_air_g": 10.6033,
+                "to_res_g": 989.3967
+        },
+        "Tl": {
+                "to_air_g": 2.0,
+                "to_res_g": 998.0
+        },
+        "Si": {
+                "to_air_g": 0.0047,
+                "to_res_g": 999.9953
+        },
+        "Fe": {
+                "to_air_g": 1.8119,
+                "to_res_g": 998.1881
+        },
+        "Ca": {
+                "to_air_g": 23.6096,
+                "to_res_g": 976.3904
+        },
+        "Al": {
+                "to_air_g": 0.8243,
+                "to_res_g": 999.1757
+        },
+        "K": {
+                "to_air_g": 14.8215,
+                "to_res_g": 985.1785
+        },
+        "Mg": {
+                "to_air_g": 2.9959,
+                "to_res_g": 997.0041
+        },
+        "Na": {
+                "to_air_g": 24.6305,
+                "to_res_g": 975.3695
+        }
+}
+
+    @classmethod
+    def calculate(cls, material: Dict[str, Any], mass_kg: float, transport_km: float,
+                  burn_type: str = "open_dump",
+                  dispersion_air: str = "low",
                   model_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         cfg = model_config or {}
         ef = cfg.get("emission_factors", {})
@@ -590,8 +743,11 @@ class DokaOpenBurningEngine:
         F = max(0.0, float(material.get("F", 0.0001)))
 
         total_c_kg = mass_kg * C_tot
-        co_fraction = ef.get("CO_fraction_of_carbon", 0.082)
-        ch4_fraction = ef.get("CH4_fraction_of_carbon", 0.015)
+        # Factor segun tipo de quema: en barril la combustion es mas incompleta (+CO, +CH4, +BC)
+        burn_mult = 1.35 if burn_type == "barrel_backyard" else 1.0
+
+        co_fraction = min(0.18, ef.get("CO_fraction_of_carbon", 0.082) * burn_mult)
+        ch4_fraction = min(0.04, ef.get("CH4_fraction_of_carbon", 0.015) * burn_mult)
         co2_fraction = max(0.0, 1.0 - co_fraction - ch4_fraction)
 
         co2_fossil = total_c_kg * fossil_share * co2_fraction * (44.01 / 12.011)
@@ -599,13 +755,35 @@ class DokaOpenBurningEngine:
         ch4_air = total_c_kg * ch4_fraction * (16.04 / 12.011)
         co_air = total_c_kg * co_fraction * (28.01 / 12.011)
 
-        black_carbon_g = mass_kg * ef.get("Black_Carbon_g_per_kg_waste", 1.25)
+        black_carbon_g = mass_kg * ef.get("Black_Carbon_g_per_kg_waste", 1.25) * burn_mult
         n2o_air = mass_kg * N * ef.get("N2O_fraction_of_nitrogen", 0.008) * (44.013 / 28.013)
         nox_air = mass_kg * N * ef.get("NOx_as_NO2_fraction_of_N", 0.28) * (46.005 / 14.007)
-        so2_air = mass_kg * S * ef.get("SO2_fraction_of_sulfur", 0.85) * (64.066 / 32.065)
-        hcl_air = mass_kg * Cl * ef.get("HCl_fraction_of_chlorine", 0.82) * (36.46 / 35.453)
-        hf_air = mass_kg * F * ef.get("HF_fraction_of_fluorine", 0.75) * (20.01 / 18.998)
-        pm25_g = mass_kg * ef.get("PM25_g_per_kg_waste", 8.5)
+        so2_air = mass_kg * S * (cls.OPEN_BURNING_TKS["S"]["to_air_g"] / 1000.0) * (64.066 / 32.065)
+        hcl_air = mass_kg * Cl * (cls.OPEN_BURNING_TKS["Cl"]["to_air_g"] / 1000.0) * (36.46 / 35.453)
+        hf_air = mass_kg * F * (cls.OPEN_BURNING_TKS["F"]["to_air_g"] / 1000.0) * (20.01 / 18.998)
+        pm25_g = mass_kg * ef.get("PM25_g_per_kg_waste", 8.5) * burn_mult
+
+        # Particion estequiometrica de todos los metales pesados y elementos traza
+        elements_ppm = material.get("elements_ppm", {})
+        metals_air = {}
+        metals_ash_soil = {}
+        total_ash_kg = mass_kg * max(0.05, float(material.get("ash_content_pct", 10.0)) / 100.0)
+
+        for elem, tks in cls.OPEN_BURNING_TKS.items():
+            if elem in ("S", "N", "Cl", "F"):
+                continue
+            # Concentracion en kg/kg
+            conc = float(material.get(elem, 0.0))
+            if conc == 0.0 and elem in elements_ppm:
+                conc = float(elements_ppm[elem]) * 1e-6
+            if conc > 0:
+                elem_mass_kg = mass_kg * conc
+                air_val = elem_mass_kg * (tks["to_air_g"] / 1000.0)
+                res_val = elem_mass_kg * (tks["to_res_g"] / 1000.0)
+                if air_val > 1e-9:
+                    metals_air[f"{elem} to air"] = round(air_val, 8)
+                if res_val > 1e-9:
+                    metals_ash_soil[f"{elem} en ceniza a suelo"] = round(res_val, 8)
 
         # GWP de combustion incompleta
         gwp_c4_fossil = co2_fossil + (ch4_air * 29.8) + (n2o_air * 273.0) + (black_carbon_g * 0.001 * 900.0)
@@ -617,11 +795,13 @@ class DokaOpenBurningEngine:
 
         return {
             "technology": "open_burning",
-            "technology_name": "Quema no Controlada a Cielo Abierto (Open Burning)",
+            "technology_name": f"Quema no Controlada a Cielo Abierto ({'Tiradero Abierto' if burn_type == 'open_dump' else 'Barril / Patio Domiciliario'}, Aire {'Urbano (Hi)' if dispersion_air == 'hi' else 'Rural (Low)'})",
             "input_summary": {
                 "material_name": material.get("name", "Residuo"),
                 "mass_kg": mass_kg,
-                "transport_km": transport_km
+                "transport_km": transport_km,
+                "burn_type": burn_type,
+                "dispersion_air": dispersion_air
             },
             "epd_modules_gwp": {
                 "C1_deconstruction": 0.0,
@@ -635,26 +815,71 @@ class DokaOpenBurningEngine:
                 "unit": "kg CO2 eq"
             },
             "lci_air_emissions": {
-                "Carbon dioxide, fossil (CO2)": round(co2_fossil, 4),
-                "Carbon dioxide, biogenic (CO2)": round(co2_bio, 4),
-                "Carbon monoxide (CO)": round(co_air, 4),
-                "Methane, fossil (CH4)": round(ch4_air, 5),
-                "Black Carbon (BC) [g]": round(black_carbon_g, 2),
-                "Particulates (< 2.5 um) [g]": round(pm25_g, 2),
-                "Dinitrogen monoxide (N2O)": round(n2o_air, 6),
-                "Nitrogen oxides (NOx as NO2)": round(nox_air, 5),
-                "Sulfur dioxide (SO2)": round(so2_air, 5),
-                "Hydrogen chloride (HCl)": round(hcl_air, 5),
-                "Hydrogen fluoride (HF)": round(hf_air, 6)
+                **{
+                    "Carbon dioxide, fossil (CO2)": round(co2_fossil, 4),
+                    "Carbon dioxide, biogenic (CO2)": round(co2_bio, 4),
+                    "Carbon monoxide (CO)": round(co_air, 4),
+                    "Methane, fossil (CH4)": round(ch4_air, 5),
+                    "Black Carbon (BC) [g]": round(black_carbon_g, 2),
+                    "Particulates (< 2.5 um) [g]": round(pm25_g, 2),
+                    "Dinitrogen monoxide (N2O)": round(n2o_air, 6),
+                    "Nitrogen oxides (NOx as NO2)": round(nox_air, 5),
+                    "Sulfur dioxide (SO2)": round(so2_air, 5),
+                    "Hydrogen chloride (HCl)": round(hcl_air, 5),
+                    "Hydrogen fluoride (HF)": round(hf_air, 6)
+                },
+                **metals_air
+            },
+            "lci_solid_residues": {
+                "Cenizas residuales en suelo (Ash to soil) [kg]": round(total_ash_kg, 4),
+                **metals_ash_soil
             }
         }
 
 
 class DokaWastewaterEngine:
-    """Modelo de Depuracion de Aguas Residuales y Lodos (WWTP) de Gabor Doka."""
+    """Modelo de Depuracion de Aguas Residuales y Lodos (WWTP) de Gabor Doka (Wastewater 2026.xlsm)."""
 
-    @staticmethod
-    def calculate(material: Dict[str, Any], volume_m3_or_kg: float, transport_km: float,
+    WWT_EFFLUENT_RATIOS = {
+        "ORG-C": 0.056,
+        "S": 0.9583,
+        "N": 0.53,
+        "P": 0.08,
+        "B": 0.9199,
+        "Cl": 1.0,
+        "F": 1.0,
+        "Ag": 0.0059,
+        "As": 0.3238,
+        "Ba": 0.1452,
+        "Cd": 0.0292,
+        "Co": 0.141,
+        "Cr": 0.0167,
+        "Cu": 0.0484,
+        "Hg": 0.04,
+        "Mn": 0.0406,
+        "Mo": 0.3744,
+        "Ni": 0.4692,
+        "Pb": 0.005,
+        "Sb": 0.5608,
+        "Se": 0.2838,
+        "Sn": 0.0094,
+        "V": 0.0241,
+        "Zn": 0.0777,
+        "Be": 0.0132,
+        "Sc": 0.502,
+        "Sr": 0.8182,
+        "Ti": 0.0703,
+        "Tl": 0.2138,
+        "Si": 0.441,
+        "Ca": 0.793,
+        "Al": 0.5347,
+        "K": 0.947,
+        "Mg": 0.9199,
+        "Na": 0.992
+}
+
+    @classmethod
+    def calculate(cls, material: Dict[str, Any], volume_m3_or_kg: float, transport_km: float,
                   treatment_stage: str = "2_stage_biological",
                   sludge_fate: str = "sludge_to_incineration",
                   model_config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -670,12 +895,12 @@ class DokaWastewaterEngine:
             "name": "Sludge Incineration", "gwp_net_per_kg_dry_sludge": 0.35
         }))
 
-        # Electricidad consumida en la PTAR: 0.45 kWh / m3 en 2 etapas, 0.65 en 3 etapas
+        # Electricidad consumida en la PTAR
         kwh_per_m3 = 0.65 if "3_stage" in treatment_stage else (0.45 if "2_stage" in treatment_stage else 0.15)
         kwh_total = volume_m3_or_kg * kwh_per_m3
         gwp_ptar_energy = kwh_total * 0.420
 
-        # Emisiones fugitivas de N2O en desnitrificacion y CH4 en digestor
+        # Emisiones fugitivas de N2O en desnitrificacion
         N_in = volume_m3_or_kg * float(material.get("N", 0.005))
         n2o_fugitive = N_in * 0.015 * (44.013 / 28.013)
         gwp_fugitive = n2o_fugitive * 273.0
@@ -688,8 +913,35 @@ class DokaWastewaterEngine:
         gwp_c2 = tkm * 0.11
         gwp_c3 = gwp_ptar_energy + gwp_fugitive
         gwp_c4 = gwp_sludge
-
         net_gwp = gwp_c2 + gwp_c3 + gwp_c4
+
+        # Particion al efluente acuoso (Emissions to water)
+        # Factor multiplicador segun etapa: si es 1 etapa mecanica pasa mas al agua, si es 3 etapas pasa menos
+        stage_mult = 1.45 if "1_stage" in treatment_stage else (0.75 if "3_stage" in treatment_stage else 1.0)
+        elements_ppm = material.get("elements_ppm", {})
+        water_emissions = {}
+
+        # DBO5 y DQO al efluente
+        c_in = volume_m3_or_kg * float(material.get("C", 0.05))
+        water_emissions["DBO5 (Biochemical Oxygen Demand)"] = round(c_in * (1.0 - stage_info.get("bod5_removal", 0.90)) * 1.5, 5)
+        water_emissions["DQO (Chemical Oxygen Demand)"] = round(c_in * (1.0 - stage_info.get("cod_removal", 0.85)) * 2.66, 5)
+        water_emissions["Nitrogeno total (N to water)"] = round(N_in * (1.0 - stage_info.get("n_removal", 0.65)), 5)
+
+        P_in = volume_m3_or_kg * float(material.get("P", 0.001))
+        p_removal = 0.92 if "3_stage" in treatment_stage else 0.35
+        water_emissions["Fosforo total (P to water)"] = round(P_in * (1.0 - p_removal), 5)
+
+        for elem, ratio in cls.WWT_EFFLUENT_RATIOS.items():
+            if elem in ("ORG-C", "N", "P"):
+                continue
+            conc = float(material.get(elem, 0.0))
+            if conc == 0.0 and elem in elements_ppm:
+                conc = float(elements_ppm[elem]) * 1e-6
+            if conc > 0:
+                elem_mass = volume_m3_or_kg * conc
+                effluent_val = elem_mass * min(1.0, ratio * stage_mult)
+                if effluent_val > 1e-9:
+                    water_emissions[f"{elem} to water"] = round(effluent_val, 8)
 
         return {
             "technology": "wastewater",
@@ -713,9 +965,16 @@ class DokaWastewaterEngine:
                 "BOD5_removal_efficiency": stage_info.get("bod5_removal", 0.90),
                 "COD_removal_efficiency": stage_info.get("cod_removal", 0.85),
                 "N_removal_efficiency": stage_info.get("n_removal", 0.65),
-                "P_removal_efficiency": stage_info.get("p_removal", 0.35),
+                "P_removal_efficiency": p_removal,
                 "sludge_produced_dry_kg": round(sludge_kg, 3),
                 "electricity_consumed_kwh": round(kwh_total, 2)
+            },
+            "lci_water_emissions": water_emissions,
+            "lci_air_emissions": {
+                "Dinitrogen monoxide (N2O fugitive)": round(n2o_fugitive, 6)
+            },
+            "lci_solid_residues": {
+                "Sewage sludge (lodo seco deshidratado) [kg]": round(sludge_kg, 4)
             }
         }
 
@@ -729,6 +988,7 @@ class DokaExportEngine:
         inp = calc_result.get("input_summary", {})
         epd = calc_result.get("epd_modules_gwp", {})
         air = calc_result.get("lci_air_emissions", {})
+        water = calc_result.get("lci_leachate_short_term_100a", calc_result.get("lci_water_emissions", {}))
         avoided_en = calc_result.get("avoided_energy", {})
         avoided_mat = calc_result.get("avoided_materials", {})
 
@@ -743,28 +1003,49 @@ class DokaExportEngine:
             "Cut off rules;All elementary flows included",
             "",
             "Products",
-            f"Waste treatment of {inp.get('material_name')};kg;{inp.get('mass_kg', 100.0)};100%;not defined",
+            f"Waste treatment of {inp.get('material_name')};kg;{inp.get('mass_kg', inp.get('volume_m3_or_kg', 100.0))};100%;not defined",
             "",
             "Avoided products"
         ]
 
-        # Agregar productos evitados (Modulo D)
         if avoided_en.get("Electricity recovered (kWh)", 0) > 0:
             lines.append(f"Electricity, medium voltage [MX];kWh;{avoided_en['Electricity recovered (kWh)']};100%;not defined")
         if avoided_en.get("District heat recovered (MJ)", 0) > 0:
             lines.append(f"Heat, district or industrial [GLO];MJ;{avoided_en['District heat recovered (MJ)']};100%;not defined")
         if avoided_mat.get("Scrap iron recovered (kg)", 0) > 0:
             lines.append(f"Iron scrap, sorted [GLO];kg;{avoided_mat['Scrap iron recovered (kg)']};100%;not defined")
+        if avoided_mat.get("Scrap aluminium recovered (kg)", 0) > 0:
+            lines.append(f"Aluminium scrap, sorted [GLO];kg;{avoided_mat['Scrap aluminium recovered (kg)']};100%;not defined")
+        if avoided_mat.get("Scrap copper recovered (kg)", 0) > 0:
+            lines.append(f"Copper scrap, sorted [GLO];kg;{avoided_mat['Scrap copper recovered (kg)']};100%;not defined")
 
-        lines.extend([
-            "",
-            "Emissions to air"
-        ])
-        for gas, val in air.items():
-            if float(val) > 0:
-                lines.append(f"{gas};kg;{val};Unspecified;0")
+        if air and len(air) > 0:
+            lines.extend([
+                "",
+                "Emissions to air"
+            ])
+            for gas, val in air.items():
+                try:
+                    val_f = float(val)
+                    if val_f > 0:
+                        lines.append(f"{gas};kg;{val_f};Unspecified;0")
+                except:
+                    pass
 
-        return "\n".join(lines)
+        if water and len(water) > 0:
+            lines.extend([
+                "",
+                "Emissions to water"
+            ])
+            for wflow, val in water.items():
+                try:
+                    val_f = float(val)
+                    if val_f > 0:
+                        lines.append(f"{wflow};kg;{val_f};River;0")
+                except:
+                    pass
+
+        return chr(10).join(lines)
 
     @staticmethod
     def to_ecospold2_xml(calc_result: Dict[str, Any]) -> str:
@@ -772,6 +1053,7 @@ class DokaExportEngine:
         inp = calc_result.get("input_summary", {})
         epd = calc_result.get("epd_modules_gwp", {})
         air = calc_result.get("lci_air_emissions", {})
+        water = calc_result.get("lci_leachate_short_term_100a", calc_result.get("lci_water_emissions", {}))
 
         xml = [
             '<?xml version="1.0" encoding="UTF-8"?>',
@@ -786,25 +1068,45 @@ class DokaExportEngine:
             '    <flowData>'
         ]
 
-        # Flujo de referencia
-        xml.append('      <intermediateExchange id="flow_ref" amount="1.0" unitName="kg">')
+        ref_mass = inp.get("mass_kg", inp.get("volume_m3_or_kg", 1.0))
+        xml.append(f'      <intermediateExchange id="flow_ref" amount="{ref_mass}" unitName="kg">')
         xml.append(f'        <name xml:lang="en">{inp.get("material_name")}</name>')
         xml.append('        <outputGroup>0</outputGroup>')
         xml.append('      </intermediateExchange>')
 
-        # Emisiones elementales al aire
-        for idx, (gas, val) in enumerate(air.items()):
-            if float(val) > 0:
-                xml.append(f'      <elementaryExchange id="elem_{idx}" amount="{val}" unitName="kg">')
-                xml.append(f'        <name xml:lang="en">{gas}</name>')
-                xml.append('        <compartment subCompartmentId="air_unspecified">air</compartment>')
-                xml.append('        <outputGroup>4</outputGroup>')
-                xml.append('      </elementaryExchange>')
+        idx = 0
+        if air and len(air) > 0:
+            for gas, val in air.items():
+                try:
+                    val_f = float(val)
+                    if val_f > 0:
+                        xml.append(f'      <elementaryExchange id="elem_{idx}" amount="{val_f}" unitName="kg">')
+                        xml.append(f'        <name xml:lang="en">{gas}</name>')
+                        xml.append('        <compartment subCompartmentId="air_unspecified">air</compartment>')
+                        xml.append('        <outputGroup>4</outputGroup>')
+                        xml.append('      </elementaryExchange>')
+                        idx += 1
+                except:
+                    pass
+
+        if water and len(water) > 0:
+            for wflow, val in water.items():
+                try:
+                    val_f = float(val)
+                    if val_f > 0:
+                        xml.append(f'      <elementaryExchange id="elem_{idx}" amount="{val_f}" unitName="kg">')
+                        xml.append(f'        <name xml:lang="en">{wflow}</name>')
+                        xml.append('        <compartment subCompartmentId="water_surface">water</compartment>')
+                        xml.append('        <outputGroup>4</outputGroup>')
+                        xml.append('      </elementaryExchange>')
+                        idx += 1
+                except:
+                    pass
 
         xml.append('    </flowData>')
         xml.append('  </activityDataset>')
         xml.append('</ecoSpold>')
-        return "\n".join(xml)
+        return chr(10).join(xml)
 
 
 class DokaMasterSuite:
